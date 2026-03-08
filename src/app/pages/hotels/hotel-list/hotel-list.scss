@@ -1,0 +1,48 @@
+.page-title { font-size: 1.5rem; font-weight: 600; }
+.text-center { text-align: center; }
+
+.clickable-row { cursor: pointer; }
+
+.hotel-name { font-weight: 500; }
+.hotel-address {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+  margin-top: 2px;
+}
+
+.room-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--p-primary-color);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  &.no-rooms {
+    background: var(--p-surface-300);
+    color: var(--p-text-muted-color);
+  }
+}
+
+.hotel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  label { font-size: 0.875rem; font-weight: 500; }
+}

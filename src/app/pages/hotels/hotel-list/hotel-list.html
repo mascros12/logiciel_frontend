@@ -1,0 +1,94 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="page-container">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="page-title">Hoteles</h2>
+    <p-button label="Nuevo hotel" icon="pi pi-plus" (onClick)="openCreate()" />
+  </div>
+
+  <p-table [value]="hotels()" [loading]="loading()"
+    styleClass="p-datatable-gridlines" [rowHover]="true">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Hotel</th>
+        <th style="width:120px">Provincia</th>
+        <th style="width:100px">Comisión</th>
+        <th style="width:80px">Hab.</th>
+        <th style="width:110px">Acciones</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-h>
+      <tr class="clickable-row" (click)="goToDetail(h.id)">
+        <td>
+          <span class="hotel-name">{{ h.name }}</span>
+          @if (h.address) {
+            <div class="hotel-address">{{ h.address }}</div>
+          }
+        </td>
+        <td>{{ h.province ?? '—' }}</td>
+        <td>{{ h.commission }}</td>
+        <td>
+          <span class="room-count" [class.no-rooms]="h.rooms.length === 0">
+            {{ h.rooms.length }}
+          </span>
+        </td>
+        <td>
+          <div class="flex gap-1" (click)="$event.stopPropagation()">
+            <p-button icon="pi pi-pencil" [text]="true" size="small"
+              (onClick)="openEdit(h, $event)" />
+            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+              (onClick)="confirmDelete($event, h.id)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="5" class="text-center">No hay hoteles registrados</td></tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-dialog
+  [header]="dialogTitle"
+  [visible]="showDialog()"
+  (visibleChange)="showDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+>
+  <form [formGroup]="form" class="hotel-form">
+    <div class="field">
+      <label>Nombre *</label>
+      <input pInputText formControlName="name" class="w-full" placeholder="Hotel Bougainvillea" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Provincia</label>
+        <p-select formControlName="province" [options]="provinces"
+          optionLabel="label" optionValue="value"
+          placeholder="Seleccionar" styleClass="w-full" appendTo="body" />
+      </div>
+      <div class="field">
+        <label>Comisión</label>
+        <p-inputNumber formControlName="commission"
+          [minFractionDigits]="2" [maxFractionDigits]="4" styleClass="w-full" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Dirección / Ciudad</label>
+      <input pInputText formControlName="address" class="w-full" placeholder="Heredia, Santo Domingo" />
+    </div>
+    <div class="field">
+      <label>Categoría</label>
+      <input pInputText formControlName="category" class="w-full" placeholder="3 estrellas, Boutique..." />
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showDialog.set(false)" />
+    <p-button [label]="editingHotel() ? 'Guardar' : 'Crear'" icon="pi pi-check"
+      [loading]="saving()" (onClick)="submit()" />
+  </ng-template>
+</p-dialog>

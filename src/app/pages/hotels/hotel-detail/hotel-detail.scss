@@ -1,0 +1,113 @@
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+    background: var(--p-surface-card);
+    border-bottom: 1px solid var(--p-surface-border);
+  
+    .header-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+  
+    .back-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--p-text-muted-color);
+      font-size: 1.1rem;
+      padding: 0.25rem;
+      margin-top: 0.25rem;
+      &:hover { color: var(--p-text-color); }
+    }
+  
+    h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.35rem; }
+  
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+  
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--p-text-muted-color);
+      i { font-size: 0.8rem; }
+    }
+  }
+  
+  .detail-body { padding: 1.5rem; }
+  
+  .empty-rooms {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem;
+    color: var(--p-text-muted-color);
+  }
+  
+  // Tabla headers
+  .th-center { text-align: center !important; }
+  .th-high   { background: #fdecea !important; color: #7a1f1f !important; }
+  .th-medium { background: #fef3cd !important; color: #7a5c00 !important; }
+  .th-low    { background: #edfaed !important; color: #1a5f1a !important; }
+  .th-sub    { font-size: 0.75rem; font-weight: 500; color: var(--p-text-muted-color); }
+  .rack      { color: var(--p-text-muted-color); font-size: 0.85rem; }
+  
+  // Formulario habitación
+  .room-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-top: 0.5rem;
+  }
+  
+  .prices-table {
+    width: 100%;
+    border-collapse: collapse;
+  
+    th, td {
+      padding: 0.4rem 0.5rem;
+      border-bottom: 1px solid var(--p-surface-border);
+    }
+  
+    .col-high   { color: #c0392b; font-weight: 600; width: 160px; }
+    .col-medium { color: #d68910; font-weight: 600; width: 160px; }
+    .col-low    { color: #27ae60; font-weight: 600; width: 160px; }
+    .row-label  { font-size: 0.8rem; color: var(--p-text-muted-color); width: 55px; }
+    .rack-row   { font-style: italic; }
+    .section-row td { background: var(--p-surface-ground); font-size: 0.85rem; padding: 0.5rem; }
+  }
+  
+  .field { display: flex; flex-direction: column; gap: 0.4rem;
+    label { font-size: 0.875rem; font-weight: 500; }
+  }
+  
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  
+  // Temporadas
+  .season-group { margin-bottom: 0.75rem; }
+  .season-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 4px;
+    background: var(--p-surface-ground);
+    margin-bottom: 4px;
+    font-size: 0.875rem;
+    .season-price { margin-left: auto; font-weight: 600; color: var(--p-primary-color); }
+  }
+  .no-seasons { color: var(--p-text-muted-color); font-size: 0.875rem; text-align: center; padding: 1rem; }
+  .season-divider { border-top: 1px solid var(--p-surface-border); margin: 1rem 0; }
+  .season-form { display: flex; flex-direction: column; gap: 1rem; }
+  .section-label {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--p-text-muted-color); margin-bottom: -0.25rem;
+  }

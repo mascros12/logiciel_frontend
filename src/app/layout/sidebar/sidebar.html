@@ -1,0 +1,35 @@
+<aside class="sidebar" [class.collapsed]="collapsed()">
+    <div class="sidebar-logo">
+      @if (!collapsed()) {
+        <span class="logo-text">Logiciel CRV</span>
+      } @else {
+        <span class="logo-icon">CRV</span>
+      }
+    </div>
+  
+    <nav class="sidebar-nav">
+      @for (item of navItems; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          class="nav-item"
+          [class.collapsed]="collapsed()"
+          [title]="collapsed() ? item.label : ''"
+        >
+          <i [class]="item.icon"></i>
+          @if (!collapsed()) {
+            <span>{{ item.label }}</span>
+          }
+        </a>
+      }
+    </nav>
+  
+    <div class="sidebar-footer">
+      <button class="nav-item logout-btn" (click)="auth.logout()">
+        <i class="pi pi-sign-out"></i>
+        @if (!collapsed()) {
+          <span>Cerrar sesión</span>
+        }
+      </button>
+    </div>
+  </aside>

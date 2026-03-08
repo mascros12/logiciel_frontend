@@ -1,0 +1,602 @@
+<p-toast />
+
+@if (loading()) {
+  <div class="page-container">
+    <p-skeleton height="120px" styleClass="mb-4" />
+    <p-skeleton height="400px" />
+  </div>
+} @else if (quotation(); as q) {
+  <!-- Header -->
+  <div class="detail-header">
+    <div class="header-left">
+      <h2>{{ q.name }}</h2>
+      <div class="header-meta">
+        @if (q.from_date) {
+          <span class="meta-item">
+            <i class="pi pi-calendar"></i>
+            {{ q.from_date | date:'dd/MM/yyyy' }} — {{ q.to_date | date:'dd/MM/yyyy' }}
+          </span>
+        }
+        @if (q.arrival_date) {
+          <span class="meta-item">
+            <i class="pi pi-arrow-down-right"></i>
+            Llegada: {{ q.arrival_date | date:'dd/MM/yyyy' }}
+            @if (q.arrival_time) { {{ formatTime(q.arrival_time) }} }
+            @if (q.flight_number_arrival) { · {{ q.flight_number_arrival }} }
+          </span>
+          <span class="meta-item">
+            <i class="pi pi-arrow-up-right"></i>
+            Salida: {{ q.departure_date | date:'dd/MM/yyyy' }}
+            @if (q.departure_time) { {{ formatTime(q.departure_time) }} }
+            @if (q.flight_number_departure) { · {{ q.flight_number_departure }} }
+          </span>
+        }
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- Selector de versión -->
+      <div class="version-selector">
+        <label>Versión</label>
+        <p-select
+            [options]="versionOptions"
+            [ngModel]="selectedVersionId()"
+            (ngModelChange)="onVersionChange($event)"
+            appendTo="body"
+        />
+      </div>
+
+      <div class="header-actions">
+        <p-button
+          icon="pi pi-plus"
+          label="Nueva versión"
+          [text]="true"
+          size="small"
+          (onClick)="showNewVersion.set(true)"
+        />
+        <p-button
+          icon="pi pi-refresh"
+          label="Recalcular"
+          [text]="true"
+          size="small"
+          (onClick)="recalculate()"
+        />
+      </div>
+
+      <div class="total-display">
+        <span class="total-label">Total</span>
+        <span class="total-amount">{{ selectedVersion()?.total | currency:'USD' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="detail-body">
+    <p-tabs value="agenda">
+
+      <!-- Tab Agenda -->
+      <p-tablist>
+        <p-tab value="agenda">Agenda</p-tab>
+        <p-tab value="cotizacion">Cotización</p-tab>
+        <p-tab value="fileaa">Ficha AA</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <p-tabpanel value="agenda">
+          <div class="agenda-container">
+
+            <!-- Leyenda -->
+            <div class="legend">
+              <span class="legend-item normal"><i class="pi pi-circle-fill"></i> Sin servicios</span>
+              <span class="legend-item low"><i class="pi pi-circle-fill"></i> Temporada baja</span>
+              <span class="legend-item medium"><i class="pi pi-circle-fill"></i> Temporada media</span>
+              <span class="legend-item high"><i class="pi pi-circle-fill"></i> Temporada alta</span>
+            </div>
+
+            <!-- Tabla de itinerario -->
+            <div class="itinerary-table-wrapper">
+              <table class="itinerary-table">
+                <thead>
+                  <tr>
+                    <th class="col-date">Día</th>
+                    <th class="col-hotel" colspan="2">Hotel / Habitación</th>
+                    <th class="col-activity" colspan="2">Actividad</th>
+                    <th class="col-vehicle" colspan="2">Vehículo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (line of lines(); track line.id) {
+                    <tr>
+                      <!-- Fecha -->
+                      <td class="cell-date">
+                        <strong>{{ line.date | date:'dd/MM' }}</strong>
+                        <small>{{ line.date | date:'EEE':'':'es' }}</small>
+                      </td>
+
+                      <!-- Botón agregar habitación -->
+                      <td class="cell-add">
+                        <p-button
+                          icon="pi pi-plus"
+                          [text]="true"
+                          size="small"
+                          pTooltip="Agregar habitación"
+                          (onClick)="openAddRoom(line)"
+                        />
+                      </td>
+
+                      <!-- Habitaciones -->
+                      <td class="cell-services">
+                        @if (line.rooms.length > 0) {
+                          @for (room of line.rooms; track room.id) {
+                            <div class="service-chip" [ngClass]="'grade-' + room.grade">
+                              <span class="service-name">{{ room.name }}</span>
+                              @if (room.additional_adults > 0) {
+                                <small>+{{ room.additional_adults }}A</small>
+                              }
+                              @if (room.additional_children > 0) {
+                                <small>+{{ room.additional_children }}N</small>
+                              }
+                            </div>
+                          }
+                        } @else {
+                          <span class="empty-cell">—</span>
+                        }
+                      </td>
+
+                      <!-- Botón agregar actividad -->
+                      <td class="cell-add">
+                        <p-button
+                          icon="pi pi-plus"
+                          [text]="true"
+                          size="small"
+                          pTooltip="Agregar actividad"
+                          (onClick)="openAddActivity(line)"
+                        />
+                      </td>
+
+                      <!-- Actividades -->
+                      <td class="cell-services">
+                        @if (line.activities.length > 0) {
+                          @for (act of line.activities; track act.id) {
+                            <div class="service-chip" [ngClass]="'grade-' + act.grade">
+                              <span class="service-name">{{ act.name }}</span>
+                              <small>{{ act.adults }}A {{ act.children }}N</small>
+                            </div>
+                          }
+                        } @else {
+                          <span class="empty-cell">—</span>
+                        }
+                      </td>
+
+                      <!-- Botón agregar vehículo -->
+                      <td class="cell-add">
+                        <p-button
+                          icon="pi pi-plus"
+                          [text]="true"
+                          size="small"
+                          pTooltip="Agregar vehículo"
+                          (onClick)="openAddVehicle(line)"
+                        />
+                      </td>
+
+                      <!-- Vehículos -->
+                      <td class="cell-services">
+                        @if (line.vehicles.length > 0) {
+                          @for (v of line.vehicles; track v.id) {
+                            <div class="service-chip" [ngClass]="'grade-' + v.grade">
+                              <span class="service-name">{{ v.name }}</span>
+                            </div>
+                          }
+                        } @else {
+                          <span class="empty-cell">—</span>
+                        }
+                      </td>
+
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </p-tabpanel>
+
+        <!-- Tab Cotización -->
+        <p-tabpanel value="cotizacion" (click)="loadSummary()">
+        @if (loadingSummary()) {
+            <p-skeleton height="300px" />
+        } @else if (summary(); as s) {
+
+            @if (!s.is_version) {
+            <!-- Cotización base v1 -->
+            <div class="summary-table">
+                <table>
+                <thead>
+                    <tr><th colspan="3" class="summary-header-blue">Cotización</th></tr>
+                </thead>
+                <tbody>
+                    <!-- Hoteles -->
+                    <tr class="category-row">
+                    <td colspan="2"><strong>Hotel</strong></td>
+                    <td>{{ s.rooms_total | currency:'USD' }}</td>
+                    </tr>
+                    @for (r of s.rooms; track r.name) {
+                    <tr [class.yellow-row]="r.total < 1">
+                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        <td class="qty">({{ r.qty }})</td>
+                        <td>{{ r.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+
+                    <!-- Actividades -->
+                    <tr class="category-row">
+                    <td colspan="2"><strong>Actividades</strong></td>
+                    <td>{{ s.activities_total | currency:'USD' }}</td>
+                    </tr>
+                    @for (a of s.activities; track a.name) {
+                    <tr [class.yellow-row]="a.total < 1">
+                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        <td class="qty">({{ a.qty }})</td>
+                        <td>{{ a.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+
+                    <!-- Vehículos -->
+                    <tr class="category-row">
+                    <td colspan="2"><strong>Vehículo</strong></td>
+                    <td>{{ s.vehicles_total | currency:'USD' }}</td>
+                    </tr>
+                    @for (v of s.vehicles; track v.name) {
+                    <tr [class.yellow-row]="v.total < 1">
+                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        <td class="qty">({{ v.qty }})</td>
+                        <td>{{ v.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+
+                    <tr class="subtotal-row">
+                    <td colspan="2">SubTotal</td>
+                    <td>{{ s.subtotal | currency:'USD' }}</td>
+                    </tr>
+                    <tr class="subtotal-row">
+                    <td colspan="2">Comisión ({{ s.commission_rate }})</td>
+                    <td>{{ s.commission | currency:'USD' }}</td>
+                    </tr>
+                    <tr class="total-row">
+                    <td colspan="2">Total</td>
+                    <td>{{ s.total | currency:'USD' }}</td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+
+            } @else {
+            <!-- Versión v2+ con diff -->
+            <div class="summary-table">
+                <table>
+                <!-- ORIGINALES -->
+                <thead>
+                    <tr><th colspan="3" class="summary-header-blue">Cotización Original</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="category-row blue-row">
+                    <td colspan="2"><strong>Hotel</strong></td>
+                    <td>{{ s.rooms_total | currency:'USD' }}</td>
+                    </tr>
+                    @for (r of s.original_rooms; track r.name) {
+                    <tr [class.yellow-row]="r.total < 1">
+                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        <td class="qty">({{ r.qty }})</td>
+                        <td>{{ r.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+                    <tr class="category-row blue-row">
+                    <td colspan="2"><strong>Actividades</strong></td>
+                    <td>{{ s.activities_total | currency:'USD' }}</td>
+                    </tr>
+                    @for (a of s.original_activities; track a.name) {
+                    <tr [class.yellow-row]="a.total < 1">
+                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        <td class="qty">({{ a.qty }})</td>
+                        <td>{{ a.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+                    <tr class="category-row blue-row">
+                    <td colspan="2"><strong>Vehículo</strong></td>
+                    <td>{{ s.vehicles_total | currency:'USD' }}</td>
+                    </tr>
+                    @for (v of s.original_vehicles; track v.name) {
+                    <tr [class.yellow-row]="v.total < 1">
+                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        <td class="qty">({{ v.qty }})</td>
+                        <td>{{ v.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+
+                    <!-- ELIMINADOS -->
+                    <tr><td colspan="3" class="summary-header-red">Elementos Eliminados</td></tr>
+                    <tr class="category-row red-row">
+                    <td colspan="2"><strong>Hotel</strong></td><td></td>
+                    </tr>
+                    @for (r of s.deleted_rooms; track r.name) {
+                    <tr>
+                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        <td class="qty">({{ r.qty }})</td>
+                        <td>{{ r.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+                    <tr class="category-row red-row">
+                    <td colspan="2"><strong>Actividades</strong></td><td></td>
+                    </tr>
+                    @for (a of s.deleted_activities; track a.name) {
+                    <tr>
+                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        <td class="qty">({{ a.qty }})</td>
+                        <td>{{ a.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+                    <tr class="category-row red-row">
+                    <td colspan="2"><strong>Vehículo</strong></td><td></td>
+                    </tr>
+                    @for (v of s.deleted_vehicles; track v.name) {
+                    <tr>
+                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        <td class="qty">({{ v.qty }})</td>
+                        <td>{{ v.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+
+                    <!-- NUEVOS -->
+                    <tr><td colspan="3" class="summary-header-green">Elementos Añadidos</td></tr>
+                    <tr class="category-row green-row">
+                    <td colspan="2"><strong>Hotel</strong></td><td></td>
+                    </tr>
+                    @for (r of s.new_rooms; track r.name) {
+                    <tr>
+                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        <td class="qty">({{ r.qty }})</td>
+                        <td>{{ r.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+                    <tr class="category-row green-row">
+                    <td colspan="2"><strong>Actividades</strong></td><td></td>
+                    </tr>
+                    @for (a of s.new_activities; track a.name) {
+                    <tr>
+                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        <td class="qty">({{ a.qty }})</td>
+                        <td>{{ a.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+                    <tr class="category-row green-row">
+                    <td colspan="2"><strong>Vehículo</strong></td><td></td>
+                    </tr>
+                    @for (v of s.new_vehicles; track v.name) {
+                    <tr>
+                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        <td class="qty">({{ v.qty }})</td>
+                        <td>{{ v.total | currency:'USD' }}</td>
+                    </tr>
+                    }
+
+                    <!-- TOTALES DIFF -->
+                    <tr class="subtotal-row blue-row">
+                    <td colspan="2">SubTotal Original</td>
+                    <td>+{{ s.base_total | currency:'USD' }}</td>
+                    </tr>
+                    <tr class="subtotal-row red-row">
+                    <td colspan="2">SubTotal Eliminados</td>
+                    <td>-{{ s.deleted_subtotal | currency:'USD' }}</td>
+                    </tr>
+                    <tr class="subtotal-row green-row">
+                    <td colspan="2">SubTotal Nuevos</td>
+                    <td>+{{ s.new_subtotal | currency:'USD' }}</td>
+                    </tr>
+                    <tr class="total-row">
+                    <td colspan="2">Total</td>
+                    <td>{{ s.total | currency:'USD' }}</td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+            }
+
+        } @else {
+            <div class="summary-empty">
+            <p-button label="Cargar resumen" icon="pi pi-calculator" (onClick)="loadSummary()" />
+            </div>
+        }
+        </p-tabpanel>
+        <!-- Tab Ficha AA -->
+        <p-tabpanel value="fileaa">
+          <div class="fileaa-container">
+            <div class="flex justify-between items-center mb-4">
+              <h3>Fichas AA</h3>
+              <p-button
+                icon="pi pi-file-plus"
+                label="Generar Ficha AA"
+                (onClick)="generateFileAA()"
+              />
+            </div>
+            <p class="text-muted">Selecciona Generar Ficha AA para crear una nueva ficha desde la versión actual.</p>
+          </div>
+        </p-tabpanel>
+
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+}
+
+<!-- Dialog agregar vehículo -->
+<p-dialog
+  header="Agregar Vehículo"
+  [visible]="showAddVehicle()"
+  (visibleChange)="showAddVehicle.set($event)"
+  [modal]="true"
+  [style]="{ width: '420px' }"
+>
+  <form [formGroup]="vehicleForm" class="dialog-form">
+    <div class="field">
+      <label>Vehículo *</label>
+      <p-autoComplete
+        formControlName="vehicle"
+        [suggestions]="vehicleSuggestions()"
+        (completeMethod)="searchVehicle($event)"
+        field="name"
+        [forceSelection]="true"
+        placeholder="Buscar vehículo..."
+        styleClass="w-full"
+        appendTo="body"
+      >
+        <ng-template let-v pTemplate="item">
+          <div>{{ v.brand }} {{ v.name }} <small>({{ v.seats }} asientos)</small></div>
+        </ng-template>
+      </p-autoComplete>
+    </div>
+    @if (activeLine()) {
+        <div class="dialog-info">
+          <i class="pi pi-calendar"></i>
+          Fecha: <strong>{{ activeLine()?.date | date:'dd/MM/yyyy' }}</strong>
+        </div>
+      }
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showAddVehicle.set(false)" />
+    <p-button label="Agregar" icon="pi pi-check" [loading]="saving()" (onClick)="submitVehicle()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog agregar habitación -->
+<p-dialog
+  header="Agregar Habitación"
+  [visible]="showAddRoom()"
+  (visibleChange)="showAddRoom.set($event)"
+  [modal]="true"
+  [style]="{ width: '460px' }"
+>
+  <form [formGroup]="roomForm" class="dialog-form">
+    <div class="field">
+      <label>Hotel *</label>
+      <p-autoComplete
+        formControlName="hotel"
+        [suggestions]="hotelSuggestions()"
+        (completeMethod)="searchHotel($event)"
+        (onSelect)="onHotelSelect($event.value)"
+        field="name"
+        [forceSelection]="true"
+        placeholder="Buscar hotel..."
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+    <div class="field">
+      <label>Habitación *</label>
+      <p-select
+        formControlName="room"
+        [options]="roomOptions()"
+        optionLabel="name"
+        placeholder="Seleccionar habitación"
+        styleClass="w-full"
+        [disabled]="roomOptions().length === 0"
+        appendTo="body"
+      />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Adultos adicionales</label>
+        <p-inputNumber formControlName="additional_adults" [min]="0" styleClass="w-full" />
+      </div>
+      <div class="field">
+        <label>Niños adicionales</label>
+        <p-inputNumber formControlName="additional_children" [min]="0" styleClass="w-full" />
+      </div>
+    </div>
+    <div class="dialog-info">
+      <i class="pi pi-calendar"></i>
+      Fecha: <strong>{{ activeLine()?.date | date:'dd/MM/yyyy' }}</strong>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showAddRoom.set(false)" />
+    <p-button label="Agregar" icon="pi pi-check" [loading]="saving()" (onClick)="submitRoom()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog agregar actividad -->
+<p-dialog
+  header="Agregar Actividad"
+  [visible]="showAddActivity()"
+  (visibleChange)="showAddActivity.set($event)"
+  [modal]="true"
+  [style]="{ width: '460px' }"
+>
+  <form [formGroup]="activityForm" class="dialog-form">
+    <div class="field">
+      <label>Actividad *</label>
+      <p-autoComplete
+        formControlName="activity"
+        [suggestions]="activitySuggestions()"
+        (completeMethod)="searchActivity($event)"
+        field="name"
+        [forceSelection]="true"
+        placeholder="Buscar actividad..."
+        styleClass="w-full"
+        appendTo="body"
+      >
+        <ng-template let-a pTemplate="item">
+          <div>{{ a.name }} <small>({{ a.province }})</small></div>
+        </ng-template>
+      </p-autoComplete>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Adultos</label>
+        <p-inputNumber formControlName="adults" [min]="0" styleClass="w-full" />
+      </div>
+      <div class="field">
+        <label>Niños</label>
+        <p-inputNumber formControlName="children" [min]="0" styleClass="w-full" />
+      </div>
+      <div class="field">
+        <label>Gratuitos</label>
+        <p-inputNumber formControlName="free" [min]="0" styleClass="w-full" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Recomendaciones</label>
+      <input pInputText formControlName="recommendation" class="w-full" />
+    </div>
+    <div class="dialog-info">
+      <i class="pi pi-calendar"></i>
+      Fecha: <strong>{{ activeLine()?.date | date:'dd/MM/yyyy' }}</strong>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showAddActivity.set(false)" />
+    <p-button label="Agregar" icon="pi pi-check" [loading]="saving()" (onClick)="submitActivity()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog nueva versión -->
+<p-dialog
+  header="Nueva versión"
+  [visible]="showNewVersion()"
+  (visibleChange)="showNewVersion.set($event)"
+  [modal]="true"
+  [style]="{ width: '400px' }"
+>
+  <form [formGroup]="versionForm" class="dialog-form">
+    <div class="field">
+      <label>Notas (opcional)</label>
+      <input pInputText formControlName="notes" class="w-full"
+        placeholder="Ej: Cambio de hotel en San José" />
+    </div>
+    <p class="dialog-info">
+      <i class="pi pi-info-circle"></i>
+      Se copiará todo el itinerario de la versión actual como base.
+    </p>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showNewVersion.set(false)" />
+    <p-button label="Crear versión" icon="pi pi-copy" [loading]="saving()" (onClick)="submitNewVersion()" />
+  </ng-template>
+</p-dialog>

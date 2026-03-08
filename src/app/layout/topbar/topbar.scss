@@ -1,0 +1,47 @@
+.topbar {
+    height: var(--topbar-height);
+    background: var(--p-surface-card);
+    border-bottom: 1px solid var(--p-surface-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 99;
+  
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 6px;
+      color: var(--p-text-color);
+      font-size: 1.1rem;
+      transition: background 0.2s;
+      &:hover { background: var(--p-surface-hover); }
+    }
+  
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+  
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+  
+    .role-badge {
+      background: var(--p-primary-100);
+      color: var(--p-primary-700);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+  }

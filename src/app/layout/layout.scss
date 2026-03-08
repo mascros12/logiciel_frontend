@@ -1,0 +1,29 @@
+.app-shell {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 64px;
+    --topbar-height: 56px;
+  
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      margin-left: var(--sidebar-width);
+      transition: margin-left 0.3s ease;
+  
+      .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+        background: var(--p-surface-ground);
+      }
+    }
+  
+    &.sidebar-collapsed .main-area {
+      margin-left: var(--sidebar-collapsed-width);
+    }
+  }

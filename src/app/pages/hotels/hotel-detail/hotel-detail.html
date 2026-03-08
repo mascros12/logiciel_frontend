@@ -1,0 +1,220 @@
+<p-toast />
+<p-confirmDialog />
+
+@if (loading()) {
+  <div class="page-container">
+    <p-skeleton height="60px" styleClass="mb-3" />
+    <p-skeleton height="400px" />
+  </div>
+} @else if (hotel(); as h) {
+
+  <!-- Header -->
+  <div class="detail-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="router.navigate(['/hoteles'])">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div>
+        <h2>{{ h.name }}</h2>
+        <div class="header-meta">
+          @if (h.province) { <span class="meta-item"><i class="pi pi-map-marker"></i> {{ h.province }}</span> }
+          @if (h.address)  { <span class="meta-item"><i class="pi pi-home"></i> {{ h.address }}</span> }
+          @if (h.category) { <span class="meta-item"><i class="pi pi-star"></i> {{ h.category }}</span> }
+          <span class="meta-item"><i class="pi pi-percentage"></i> Comisión: {{ h.commission }}</span>
+        </div>
+      </div>
+    </div>
+    <p-button label="Nueva habitación" icon="pi pi-plus" (onClick)="openAddRoom()" />
+  </div>
+
+  <!-- Tabla de habitaciones -->
+  <div class="detail-body">
+    @if (h.rooms.length === 0) {
+      <div class="empty-rooms">
+        <i class="pi pi-inbox" style="font-size:2rem; color: var(--p-text-muted-color)"></i>
+        <p>Sin habitaciones — agrega la primera</p>
+      </div>
+    } @else {
+      <p-table [value]="h.rooms" styleClass="p-datatable-gridlines" [rowHover]="true">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Habitación</th>
+            <th colspan="2" class="th-center th-high">Alta</th>
+            <th colspan="2" class="th-center th-medium">Media</th>
+            <th colspan="2" class="th-center th-low">Baja</th>
+            <th colspan="2" class="th-center">Adulto adicional</th>
+            <th colspan="2" class="th-center">Niño adicional</th>
+            <th style="width:110px">Acciones</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+            <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+            <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+            <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+            <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+            <th></th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-room>
+          <tr>
+            <td><strong>{{ room.name }}</strong></td>
+            <td>{{ priceOrDash(room.net_high_price) }}</td>
+            <td class="rack">{{ priceOrDash(room.rack_high_price) }}</td>
+            <td>{{ priceOrDash(room.net_medium_price) }}</td>
+            <td class="rack">{{ priceOrDash(room.rack_medium_price) }}</td>
+            <td>{{ priceOrDash(room.net_low_price) }}</td>
+            <td class="rack">{{ priceOrDash(room.rack_low_price) }}</td>
+            <td>{{ priceOrDash(room.net_additional_adult) }}</td>
+            <td class="rack">{{ priceOrDash(room.rack_additional_adult) }}</td>
+            <td>{{ priceOrDash(room.net_additional_child) }}</td>
+            <td class="rack">{{ priceOrDash(room.rack_additional_child) }}</td>
+            <td>
+              <div class="flex gap-1">
+                <p-button icon="pi pi-calendar" [text]="true" size="small"
+                  pTooltip="Temporadas" (onClick)="openSeasons(room)" />
+                <p-button icon="pi pi-pencil" [text]="true" size="small"
+                  (onClick)="openEditRoom(room)" />
+                <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+                  (onClick)="confirmDeleteRoom($event, room.id)" />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </div>
+}
+
+<!-- Dialog habitación -->
+<p-dialog
+  [header]="editingRoom() ? 'Editar Habitación' : 'Nueva Habitación'"
+  [visible]="showRoomDialog()"
+  (visibleChange)="showRoomDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '680px' }"
+>
+  <form [formGroup]="roomForm" class="room-form">
+    <div class="field">
+      <label>Nombre *</label>
+      <input pInputText formControlName="name" class="w-full" placeholder="Habitación doble, Suite..." />
+    </div>
+
+    <table class="prices-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="col-high">Alta</th>
+          <th class="col-medium">Media</th>
+          <th class="col-low">Baja</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="row-label">Neto</td>
+          <td><p-inputNumber formControlName="net_high_price"   mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td><p-inputNumber formControlName="net_medium_price" mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td><p-inputNumber formControlName="net_low_price"    mode="currency" currency="USD" styleClass="w-full" /></td>
+        </tr>
+        <tr>
+          <td class="row-label rack-row">Rack</td>
+          <td><p-inputNumber formControlName="rack_high_price"   mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td><p-inputNumber formControlName="rack_medium_price" mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td><p-inputNumber formControlName="rack_low_price"    mode="currency" currency="USD" styleClass="w-full" /></td>
+        </tr>
+        <tr class="section-row"><td colspan="4"><strong>Adultos / Niños adicionales</strong></td></tr>
+        <tr>
+          <td class="row-label">Neto</td>
+          <td><p-inputNumber formControlName="net_additional_adult"  mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td><p-inputNumber formControlName="net_additional_child"  mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="row-label rack-row">Rack</td>
+          <td><p-inputNumber formControlName="rack_additional_adult" mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td><p-inputNumber formControlName="rack_additional_child" mode="currency" currency="USD" styleClass="w-full" /></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showRoomDialog.set(false)" />
+    <p-button [label]="editingRoom() ? 'Guardar' : 'Agregar'" icon="pi pi-check"
+      [loading]="savingRoom()" (onClick)="submitRoom()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog temporadas de habitación -->
+<p-dialog
+  [header]="'Temporadas — ' + (seasonRoom()?.name ?? '')"
+  [visible]="showSeasonDialog()"
+  (visibleChange)="showSeasonDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '560px' }"
+>
+  @if (seasonRoom(); as room) {
+
+    @for (grade of ['high', 'medium', 'low']; track grade) {
+      @if (seasonsByGrade(room.seasons, grade).length > 0) {
+        <div class="season-group">
+          <p-tag [value]="gradeLabels[grade]" [severity]="gradeSeverity[grade]" styleClass="mb-2" />
+          @for (s of seasonsByGrade(room.seasons, grade); track s.id) {
+            <div class="season-row">
+              <span>{{ s.start_date }} → {{ s.end_date }}</span>
+              <span class="season-price">${{ s.net_price }}</span>
+              <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+                (onClick)="deleteSeason(s.id)" />
+            </div>
+          }
+        </div>
+      }
+    }
+
+    @if (room.seasons.length === 0) {
+      <p class="no-seasons">Sin temporadas configuradas.</p>
+    }
+
+    <div class="season-divider"></div>
+    <p class="section-label">Agregar temporada</p>
+
+    <form [formGroup]="seasonForm" class="season-form">
+      <div class="field-row">
+        <div class="field">
+          <label>Tipo *</label>
+          <p-select formControlName="grade" [options]="gradeOptions"
+            optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body" />
+        </div>
+        <div class="field">
+          <label>Precio neto *</label>
+          <p-inputNumber formControlName="net_price" mode="currency" currency="USD" styleClass="w-full" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Desde *</label>
+          <p-datepicker formControlName="start_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+        </div>
+        <div class="field">
+          <label>Hasta *</label>
+          <p-datepicker formControlName="end_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Adulto adicional</label>
+          <p-inputNumber formControlName="net_additional_adult" mode="currency" currency="USD" styleClass="w-full" />
+        </div>
+        <div class="field">
+          <label>Niño adicional</label>
+          <p-inputNumber formControlName="net_additional_child" mode="currency" currency="USD" styleClass="w-full" />
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <p-button label="Agregar" icon="pi pi-plus" [loading]="savingSeason()" (onClick)="submitSeason()" />
+      </div>
+    </form>
+  }
+</p-dialog>

@@ -1,0 +1,13 @@
+<header class="topbar">
+    <button class="toggle-btn" (click)="toggleSidebar.emit()">
+      <i class="pi pi-bars"></i>
+    </button>
+  
+    <div class="topbar-right">
+      <div class="user-info">
+        <i class="pi pi-user"></i>
+        <span>{{ auth.currentUser()?.full_name }}</span>
+        <span class="role-badge">{{ auth.currentUser()?.role }}</span>
+      </div>
+    </div>
+  </header>
