@@ -3,11 +3,30 @@
 
 <div class="page-container">
   <div class="flex justify-between items-center mb-4">
-    <h2 class="page-title">Vehículos</h2>
-    <p-button label="Nuevo vehículo" icon="pi pi-plus" (onClick)="openCreate()" />
+    <div class="flex items-center gap-3">
+      <h2 class="page-title">Vehículos</h2>
+      <span class="subtitle">Listado de vehículos registrados</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="search-wrapper">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          type="text"
+          placeholder="Buscar por nombre, marca o categoría..."
+          [(ngModel)]="searchTerm"
+        />
+      </span>
+      <p-button label="Nuevo vehículo" icon="pi pi-plus" (onClick)="openCreate()" />
+    </div>
   </div>
 
-  <p-table [value]="vehicles()" [loading]="loading()" styleClass="p-datatable-gridlines" [rowHover]="true">
+  <p-table
+    [value]="vehicles() | vehicleFilter: searchTerm"
+    [loading]="loading()"
+    styleClass="p-datatable-gridlines"
+    [rowHover]="true"
+  >
     <ng-template pTemplate="header">
       <tr>
         <th>Nombre</th>

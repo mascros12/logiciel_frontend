@@ -3,16 +3,30 @@
 
 <div class="page-container">
   <div class="flex justify-between items-center mb-4">
-    <h2 class="page-title">Actividades</h2>
-    <p-button label="Nueva actividad" icon="pi pi-plus" (onClick)="openCreate()" />
+    <div class="flex items-center gap-3">
+      <h2 class="page-title">Actividades</h2>
+      <span class="subtitle">Listado de actividades registradas</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="search-wrapper">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          type="text"
+          placeholder="Buscar por nombre, provincia o categoría..."
+          [(ngModel)]="searchTerm"
+        />
+      </span>
+      <p-button label="Nueva actividad" icon="pi pi-plus" (onClick)="openCreate()" />
+    </div>
   </div>
 
   <p-table
-  [value]="activities()"
-  [loading]="loading()"
-  styleClass="p-datatable-gridlines"
-  [rowHover]="true"
->
+    [value]="activities() | activityFilter: searchTerm"
+    [loading]="loading()"
+    styleClass="p-datatable-gridlines"
+    [rowHover]="true"
+  >
   <ng-template pTemplate="header">
     <tr>
       <th>Actividad</th>

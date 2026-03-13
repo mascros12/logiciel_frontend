@@ -44,6 +44,12 @@ export const routes: Routes = [
           import('./pages/hotels/hotel-list/hotel-list')
             .then(m => m.HotelList)
       },
+      { 
+        path: 'hoteles/:id', 
+        loadComponent: () => 
+          import('./pages/hotels/hotel-detail/hotel-detail')
+            .then(m => m.HotelDetail) 
+      },
       {
         path: 'contactos',
         loadComponent: () =>

@@ -13,17 +13,19 @@ import { SelectModule } from 'primeng/select';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ActivityService } from '../../../core/services/activity.service';
 import { Activity } from '../../../core/models/activity.model';
+import { FormsModule } from '@angular/forms';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
+import { ActivityFilterPipe } from './activity-filter.pipe';
 
 @Component({
   selector: 'app-activity-list',
   standalone: true,
   imports: [
-    DecimalPipe, ReactiveFormsModule,
+    DecimalPipe, ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TagModule, SelectModule,
-    RichTextPipe,
+    RichTextPipe, ActivityFilterPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './activity-list.html',
@@ -34,6 +36,7 @@ export class ActivityList implements OnInit {
   total = signal(0);
   loading = signal(false);
   saving = signal(false);
+  searchTerm = '';
 
   showDialog = signal(false);
   editingId = signal<string | null>(null);

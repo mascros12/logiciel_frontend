@@ -1,38 +1,33 @@
-export interface QuotationVehicle {
+interface QuotationVehicle {
   id: string;
-  vehicle_id: string | null;
   name: string;
   grade: string;
-  net_price: number;
-  rack_price: number;
-  net_weekly_price: number;
-  rack_weekly_price: number;
+  is_original: boolean;
+  deleted: boolean;
+  total: number;
 }
 
-export interface QuotationRoom {
+interface QuotationRoom {
   id: string;
-  room_id: string | null;
   name: string;
   grade: string;
-  net_price: number;
-  rack_price: number;
   additional_adults: number;
   additional_children: number;
-  net_additional_adult: number;
-  net_additional_child: number;
+  is_original: boolean;
+  deleted: boolean;
+  total: number;
 }
 
-export interface QuotationActivity {
+interface QuotationActivity {
   id: string;
-  activity_id: string | null;
   name: string;
+  recommendation: string;
   grade: string;
   adults: number;
   children: number;
-  free: number;
-  net_price: number;
-  rack_price: number;
-  recommendation: string | null;
+  is_original: boolean;
+  deleted: boolean;
+  total: number;
 }
 
 export interface QuotationLine {

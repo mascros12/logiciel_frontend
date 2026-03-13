@@ -100,7 +100,7 @@
                   <tr>
                     <th class="col-date">Día</th>
                     <th class="col-hotel" colspan="2">Hotel / Habitación</th>
-                    <th class="col-activity" colspan="2">Actividad</th>
+                    <th class="col-activity" colspan="3">Actividad</th>
                     <th class="col-vehicle" colspan="2">Vehículo</th>
                   </tr>
                 </thead>
@@ -128,14 +128,17 @@
                       <td class="cell-services">
                         @if (line.rooms.length > 0) {
                           @for (room of line.rooms; track room.id) {
-                            <div class="service-chip" [ngClass]="'grade-' + room.grade">
-                              <span class="service-name">{{ room.name }}</span>
+                            <div class="service-chip" [ngClass]="getChipClass(room)">
+                              <span class="service-name" [innerHTML]="room.name | richText"></span>
                               @if (room.additional_adults > 0) {
                                 <small>+{{ room.additional_adults }}A</small>
                               }
                               @if (room.additional_children > 0) {
                                 <small>+{{ room.additional_children }}N</small>
                               }
+                              <p-button icon="pi pi-times" [text]="true" size="small"
+                                styleClass="chip-delete-btn"
+                                (onClick)="deleteRoom(room.id)" />
                             </div>
                           }
                         } @else {
@@ -158,13 +161,30 @@
                       <td class="cell-services">
                         @if (line.activities.length > 0) {
                           @for (act of line.activities; track act.id) {
-                            <div class="service-chip" [ngClass]="'grade-' + act.grade">
-                              <span class="service-name">{{ act.name }}</span>
+                            <div class="service-chip" [ngClass]="getChipClass(act)">
+                              <span class="service-name" [innerHTML]="act.name | richText"></span>
                               <small>{{ act.adults }}A {{ act.children }}N</small>
+                              <p-button icon="pi pi-times" [text]="true" size="small"
+                                styleClass="chip-delete-btn"
+                                (onClick)="deleteActivity(act.id)" />
                             </div>
                           }
                         } @else {
                           <span class="empty-cell">—</span>
+                        }
+                      </td>
+                      
+                      <!-- Recomendaciones de actividades -->
+                      <td class="cell-recommendations">
+                        @if (line.activities.length > 0) {
+                          @for (act of line.activities; track act.id) {
+                            @if (act.recommendation) {
+                              <div class="recommendation-item">
+                                <i class="pi pi-comment"></i>
+                                {{ act.recommendation }}
+                              </div>
+                            }
+                          }
                         }
                       </td>
 
@@ -183,8 +203,11 @@
                       <td class="cell-services">
                         @if (line.vehicles.length > 0) {
                           @for (v of line.vehicles; track v.id) {
-                            <div class="service-chip" [ngClass]="'grade-' + v.grade">
-                              <span class="service-name">{{ v.name }}</span>
+                            <div class="service-chip" [ngClass]="getChipClass(v)">
+                              <span class="service-name" [innerHTML]="v.name | richText"></span>
+                              <p-button icon="pi pi-times" [text]="true" size="small"
+                                styleClass="chip-delete-btn"
+                                (onClick)="deleteVehicle(v.id)" />
                             </div>
                           }
                         } @else {
@@ -437,27 +460,48 @@
   <form [formGroup]="vehicleForm" class="dialog-form">
     <div class="field">
       <label>Vehículo *</label>
-      <p-autoComplete
+      <p-select
         formControlName="vehicle"
-        [suggestions]="vehicleSuggestions()"
-        (completeMethod)="searchVehicle($event)"
-        field="name"
-        [forceSelection]="true"
+        [options]="vehicleOptions()"
+        optionLabel="name"
+        [filter]="true"
+        filterBy="name,brand"
         placeholder="Buscar vehículo..."
         styleClass="w-full"
         appendTo="body"
+        emptyFilterMessage="Sin resultados"
+        emptyMessage="Sin opciones"
       >
-        <ng-template let-v pTemplate="item">
-          <div>{{ v.brand }} {{ v.name }} <small>({{ v.seats }} asientos)</small></div>
+        <ng-template let-v pTemplate="selectedItem">
+          <span [innerHTML]="v.name | richText"></span>
         </ng-template>
-      </p-autoComplete>
+        <ng-template let-v pTemplate="item">
+          <div [innerHTML]="v.name | richText"></div>
+          <small>{{ v.brand }} · {{ v.seats }} asientos</small>
+        </ng-template>
+      </p-select>
     </div>
-    @if (activeLine()) {
-        <div class="dialog-info">
-          <i class="pi pi-calendar"></i>
-          Fecha: <strong>{{ activeLine()?.date | date:'dd/MM/yyyy' }}</strong>
-        </div>
-      }
+
+    <div class="field-row">
+      <div class="field">
+        <label>Fecha inicio *</label>
+        <p-datepicker
+          formControlName="start_date"
+          dateFormat="dd/mm/yy"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div class="field">
+        <label>Fecha fin *</label>
+        <p-datepicker
+          formControlName="end_date"
+          dateFormat="dd/mm/yy"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+    </div>
   </form>
   <ng-template pTemplate="footer">
     <p-button label="Cancelar" [text]="true" (onClick)="showAddVehicle.set(false)" />
@@ -476,17 +520,21 @@
   <form [formGroup]="roomForm" class="dialog-form">
     <div class="field">
       <label>Hotel *</label>
-      <p-autoComplete
+      <p-select
         formControlName="hotel"
-        [suggestions]="hotelSuggestions()"
-        (completeMethod)="searchHotel($event)"
-        (onSelect)="onHotelSelect($event.value)"
-        field="name"
-        [forceSelection]="true"
+        [options]="hotelOptions()"
+        optionLabel="name"
+        [filter]="true"
+        filterBy="name"
         placeholder="Buscar hotel..."
         styleClass="w-full"
         appendTo="body"
-      />
+        (onChange)="onHotelSelect($event.value)"
+      >
+        <ng-template let-h pTemplate="selectedItem">
+          <span [innerHTML]="h.name | richText"></span>
+        </ng-template>
+      </p-select>
     </div>
     <div class="field">
       <label>Habitación *</label>
@@ -532,20 +580,24 @@
   <form [formGroup]="activityForm" class="dialog-form">
     <div class="field">
       <label>Actividad *</label>
-      <p-autoComplete
+      <p-select
         formControlName="activity"
-        [suggestions]="activitySuggestions()"
-        (completeMethod)="searchActivity($event)"
-        field="name"
-        [forceSelection]="true"
+        [options]="activityOptions()"
+        optionLabel="name"
+        [filter]="true"
+        filterBy="name"
         placeholder="Buscar actividad..."
         styleClass="w-full"
         appendTo="body"
       >
-        <ng-template let-a pTemplate="item">
-          <div>{{ a.name }} <small>({{ a.province }})</small></div>
+        <ng-template let-a pTemplate="selectedItem">
+          <span [innerHTML]="a.name | richText"></span>
         </ng-template>
-      </p-autoComplete>
+        <ng-template let-a pTemplate="item">
+          <div [innerHTML]="a.name | richText"></div>
+          <small>{{ a.province }}</small>
+        </ng-template>
+      </p-select>
     </div>
     <div class="field-row">
       <div class="field">

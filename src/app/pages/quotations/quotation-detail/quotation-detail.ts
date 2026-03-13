@@ -17,6 +17,7 @@ import { MessageService } from 'primeng/api';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { FormsModule } from '@angular/forms';
 import { QuotationSummary } from '../../../core/models/quotation.model';
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { QuotationService } from '../../../core/services/quotation.service';
 import { ProviderService } from '../../../core/services/provider.service';
@@ -27,6 +28,7 @@ import {
 import {
   VehicleOption, HotelOption, RoomOption, ActivityOption
 } from '../../../core/models/provider.model';
+import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 
 @Component({
   selector: 'app-quotation-detail',
@@ -36,7 +38,7 @@ import {
     TabsModule, ButtonModule, TableModule, TagModule,
     DialogModule, SelectModule, InputTextModule, InputNumberModule,
     ToastModule, SkeletonModule, TooltipModule, AutoCompleteModule,
-    FormsModule,
+    FormsModule, DatePickerModule, RichTextPipe
   ],
   providers: [MessageService],
   templateUrl: './quotation-detail.html',
@@ -97,7 +99,9 @@ export class QuotationDetail implements OnInit {
     private messageService: MessageService,
   ) {
     this.vehicleForm = this.fb.group({
-      vehicle: [null, Validators.required],
+      vehicle:    [null, Validators.required],
+      start_date: [null, Validators.required],
+      end_date:   [null, Validators.required],
     });
     this.roomForm = this.fb.group({
       hotel: [null, Validators.required],
@@ -196,11 +200,19 @@ export class QuotationDetail implements OnInit {
     );
   }
 
+  ItemLabel(o: any): string {
+    return o?.name ?? '';
+  }
+
   // ─── Abrir dialogs ─────────────────────────────────────────
 
   openAddVehicle(line: QuotationLine) {
     this.activeLine.set(line);
-    this.vehicleForm.reset();
+    const lineDate = new Date(line.date + 'T00:00:00');
+    this.vehicleForm.reset({
+      start_date: lineDate,
+      end_date: lineDate,
+    });
     this.showAddVehicle.set(true);
   }
 
@@ -218,34 +230,53 @@ export class QuotationDetail implements OnInit {
   }
 
   // ─── Guardar items ─────────────────────────────────────────
-
+  vehicleName(v: any): string {
+    return v?.name ?? '';
+  }
   submitVehicle() {
     if (this.vehicleForm.invalid) return;
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
-    const line = this.activeLine()!;
-    const vehicle: VehicleOption = this.vehicleForm.value.vehicle;
-
+    const vehicle = this.vehicleForm.value.vehicle;
+    const startDate = new Date(this.vehicleForm.value.start_date);
+    const endDate = new Date(this.vehicleForm.value.end_date);
+  
+    if (endDate < startDate) {
+      this.messageService.add({ severity: 'warn', summary: 'La fecha fin debe ser mayor o igual a la fecha inicio' });
+      return;
+    }
+  
+    // Generar array de fechas del rango
+    const dates: string[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+  
     this.saving.set(true);
-    const body: AddVehicleRequest = {
-      vehicle_id: vehicle.id,
-      date: line.date,
-    };
-
-    this.quotationService.addVehicle(q.id, version.id, body).subscribe({
-      next: () => {
-        this.showAddVehicle.set(false);
-        this.saving.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Vehículo agregado' });
-        this.load(q.id);
-      },
-      error: (err) => {
-        this.saving.set(false);
-        this.messageService.add({
-          severity: 'error',
-          summary: err.error?.detail ?? 'Error al agregar vehículo'
-        });
-      }
+  
+    // Crear una request por cada día
+    const requests = dates.map(date =>
+      this.quotationService.addVehicle(q.id, version.id, {
+        vehicle_id: vehicle.id,
+        date,
+      })
+    );
+  
+    import('rxjs').then(({ forkJoin }) => {
+      forkJoin(requests).subscribe({
+        next: () => {
+          this.showAddVehicle.set(false);
+          this.saving.set(false);
+          this.messageService.add({ severity: 'success', summary: `Vehículo agregado (${dates.length} días)` });
+          this.load(q.id);
+        },
+        error: (err) => {
+          this.saving.set(false);
+          this.messageService.add({ severity: 'error', summary: err.error?.detail ?? 'Error al agregar vehículo' });
+        }
+      });
     });
   }
 
@@ -388,5 +419,45 @@ export class QuotationDetail implements OnInit {
   formatTime(t: string | null): string {
     if (!t) return '';
     return t.substring(0, 5);
+  }
+
+  deleteVehicle(id: string) {
+    const q = this.quotation()!;
+    this.quotationService.deleteVehicle(id).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Vehículo eliminado' });
+        this.load(q.id);
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error al eliminar' }),
+    });
+  }
+  
+  deleteRoom(id: string) {
+    const q = this.quotation()!;
+    this.quotationService.deleteRoom(id).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Habitación eliminada' });
+        this.load(q.id);
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error al eliminar' }),
+    });
+  }
+  
+  deleteActivity(id: string) {
+    const q = this.quotation()!;
+    this.quotationService.deleteActivity(id).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Actividad eliminada' });
+        this.load(q.id);
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error al eliminar' }),
+    });
+  }
+
+  getChipClass(item: { is_original: boolean; deleted: boolean; [key: string]: any }): string {
+    if (item.deleted) return 'chip-deleted';
+    if (item.is_original) return 'chip-original';
+    if (item['total'] === 0 || item['total'] === null) return 'chip-no-price';
+    return 'chip-new';
   }
 }

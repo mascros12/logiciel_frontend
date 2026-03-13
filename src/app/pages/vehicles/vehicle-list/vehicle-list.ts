@@ -16,16 +16,18 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { Vehicle, VehicleSeason } from '../../../core/models/vehicle.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
+import { FormsModule } from '@angular/forms';
+import { VehicleFilterPipe } from './vehicle-filter.pipe';
 
 @Component({
   selector: 'app-vehicle-list',
   standalone: true,
   imports: [
-    DecimalPipe, ReactiveFormsModule,
+    DecimalPipe, ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
-    DatePickerModule, TagModule, RichTextPipe,
+    DatePickerModule, TagModule, RichTextPipe, VehicleFilterPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './vehicle-list.html',
@@ -35,6 +37,7 @@ export class VehicleList implements OnInit {
   vehicles = signal<Vehicle[]>([]);
   loading = signal(false);
   saving = signal(false);
+  searchTerm = '';
 
   showDialog = signal(false);
   editingVehicle = signal<Vehicle | null>(null);

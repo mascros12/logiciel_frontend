@@ -72,4 +72,16 @@ export class QuotationService {
       `${this.url}/${quotationId}/versions/${versionId}/summary`
     );
   }
+
+  deleteVehicle(id: string) {
+    return this.http.delete(`${environment.apiUrl}/quotations/vehicles/${id}`);
+  }
+  
+  deleteRoom(id: string) {
+    return this.http.delete(`${environment.apiUrl}/quotations/rooms/${id}`);
+  }
+  
+  deleteActivity(id: string) {
+    return this.http.delete(`${environment.apiUrl}/quotations/activities/${id}`);
+  }
 }

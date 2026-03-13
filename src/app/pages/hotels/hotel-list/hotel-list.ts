@@ -13,14 +13,18 @@ import { TagModule } from 'primeng/tag';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
 import { Hotel } from '../../../core/models/hotel.model';
+import { FormsModule } from '@angular/forms';
+import { HotelFilterPipe } from './hotel-filter.pipe';
 
 @Component({
   selector: 'app-hotel-list',
   standalone: true,
   imports: [
-    ReactiveFormsModule, TableModule, ButtonModule, DialogModule,
+    ReactiveFormsModule, FormsModule,
+    TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, SelectModule, TagModule,
+    HotelFilterPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-list.html',
@@ -28,6 +32,7 @@ import { Hotel } from '../../../core/models/hotel.model';
 })
 export class HotelList implements OnInit {
   hotels = signal<Hotel[]>([]);
+  searchTerm = '';
   loading = signal(false);
   saving = signal(false);
   showDialog = signal(false);
