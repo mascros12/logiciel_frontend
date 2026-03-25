@@ -21,11 +21,10 @@ export class Sidebar {
   collapsed = input(false);
 
   navItems: NavItem[] = [
-    { label: 'Cotizaciones', icon: 'pi pi-file', route: '/cotizaciones' },
-    { label: 'Contactos', icon: 'pi pi-users', route: '/contactos' },
-    { label: 'Actividades', icon: 'pi pi-map-marker', route: '/actividades' },
-    { label: 'Vehículos', icon: 'pi pi-car', route: '/vehiculos' },
     { label: 'Hoteles', icon: 'pi pi-building', route: '/hoteles' },
+    { label: 'Vehículos', icon: 'pi pi-car', route: '/vehiculos' },
+    { label: 'Actividades', icon: 'pi pi-map-marker', route: '/actividades' },
+    { label: 'Cotizaciones', icon: 'pi pi-file', route: '/cotizaciones' },
   ];
 
   constructor(public auth: AuthService) {}

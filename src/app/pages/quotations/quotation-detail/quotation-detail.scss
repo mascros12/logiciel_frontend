@@ -10,7 +10,7 @@
     flex-wrap: wrap;
   
     h2 {
-      font-size: 1.4rem;
+      font-size: 1.525rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
     }
@@ -25,9 +25,9 @@
       display: flex;
       align-items: center;
       gap: 0.35rem;
-      font-size: 0.85rem;
+      font-size: 0.975rem;
       color: var(--p-text-muted-color);
-      i { font-size: 0.8rem; }
+      i { font-size: 0.925rem; }
     }
   
     .header-right {
@@ -42,7 +42,7 @@
       flex-direction: column;
       gap: 0.25rem;
       label {
-        font-size: 0.75rem;
+        font-size: 0.875rem;
         font-weight: 600;
         text-transform: uppercase;
         color: var(--p-text-muted-color);
@@ -59,13 +59,13 @@
       flex-direction: column;
       align-items: flex-end;
       .total-label {
-        font-size: 0.75rem;
+        font-size: 0.875rem;
         text-transform: uppercase;
         color: var(--p-text-muted-color);
         font-weight: 600;
       }
       .total-amount {
-        font-size: 1.5rem;
+        font-size: 1.625rem;
         font-weight: 700;
         color: var(--p-primary-color);
       }
@@ -87,46 +87,72 @@
       display: flex;
       align-items: center;
       gap: 0.35rem;
-      font-size: 0.8rem;
+      font-size: 0.925rem;
       color: var(--p-text-muted-color);
-  
+
       &.normal i { color: var(--p-surface-400); }
       &.low i { color: #6fc4d3; }
       &.medium i { color: #fcca09; }
       &.high i { color: #f8a8a8; }
     }
+
+    &.legend-version {
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--p-surface-border);
+      flex-wrap: wrap;
+      .legend-title {
+        width: 100%;
+        font-weight: 700;
+        font-size: 0.905rem;
+        text-transform: uppercase;
+        color: var(--p-text-muted-color);
+        margin-bottom: 0.25rem;
+      }
+      .chip-legend {
+        &.inherited i { color: #2a8a9e; }
+        &.new i { color: #3d9a38; }
+        &.deleted i { color: #c62828; }
+        &.warning i { color: #c9a100; }
+      }
+    }
   }
   
-  // Tabla de itinerario
+  // Tabla de itinerario — bordes visibles para mayor claridad (accesibilidad)
   .itinerary-table-wrapper {
     overflow-x: auto;
-    border: 1px solid var(--p-surface-border);
+    border: 1px solid #c4cdd5;
     border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
   
   .itinerary-table {
     width: 100%;
     border-collapse: collapse;
     min-width: 900px;
+    --table-border: #c4cdd5;
   
     thead tr {
       background: var(--p-surface-100);
       th {
         padding: 0.65rem 0.75rem;
-        font-size: 0.8rem;
+        font-size: 0.925rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--p-text-muted-color);
-        border-bottom: 2px solid var(--p-surface-border);
+        border: 1px solid var(--table-border);
+        border-bottom: 2px solid #94a3b8;
         text-align: left;
       }
     }
   
+    tbody td {
+      border: 1px solid var(--table-border);
+    }
+  
     tbody tr {
-      border-bottom: 1px solid var(--p-surface-border);
       &:hover { background: var(--p-surface-hover); }
-      &:last-child { border-bottom: none; }
     }
   
     .col-date { width: 80px; }
@@ -135,25 +161,58 @@
     .col-vehicle { }
   
     .cell-date {
+      height: 100%;
       padding: 0.5rem 0.75rem;
       vertical-align: middle;
-      display: flex;
+      //display: flex;
       flex-direction: column;
-      strong { font-size: 0.9rem; }
-      small { color: var(--p-text-muted-color); font-size: 0.75rem; text-transform: capitalize; }
+      border: 0px none !important;
+      border-bottom: 1px solid var(--table-border) !important;
+      strong { font-size: 1.025rem; }
+      small { color: var(--p-text-muted-color); font-size: 0.875rem; text-transform: capitalize; }
     }
   
     .cell-add {
       padding: 0.25rem;
       vertical-align: middle;
       width: 36px;
-      border-left: 2px solid var(--p-surface-border);
+      border-left: 1px solid var(--table-border);
     }
   
     .cell-services {
       padding: 0.35rem 0.5rem;
       vertical-align: middle;
       min-width: 180px;
+    }
+
+    .cell-services-activities {
+      min-width: 220px;
+    }
+
+    .activity-block {
+      margin-bottom: 0.5rem;
+      &:last-child { margin-bottom: 0; }
+    }
+
+    .activity-comment {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+      padding: 0.35rem 0.45rem;
+      font-size: 0.905rem;
+      color: var(--p-text-muted-color);
+      line-height: 1.35;
+      background: var(--p-surface-50);
+      border: 1px solid var(--table-border);
+      border-radius: 6px;
+
+      i {
+        font-size: 0.875rem;
+        margin-top: 2px;
+        flex-shrink: 0;
+        color: var(--p-primary-color);
+      }
     }
   }
   
@@ -165,29 +224,41 @@
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     margin: 2px;
-    font-size: 0.8rem;
+    font-size: 0.925rem;
   
-    // 🟢 Verde — agregado en esta versión
+    // 🟢 Verde — nuevo en esta versión (v2+, is_original=true)
     &.chip-new {
       background: #7fd37b;
       color: #1a4a1a;
     }
-  
-    // 🔵 Azul — original sin cambios
-    &.chip-original {
+
+    // 🔵 Azul — heredado de la versión anterior (v2+, is_original=false)
+    &.chip-inherited {
       background: #6fc4d3;
       color: #0a3a4a;
     }
-  
-    // 🔴 Rojo — eliminado
+
+    // v1: chip neutro si ya tiene precio (temporada = leyenda de arriba)
+    &.chip-v1-neutral {
+      background: var(--p-surface-100);
+      color: var(--p-text-color);
+      border: 1px solid var(--p-surface-border);
+    }
+
+    // 🔴 Rojo — eliminado (soft delete)
     &.chip-deleted {
       background: #f8a8a8;
       color: #7a1f1f;
       text-decoration: line-through;
-      opacity: 0.8;
+      opacity: 0.85;
     }
-  
-    // 🟡 Amarillo — sin precios
+
+    // 🟡 Amarillo — precio neto 0 (falta configurar / temporada)
+    &.chip-warning {
+      background: #fcca09;
+      color: #5a4a00;
+    }
+
     &.chip-no-price {
       background: #fcca09;
       color: #5a4a00;
@@ -205,7 +276,7 @@
   
   .empty-cell {
     color: var(--p-surface-400);
-    font-size: 0.85rem;
+    font-size: 0.975rem;
   }
   
   // Dialogs
@@ -219,7 +290,7 @@
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
-      label { font-size: 0.875rem; font-weight: 500; }
+      label { font-size: 1rem; font-weight: 500; }
     }
   
     .field-row {
@@ -229,37 +300,41 @@
     }
   }
   
+  // .dialog-info base está en styles.scss; aquí solo ajustes del detalle de cotización
   .dialog-info {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85rem;
-    color: var(--p-text-muted-color);
-    background: var(--p-surface-ground);
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
+    color: var(--p-text-color);
   }
   
   .fileaa-container {
     padding: 1rem 0;
-    h3 { font-size: 1.1rem; font-weight: 600; }
+    h3 { font-size: 1.225rem; font-weight: 600; }
   }
   
-  .text-muted { color: var(--p-text-muted-color); font-size: 0.9rem; }
+  .text-muted { color: var(--p-text-muted-color); font-size: 1.025rem; }
 
   // Summary table
+.summary-table-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
 .summary-table {
     max-width: 600px;
-    margin: 1rem 0;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   
     table {
       width: 100%;
       border-collapse: collapse;
+      --table-border: #c4cdd5;
   
       td, th {
         padding: 0.5rem 0.75rem;
-        border: 1px solid var(--p-surface-border);
-        font-size: 0.875rem;
+        border: 1px solid var(--table-border);
+        font-size: 1rem;
       }
   
       .qty { width: 60px; text-align: center; color: var(--p-text-muted-color); }
@@ -287,26 +362,12 @@
     background: #042a7e;
     color: white;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
   
   .summary-empty {
     padding: 2rem;
     display: flex;
     justify-content: center;
-  }
-
-  .cell-recommendations {
-    font-size: 0.78rem;
-    color: var(--p-text-muted-color);
-    min-width: 120px;
-    max-width: 180px;
-  }
-  
-  .recommendation-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.3rem;
-    margin-bottom: 3px;
-    i { font-size: 0.75rem; margin-top: 2px; flex-shrink: 0; }
+    align-items: center;
   }

@@ -15,6 +15,8 @@ import { HotelService } from '../../../core/services/hotel.service';
 import { Hotel } from '../../../core/models/hotel.model';
 import { FormsModule } from '@angular/forms';
 import { HotelFilterPipe } from './hotel-filter.pipe';
+import { DecimalPipe } from '@angular/common';
+import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 
 @Component({
   selector: 'app-hotel-list',
@@ -24,7 +26,7 @@ import { HotelFilterPipe } from './hotel-filter.pipe';
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, SelectModule, TagModule,
-    HotelFilterPipe,
+    HotelFilterPipe, DecimalPipe, RichTextPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-list.html',

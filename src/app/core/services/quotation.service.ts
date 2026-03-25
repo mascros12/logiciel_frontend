@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
-  Quotation, QuotationFull, QuotationListResponse,
-  QuotationCreate, QuotationVersion,
+  Quotation, QuotationFull, QuotationListResponse, QuotationLine,
+  QuotationCreate, QuotationUpdate, QuotationVersion,
   AddVehicleRequest, AddRoomRequest, AddActivityRequest,
   QuotationSummary
 } from '../models/quotation.model';
@@ -25,8 +25,35 @@ export class QuotationService {
     return this.http.get<QuotationFull>(`${this.url}/${id}`);
   }
 
+  getVersionLines(quotationId: string, versionId: string) {
+    return this.http.get<QuotationLine[]>(
+      `${this.url}/${quotationId}/versions/${versionId}/lines`
+    );
+  }
+
+  syncCalendar(quotationId: string, versionId: string, body: { from_date: string; to_date: string }) {
+    return this.http.post<{ ok: boolean; from_date: string; to_date: string }>(
+      `${this.url}/${quotationId}/versions/${versionId}/sync-calendar`,
+      body
+    );
+  }
+
+  /** Desplaza todos los días de la agenda y las fechas del viaje según la nueva primera fecha. */
+  shiftItineraryDates(quotationId: string, versionId: string, body: { new_first_date: string }) {
+    return this.http.post<{
+      ok: boolean;
+      delta_days: number;
+      old_first: string;
+      new_first: string;
+    }>(`${this.url}/${quotationId}/versions/${versionId}/shift-itinerary-dates`, body);
+  }
+
   create(body: QuotationCreate) {
     return this.http.post<Quotation>(this.url, body);
+  }
+
+  update(id: string, body: QuotationUpdate) {
+    return this.http.patch<Quotation>(`${this.url}/${id}`, body);
   }
 
   delete(id: string) {

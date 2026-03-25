@@ -78,7 +78,7 @@
   [visible]="showDialog()"
   (visibleChange)="showDialog.set($event)"
   [modal]="true"
-  [style]="{ width: '560px' }"
+  [style]="{ width: 'min(560px, 96vw)' }"
 >
     <form [formGroup]="form" class="activity-form">
 

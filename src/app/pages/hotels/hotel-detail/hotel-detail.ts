@@ -16,8 +16,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
-import { Hotel, Room, RoomSeason } from '../../../core/models/hotel.model';
-
+import { Hotel, Room, RoomSeason, RoomSeasonCreate, HotelSeason } from '../../../core/models/hotel.model';
+import { DecimalPipe } from '@angular/common';
 @Component({
   selector: 'app-hotel-detail',
   standalone: true,
@@ -26,6 +26,7 @@ import { Hotel, Room, RoomSeason } from '../../../core/models/hotel.model';
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
     DatePickerModule, TagModule, SkeletonModule, TooltipModule,
+    DecimalPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-detail.html',
@@ -33,8 +34,10 @@ import { Hotel, Room, RoomSeason } from '../../../core/models/hotel.model';
 })
 export class HotelDetail implements OnInit {
   hotel = signal<Hotel | null>(null);
+  hotelSeasons = signal<HotelSeason[]>([]);
   loading = signal(true);
   saving = signal(false);
+  activeTab = signal<'rooms' | 'seasons'>('rooms');
 
   // Dialog habitación
   showRoomDialog = signal(false);
@@ -46,16 +49,21 @@ export class HotelDetail implements OnInit {
   seasonRoom = signal<Room | null>(null);
   savingSeason = signal(false);
 
+  // Dialog temporada del hotel
+  showHotelSeasonDialog = signal(false);
+  savingHotelSeason = signal(false);
+
   roomForm: FormGroup;
   seasonForm: FormGroup;
+  hotelSeasonForm: FormGroup;
 
   gradeOptions = [
-    { label: 'Alta',        value: 'high' },
-    { label: 'Media',       value: 'medium' },
-    { label: 'Promocional', value: 'low' },
+    { label: 'Temporada Pico', value: 'high' },
+    { label: 'Temporada Alta', value: 'medium' },
+    { label: 'Temporada Baja', value: 'low' },
   ];
 
-  gradeLabels: Record<string, string> = { high: 'Alta', medium: 'Media', low: 'Promocional' };
+  gradeLabels: Record<string, string> = { high: 'Pico', medium: 'Alta', low: 'Promocional' };
   gradeSeverity: Record<string, 'danger' | 'warn' | 'success'> = {
     high: 'danger', medium: 'warn', low: 'success'
   };
@@ -96,12 +104,15 @@ export class HotelDetail implements OnInit {
     });
 
     this.seasonForm = this.fb.group({
-      grade:              [null, Validators.required],
-      start_date:         [null, Validators.required],
-      end_date:           [null, Validators.required],
-      net_price:          [0, Validators.required],
-      net_additional_adult: [null],
-      net_additional_child: [null],
+      grade:  [null, Validators.required],
+      price:  [0, Validators.required],
+      year:   [new Date().getFullYear(), Validators.required],
+    });
+
+    this.hotelSeasonForm = this.fb.group({
+      grade:      [null, Validators.required],
+      start_date: [null, Validators.required],
+      end_date:   [null, Validators.required],
     });
   }
 
@@ -113,9 +124,24 @@ export class HotelDetail implements OnInit {
   load(id: string) {
     this.loading.set(true);
     this.hotelService.getById(id).subscribe({
-      next: (h) => { this.hotel.set(h); this.loading.set(false); },
+      next: (h) => {
+        this.hotel.set(h);
+        this.loading.set(false);
+        this.loadHotelSeasons(id);
+      },
       error: () => { this.loading.set(false); this.router.navigate(['/hoteles']); },
     });
+  }
+
+  loadHotelSeasons(hotelId: string) {
+    this.hotelService.getHotelSeasons(hotelId).subscribe({
+      next: (list) => this.hotelSeasons.set(list),
+      error: () => this.hotelSeasons.set([]),
+    });
+  }
+
+  onTabChange(value: string | number | undefined) {
+    this.activeTab.set(value === 'seasons' ? 'seasons' : 'rooms');
   }
 
   calcRoomRack() {
@@ -191,10 +217,11 @@ export class HotelDetail implements OnInit {
     });
   }
 
-  // ── Temporadas de habitación ─────────────────────────────────
+  // ── Temporadas de habitación (RoomSeason: grade, price, year) ─
   openSeasons(room: Room) {
     this.seasonRoom.set(room);
-    this.seasonForm.reset({ net_price: 0 });
+    const currentYear = new Date().getFullYear();
+    this.seasonForm.reset({ grade: null, price: 0, year: currentYear });
     this.showSeasonDialog.set(true);
   }
 
@@ -203,18 +230,17 @@ export class HotelDetail implements OnInit {
     const h = this.hotel()!;
     const room = this.seasonRoom()!;
     this.savingSeason.set(true);
-
     const val = this.seasonForm.value;
-    const body = {
-      ...val,
-      start_date: this.formatDate(val.start_date),
-      end_date:   this.formatDate(val.end_date),
+    const body: RoomSeasonCreate = {
+      grade: val.grade as 'high' | 'medium' | 'low',
+      price: val.price,
+      year: val.year,
     };
 
     this.hotelService.addRoomSeason(h.id, room.id, body).subscribe({
       next: () => {
         this.savingSeason.set(false);
-        this.seasonForm.reset({ net_price: 0 });
+        this.seasonForm.reset({ grade: null, price: 0, year: new Date().getFullYear() });
         this.messageService.add({ severity: 'success', summary: 'Temporada agregada' });
         this.hotelService.getById(h.id).subscribe(updated => {
           this.hotel.set(updated);
@@ -244,15 +270,122 @@ export class HotelDetail implements OnInit {
     });
   }
 
+  /** Años a mostrar: actual + próximos 2 */
+  getSeasonYears(): number[] {
+    const y = new Date().getFullYear();
+    return [y, y + 1, y + 2];
+  }
+
+  /** Opciones de año para el select del formulario de temporadas de habitación */
+  getSeasonYearOptions() {
+    return this.getSeasonYears().map(year => ({ label: year.toString(), value: year }));
+  }
+
   formatDate(d: Date): string {
     return d.toISOString().split('T')[0];
   }
 
-  seasonsByGrade(seasons: RoomSeason[], grade: string) {
-    return seasons.filter(s => s.grade === grade);
+  /**
+   * Precio a mostrar para un año y grade concreto.
+   * Si existe RoomSeason para ese (year, grade), se usa su price; si no, se usa el precio base de la habitación.
+   */
+  priceForYearAndGrade(room: Room, year: number, grade: 'high' | 'medium' | 'low'): string {
+    const season = (room.seasons || []).find(s => s.year === year && s.grade === grade);
+    if (season) {
+      return `$${season.price}`;
+    }
+    const base =
+      grade === 'high'
+        ? room.net_high_price
+        : grade === 'medium'
+          ? room.net_medium_price
+          : room.net_low_price;
+    return this.priceOrDash(base as number | null);
+  }
+
+  /**
+   * Rack a mostrar para un año y grade concreto.
+   * Si existe RoomSeason para ese (year, grade): rack = precio temporada × comisión del hotel.
+   * Si no: se usa el rack base de la habitación.
+   */
+  rackForYearAndGrade(room: Room, year: number, grade: 'high' | 'medium' | 'low'): string {
+    const commission = this.hotel()?.commission ?? 1.2;
+    const season = (room.seasons || []).find(s => s.year === year && s.grade === grade);
+    if (season) {
+      const rack = Math.round(season.price * commission * 100) / 100;
+      return `$${rack}`;
+    }
+    const base =
+      grade === 'high'
+        ? room.rack_high_price
+        : grade === 'medium'
+          ? room.rack_medium_price
+          : room.rack_low_price;
+    return this.priceOrDash(base as number | null);
+  }
+
+  /** Texto resumido de precios base (Pico / Alta / Baja) */
+  basePricesSummary(room: Room): string {
+    const a = room.net_high_price != null ? `$${room.net_high_price}` : '—';
+    const m = room.net_medium_price != null ? `$${room.net_medium_price}` : '—';
+    const b = room.net_low_price != null ? `$${room.net_low_price}` : '—';
+    return `Pico ${a} · Alta ${m} · Baja ${b}`;
   }
 
   priceOrDash(val: number | null): string {
     return val !== null && val !== undefined ? `$${val}` : '—';
+  }
+
+  /** Rack calculado: precio × comisión del hotel (para temporadas de habitación) */
+  rackFromSeasonPrice(price: number): string {
+    const commission = this.hotel()?.commission ?? 1.2;
+    const rack = Math.round(price * commission * 100) / 100;
+    return `$${rack}`;
+  }
+
+  hotelSeasonsByGrade(grade: string): HotelSeason[] {
+    return this.hotelSeasons().filter(s => s.grade === grade);
+  }
+
+  openAddHotelSeason() {
+    this.hotelSeasonForm.reset();
+    this.showHotelSeasonDialog.set(true);
+  }
+
+  submitHotelSeason() {
+    if (this.hotelSeasonForm.invalid) return;
+    const h = this.hotel();
+    if (!h) return;
+    const val = this.hotelSeasonForm.value;
+    const body = {
+      hotel_id: h.id,
+      grade: val.grade,
+      start_date: this.formatDate(val.start_date),
+      end_date: this.formatDate(val.end_date),
+    };
+    this.savingHotelSeason.set(true);
+    this.hotelService.addHotelSeason(h.id, body).subscribe({
+      next: () => {
+        this.savingHotelSeason.set(false);
+        this.showHotelSeasonDialog.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Temporada agregada' });
+        this.loadHotelSeasons(h.id);
+      },
+      error: (err) => {
+        this.savingHotelSeason.set(false);
+        this.messageService.add({ severity: 'error', summary: err.error?.detail ?? 'Error' });
+      },
+    });
+  }
+
+  deleteHotelSeason(season: HotelSeason) {
+    const h = this.hotel();
+    if (!h) return;
+    this.hotelService.deleteHotelSeason(h.id, season.id).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Temporada eliminada' });
+        this.loadHotelSeasons(h.id);
+      },
+    });
   }
 }

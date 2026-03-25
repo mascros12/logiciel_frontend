@@ -1,0 +1,200 @@
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  background: var(--p-surface-card);
+  border-bottom: 1px solid var(--p-surface-border);
+
+  .header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .back-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--p-text-muted-color);
+    font-size: 1.1rem;
+    padding: 0.25rem;
+    margin-top: 0.25rem;
+    &:hover { color: var(--p-text-color); }
+  }
+
+  h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--p-text-muted-color);
+
+    i { font-size: 0.8rem; }
+  }
+}
+
+.detail-body {
+  padding: 1.5rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr);
+  gap: 1.5rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.info-card {
+  background: var(--p-surface-card);
+  border-radius: var(--p-border-radius);
+  border: 1px solid var(--p-surface-border);
+  padding: 1.2rem 1.3rem;
+
+  h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+
+  .label {
+    color: var(--p-text-muted-color);
+  }
+
+  .value {
+    font-weight: 500;
+  }
+}
+
+.mini-prices-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+
+  th, td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--p-surface-border);
+    text-align: right;
+  }
+
+  th:first-child,
+  td:first-child {
+    text-align: left;
+  }
+
+  th {
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color);
+  }
+
+  .row-label {
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.mt-4 {
+  margin-top: 1.25rem;
+}
+
+// Temporadas
+.vehicle-seasons-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  max-width: 1100px;
+  margin-inline: auto;
+}
+
+.vehicle-season-card {
+  background: var(--p-surface-card);
+  border: 1px solid var(--p-surface-border);
+  border-radius: var(--p-border-radius);
+  overflow: hidden;
+}
+
+.season-card-title {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: var(--p-surface-ground);
+  border-bottom: 1px solid var(--p-surface-border);
+}
+
+.season-datatable {
+  width: 100%;
+
+  ::ng-deep .p-datatable-wrapper {
+    overflow: visible;
+  }
+
+  ::ng-deep table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  ::ng-deep th,
+  ::ng-deep td {
+    padding: 0.5rem 0.75rem;
+  }
+
+  ::ng-deep .p-datatable-thead > tr > th {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.season-empty {
+  text-align: center;
+  color: var(--p-text-muted-color);
+  font-size: 0.875rem;
+  padding: 1rem !important;
+}
+
+.season-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+

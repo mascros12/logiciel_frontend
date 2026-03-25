@@ -3,7 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   Hotel, HotelListResponse, HotelCreate,
-  Room, RoomCreate, RoomSeasonCreate
+  Room, RoomCreate, RoomSeasonCreate,
+  HotelSeason, HotelSeasonCreate,
 } from '../models/hotel.model';
 
 @Injectable({ providedIn: 'root' })
@@ -47,7 +48,20 @@ export class HotelService {
     return this.http.delete(`${this.url}/${hotelId}/rooms/${roomId}`);
   }
 
-  // Room seasons
+  // Hotel seasons (temporadas del hotel)
+  getHotelSeasons(hotelId: string) {
+    return this.http.get<HotelSeason[]>(`${this.url}/${hotelId}/seasons`);
+  }
+
+  addHotelSeason(hotelId: string, body: HotelSeasonCreate) {
+    return this.http.post<HotelSeason>(`${this.url}/${hotelId}/seasons`, body);
+  }
+
+  deleteHotelSeason(hotelId: string, seasonId: string) {
+    return this.http.delete(`${this.url}/${hotelId}/seasons/${seasonId}`);
+  }
+
+  // Room seasons (temporadas por habitación)
   addRoomSeason(hotelId: string, roomId: string, body: RoomSeasonCreate) {
     return this.http.post(`${this.url}/${hotelId}/rooms/${roomId}/seasons`, body);
   }

@@ -35,3 +35,54 @@ html, body {
 .w-full { width: 100%; }
 .mb-4 { margin-bottom: 1rem; }
 .mt-4 { margin-top: 1rem; }
+
+// ─── PrimeNG Dialog: sin scroll interno comprimido; el modal crece con el formulario ───
+// El tema pone overflow-y:auto en .p-dialog-content y max-height al root, lo que aprieta el texto.
+.p-dialog-mask .p-dialog.p-component:not(.p-dialog-maximized) {
+  max-height: 92vh;
+  height: auto;
+  // Si el formulario es muy largo, una sola zona de scroll en el borde del modal (no dentro del texto)
+  overflow-y: auto;
+}
+
+.p-dialog.p-component:not(.p-dialog-maximized) .p-dialog-content {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  flex-grow: 0;
+  flex-shrink: 0;
+  max-height: none !important;
+}
+
+// Textos de ayuda en modales (reutilizable)
+.dialog-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  line-height: 1.55;
+  font-size: 0.95rem;
+  color: var(--p-text-color);
+  background: var(--p-surface-ground);
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--p-surface-border);
+
+  > .pi,
+  > i.pi {
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+    color: var(--p-primary-color);
+  }
+}
+
+.dialog-info-body {
+  flex: 1;
+  min-width: 0;
+
+  p {
+    margin: 0 0 0.65rem 0;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

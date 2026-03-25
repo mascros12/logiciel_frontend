@@ -1,5 +1,6 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -23,7 +24,7 @@ import { VehicleFilterPipe } from './vehicle-filter.pipe';
   selector: 'app-vehicle-list',
   standalone: true,
   imports: [
-    DecimalPipe, ReactiveFormsModule, FormsModule,
+    ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
@@ -51,13 +52,13 @@ export class VehicleList implements OnInit {
   seasonForm: FormGroup;
 
   gradeOptions = [
-    { label: 'Alta', value: 'high' },
-    { label: 'Media', value: 'medium' },
+    { label: 'Pico', value: 'high' },
+    { label: 'Alta', value: 'medium' },
     { label: 'Promocional', value: 'low' },
   ];
 
   gradeLabels: Record<string, string> = {
-    high: 'Alta', medium: 'Media', low: 'Promocional'
+    high: 'Pico', medium: 'Alta', low: 'Promocional'
   };
 
   gradeSeverity: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
@@ -65,6 +66,7 @@ export class VehicleList implements OnInit {
   };
 
   constructor(
+    private router: Router,
     private vehicleService: VehicleService,
     private fb: FormBuilder,
     private messageService: MessageService,
@@ -113,6 +115,54 @@ export class VehicleList implements OnInit {
       net_daily_price: [0, Validators.required],
       net_weekly_price: [0, Validators.required],
     });
+  }
+
+  goToDetail(v: Vehicle) {
+    this.router.navigate(['/vehiculos', v.id]);
+  }
+
+  // ── Precios por año ───────────────────────────────────────────
+  /** Años a mostrar: actual + próximos 2 (igual que hoteles) */
+  getSeasonYears(): number[] {
+    const y = new Date().getFullYear();
+    return [y, y + 1, y + 2];
+  }
+
+  private priceFromSeasonOrBase(
+    v: Vehicle,
+    year: number,
+    grade: 'high' | 'medium' | 'low',
+    kind: 'daily' | 'weekly',
+  ): number | null {
+    const seasonsForYearGrade: VehicleSeason[] = (v.seasons || []).filter((s) => {
+      const seasonYear = new Date(s.start_date).getFullYear();
+      return seasonYear === year && s.grade === grade;
+    });
+
+    if (seasonsForYearGrade.length > 0) {
+      const s = seasonsForYearGrade[0];
+      return kind === 'daily' ? s.net_daily_price : s.net_weekly_price;
+    }
+
+    if (kind === 'daily') {
+      if (grade === 'high') return v.net_daily_high;
+      if (grade === 'medium') return v.net_daily_medium;
+      return v.net_daily_low;
+    } else {
+      if (grade === 'high') return v.net_weekly_high;
+      if (grade === 'medium') return v.net_weekly_medium;
+      return v.net_weekly_low;
+    }
+  }
+
+  priceForYearAndGrade(
+    v: Vehicle,
+    year: number,
+    grade: 'high' | 'medium' | 'low',
+    kind: 'daily' | 'weekly',
+  ): string {
+    const val = this.priceFromSeasonOrBase(v, year, grade, kind);
+    return val !== null && val !== undefined ? `$${val}` : '—';
   }
 
   ngOnInit() { this.load(); }

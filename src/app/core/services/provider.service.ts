@@ -24,8 +24,11 @@ export class ProviderService {
     );
   }
 
+  /**
+   * El API devuelve un array directo (list[RoomResponse]), no un objeto paginado.
+   */
   getRoomsByHotel(hotelId: string) {
-    return this.http.get<ProviderListResponse<RoomOption>>(
+    return this.http.get<RoomOption[]>(
       `${environment.apiUrl}/hotels/${hotelId}/rooms`
     );
   }

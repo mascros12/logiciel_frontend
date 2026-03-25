@@ -131,7 +131,7 @@
   [visible]="showCreateDialog()"
   (visibleChange)="showCreateDialog.set($event)"
   [modal]="true"
-  [style]="{ width: '520px' }"
+  [style]="{ width: 'min(560px, 96vw)' }"
 >
   <form [formGroup]="createForm" class="create-form">
 

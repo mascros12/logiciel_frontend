@@ -32,7 +32,6 @@
         <th>Hotel</th>
         <th style="width:120px">Provincia</th>
         <th style="width:100px">Comisión</th>
-        <th style="width:80px">Hab.</th>
         <th style="width:110px">Acciones</th>
       </tr>
     </ng-template>
@@ -40,18 +39,13 @@
     <ng-template pTemplate="body" let-h>
       <tr class="clickable-row" (click)="goToDetail(h.id)">
         <td>
-          <span class="hotel-name">{{ h.name }}</span>
+          <span class="hotel-name" [innerHTML]="h.name | richText"></span>
           @if (h.address) {
             <div class="hotel-address">{{ h.address }}</div>
           }
         </td>
         <td>{{ h.province ?? '—' }}</td>
-        <td>{{ h.commission }}</td>
-        <td>
-          <span class="room-count" [class.no-rooms]="h.rooms.length === 0">
-            {{ h.rooms.length }}
-          </span>
-        </td>
+        <td>{{ h.commission | number:'1.2-2' }}</td>
         <td>
           <div class="flex gap-1" (click)="$event.stopPropagation()">
             <p-button icon="pi pi-pencil" [text]="true" size="small"
@@ -74,7 +68,7 @@
   [visible]="showDialog()"
   (visibleChange)="showDialog.set($event)"
   [modal]="true"
-  [style]="{ width: '480px' }"
+  [style]="{ width: 'min(480px, 96vw)' }"
 >
   <form [formGroup]="form" class="hotel-form">
     <div class="field">

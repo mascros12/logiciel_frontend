@@ -2,20 +2,24 @@ interface QuotationVehicle {
   id: string;
   name: string;
   grade: string;
+  net_price: number;
+  rack_price: number;
   is_original: boolean;
   deleted: boolean;
-  total: number;
+  total?: number;
 }
 
 interface QuotationRoom {
   id: string;
   name: string;
   grade: string;
+  net_price: number;
+  rack_price: number;
   additional_adults: number;
   additional_children: number;
   is_original: boolean;
   deleted: boolean;
-  total: number;
+  total?: number;
 }
 
 interface QuotationActivity {
@@ -25,9 +29,11 @@ interface QuotationActivity {
   grade: string;
   adults: number;
   children: number;
+  net_price: number;
+  rack_price: number;
   is_original: boolean;
   deleted: boolean;
-  total: number;
+  total?: number;
 }
 
 export interface QuotationLine {
@@ -50,6 +56,8 @@ export interface QuotationVersion {
 export interface Quotation {
   id: string;
   name: string;
+  notes: string | null;
+  family_description: string | null;
   from_date: string | null;
   to_date: string | null;
   arrival_date: string | null;
@@ -87,6 +95,23 @@ export interface QuotationCreate {
   notes?: string;
   commission?: number;
   contact_id?: string;
+}
+
+export interface QuotationUpdate {
+  name?: string;
+  notes?: string;
+  family_description?: string;
+  from_date?: string;
+  to_date?: string;
+  arrival_date?: string;
+  departure_date?: string;
+  arrival_time?: string;
+  departure_time?: string;
+  flight_number_arrival?: string;
+  flight_number_departure?: string;
+  commission?: number;
+  contact_id?: string;
+  shared?: boolean;
 }
 
 export interface AddVehicleRequest {

@@ -1,13 +1,10 @@
 export interface RoomSeason {
-    id: string;
-    room_id: string;
-    grade: 'high' | 'medium' | 'low';
-    start_date: string;
-    end_date: string;
-    net_price: number;
-    net_additional_adult: number | null;
-    net_additional_child: number | null;
-  }
+  id: string;
+  room_id: string;
+  grade: 'high' | 'medium' | 'low';
+  price: number;
+  year: number;
+}
   
   export interface Room {
     id: string;
@@ -66,11 +63,23 @@ export interface RoomSeason {
     rack_additional_child?: number;
   }
   
-  export interface RoomSeasonCreate {
-    grade: 'high' | 'medium' | 'low';
-    start_date: string;
-    end_date: string;
-    net_price: number;
-    net_additional_adult?: number;
-    net_additional_child?: number;
-  }
+  export interface HotelSeason {
+  id: string;
+  hotel_id: string;
+  grade: 'high' | 'medium' | 'low';
+  start_date: string;
+  end_date: string;
+}
+
+export interface HotelSeasonCreate {
+  hotel_id: string;
+  grade: 'high' | 'medium' | 'low';
+  start_date: string;
+  end_date: string;
+}
+
+export interface RoomSeasonCreate {
+  grade: 'high' | 'medium' | 'low';
+  price: number;
+  year: number;
+}

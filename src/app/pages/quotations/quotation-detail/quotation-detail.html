@@ -40,6 +40,8 @@
         <label>Versión</label>
         <p-select
             [options]="versionOptions"
+            optionLabel="label"
+            optionValue="value"
             [ngModel]="selectedVersionId()"
             (ngModelChange)="onVersionChange($event)"
             appendTo="body"
@@ -47,6 +49,31 @@
       </div>
 
       <div class="header-actions">
+        <p-button
+          icon="pi pi-pencil"
+          label="Editar"
+          [text]="true"
+          size="small"
+          pTooltip="Editar datos de la cotización"
+          (onClick)="openEdit()"
+        />
+        <p-button
+          icon="pi pi-calendar-plus"
+          label="Ampliar fechas"
+          [text]="true"
+          size="small"
+          pTooltip="Añadir días al itinerario (misma versión)"
+          (onClick)="openExtendCalendar()"
+        />
+        <p-button
+          icon="pi pi-sync"
+          label="Cambiar inicio del viaje"
+          [text]="true"
+          size="small"
+          [disabled]="!firstAgendaDate()"
+          pTooltip="Indica la nueva primera fecha del itinerario; el resto de días se mueve igual"
+          (onClick)="openShiftItinerary()"
+        />
         <p-button
           icon="pi pi-plus"
           label="Nueva versión"
@@ -85,13 +112,22 @@
         <p-tabpanel value="agenda">
           <div class="agenda-container">
 
-            <!-- Leyenda -->
-            <div class="legend">
+            <!-- Leyenda temporadas (v1 y referencia general) -->
+            <!--div class="legend">
               <span class="legend-item normal"><i class="pi pi-circle-fill"></i> Sin servicios</span>
               <span class="legend-item low"><i class="pi pi-circle-fill"></i> Temporada baja</span>
               <span class="legend-item medium"><i class="pi pi-circle-fill"></i> Temporada media</span>
               <span class="legend-item high"><i class="pi pi-circle-fill"></i> Temporada alta</span>
-            </div>
+            </div-->
+            @if ((selectedVersion()?.version_number ?? 1) > 1) {
+              <div class="legend legend-version">
+                <span class="legend-title">Versión {{ selectedVersion()?.version_number }} — ítems</span>
+                <span class="legend-item chip-legend inherited"><i class="pi pi-circle-fill"></i> Heredado (versión anterior)</span>
+                <span class="legend-item chip-legend new"><i class="pi pi-circle-fill"></i> Nuevo en esta versión</span>
+                <span class="legend-item chip-legend deleted"><i class="pi pi-circle-fill"></i> Eliminado</span>
+                <span class="legend-item chip-legend warning"><i class="pi pi-circle-fill"></i> Precio neto 0 (revisar)</span>
+              </div>
+            }
 
             <!-- Tabla de itinerario -->
             <div class="itinerary-table-wrapper">
@@ -100,7 +136,7 @@
                   <tr>
                     <th class="col-date">Día</th>
                     <th class="col-hotel" colspan="2">Hotel / Habitación</th>
-                    <th class="col-activity" colspan="3">Actividad</th>
+                    <th class="col-activity" colspan="2">Actividad</th>
                     <th class="col-vehicle" colspan="2">Vehículo</th>
                   </tr>
                 </thead>
@@ -109,7 +145,7 @@
                     <tr>
                       <!-- Fecha -->
                       <td class="cell-date">
-                        <strong>{{ line.date | date:'dd/MM' }}</strong>
+                        <strong>{{ line.date | date:'dd/MM' }}</strong><br>
                         <small>{{ line.date | date:'EEE':'':'es' }}</small>
                       </td>
 
@@ -136,9 +172,11 @@
                               @if (room.additional_children > 0) {
                                 <small>+{{ room.additional_children }}N</small>
                               }
+                              @if (!room.deleted) {
                               <p-button icon="pi pi-times" [text]="true" size="small"
                                 styleClass="chip-delete-btn"
                                 (onClick)="deleteRoom(room.id)" />
+                              }
                             </div>
                           }
                         } @else {
@@ -157,34 +195,30 @@
                         />
                       </td>
 
-                      <!-- Actividades -->
-                      <td class="cell-services">
+                      <!-- Actividades (chip + comentario en la misma celda) -->
+                      <td class="cell-services cell-services-activities">
                         @if (line.activities.length > 0) {
                           @for (act of line.activities; track act.id) {
-                            <div class="service-chip" [ngClass]="getChipClass(act)">
-                              <span class="service-name" [innerHTML]="act.name | richText"></span>
-                              <small>{{ act.adults }}A {{ act.children }}N</small>
-                              <p-button icon="pi pi-times" [text]="true" size="small"
-                                styleClass="chip-delete-btn"
-                                (onClick)="deleteActivity(act.id)" />
+                            <div class="activity-block">
+                              <div class="service-chip" [ngClass]="getChipClass(act)">
+                                <span class="service-name" [innerHTML]="act.name | richText"></span>
+                                <small>{{ act.adults }}A {{ act.children }}N</small>
+                                @if (!act.deleted) {
+                                <p-button icon="pi pi-times" [text]="true" size="small"
+                                  styleClass="chip-delete-btn"
+                                  (onClick)="deleteActivity(act.id)" />
+                                }
+                              </div>
+                              @if (act.recommendation) {
+                                <div class="activity-comment">
+                                  <i class="pi pi-comment"></i>
+                                  <span>{{ act.recommendation }}</span>
+                                </div>
+                              }
                             </div>
                           }
                         } @else {
                           <span class="empty-cell">—</span>
-                        }
-                      </td>
-                      
-                      <!-- Recomendaciones de actividades -->
-                      <td class="cell-recommendations">
-                        @if (line.activities.length > 0) {
-                          @for (act of line.activities; track act.id) {
-                            @if (act.recommendation) {
-                              <div class="recommendation-item">
-                                <i class="pi pi-comment"></i>
-                                {{ act.recommendation }}
-                              </div>
-                            }
-                          }
                         }
                       </td>
 
@@ -205,9 +239,11 @@
                           @for (v of line.vehicles; track v.id) {
                             <div class="service-chip" [ngClass]="getChipClass(v)">
                               <span class="service-name" [innerHTML]="v.name | richText"></span>
+                              @if (!v.deleted) {
                               <p-button icon="pi pi-times" [text]="true" size="small"
                                 styleClass="chip-delete-btn"
                                 (onClick)="deleteVehicle(v.id)" />
+                              }
                             </div>
                           }
                         } @else {
@@ -224,13 +260,16 @@
         </p-tabpanel>
 
         <!-- Tab Cotización -->
-        <p-tabpanel value="cotizacion" (click)="loadSummary()">
+        <p-tabpanel value="cotizacion">
         @if (loadingSummary()) {
+            <div class="summary-table-wrapper">
             <p-skeleton height="300px" />
+            </div>
         } @else if (summary(); as s) {
 
             @if (!s.is_version) {
             <!-- Cotización base v1 -->
+            <div class="summary-table-wrapper">
             <div class="summary-table">
                 <table>
                 <thead>
@@ -291,14 +330,16 @@
                 </tbody>
                 </table>
             </div>
+            </div>
 
             } @else {
             <!-- Versión v2+ con diff -->
+            <div class="summary-table-wrapper">
             <div class="summary-table">
                 <table>
                 <!-- ORIGINALES -->
                 <thead>
-                    <tr><th colspan="3" class="summary-header-blue">Cotización Original</th></tr>
+                    <tr><th colspan="3" class="summary-header-blue">Heredados (versión anterior)</th></tr>
                 </thead>
                 <tbody>
                     <tr class="category-row blue-row">
@@ -374,7 +415,7 @@
                     <td colspan="2"><strong>Hotel</strong></td><td></td>
                     </tr>
                     @for (r of s.new_rooms; track r.name) {
-                    <tr>
+                    <tr [class.yellow-row]="r.total < 1">
                         <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
                         <td class="qty">({{ r.qty }})</td>
                         <td>{{ r.total | currency:'USD' }}</td>
@@ -384,7 +425,7 @@
                     <td colspan="2"><strong>Actividades</strong></td><td></td>
                     </tr>
                     @for (a of s.new_activities; track a.name) {
-                    <tr>
+                    <tr [class.yellow-row]="a.total < 1">
                         <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
                         <td class="qty">({{ a.qty }})</td>
                         <td>{{ a.total | currency:'USD' }}</td>
@@ -394,7 +435,7 @@
                     <td colspan="2"><strong>Vehículo</strong></td><td></td>
                     </tr>
                     @for (v of s.new_vehicles; track v.name) {
-                    <tr>
+                    <tr [class.yellow-row]="v.total < 1">
                         <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
                         <td class="qty">({{ v.qty }})</td>
                         <td>{{ v.total | currency:'USD' }}</td>
@@ -421,11 +462,12 @@
                 </tbody>
                 </table>
             </div>
+            </div>
             }
 
         } @else {
             <div class="summary-empty">
-            <p-button label="Cargar resumen" icon="pi pi-calculator" (onClick)="loadSummary()" />
+            <p class="text-muted">Cargando resumen...</p>
             </div>
         }
         </p-tabpanel>
@@ -455,7 +497,7 @@
   [visible]="showAddVehicle()"
   (visibleChange)="showAddVehicle.set($event)"
   [modal]="true"
-  [style]="{ width: '420px' }"
+  [style]="{ width: 'min(440px, 96vw)' }"
 >
   <form [formGroup]="vehicleForm" class="dialog-form">
     <div class="field">
@@ -515,7 +557,7 @@
   [visible]="showAddRoom()"
   (visibleChange)="showAddRoom.set($event)"
   [modal]="true"
-  [style]="{ width: '460px' }"
+  [style]="{ width: 'min(500px, 96vw)' }"
 >
   <form [formGroup]="roomForm" class="dialog-form">
     <div class="field">
@@ -529,7 +571,6 @@
         placeholder="Buscar hotel..."
         styleClass="w-full"
         appendTo="body"
-        (onChange)="onHotelSelect($event.value)"
       >
         <ng-template let-h pTemplate="selectedItem">
           <span [innerHTML]="h.name | richText"></span>
@@ -550,6 +591,26 @@
     </div>
     <div class="field-row">
       <div class="field">
+        <label>Fecha inicio *</label>
+        <p-datepicker
+          formControlName="start_date"
+          dateFormat="dd/mm/yy"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div class="field">
+        <label>Fecha fin *</label>
+        <p-datepicker
+          formControlName="end_date"
+          dateFormat="dd/mm/yy"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
         <label>Adultos adicionales</label>
         <p-inputNumber formControlName="additional_adults" [min]="0" styleClass="w-full" />
       </div>
@@ -560,7 +621,12 @@
     </div>
     <div class="dialog-info">
       <i class="pi pi-calendar"></i>
-      Fecha: <strong>{{ activeLine()?.date | date:'dd/MM/yyyy' }}</strong>
+      <div class="dialog-info-body">
+        <p>
+          Se cotiza por noches: se crea para todas las fechas desde <strong>inicio</strong> hasta
+          <strong>fin</strong> excluyendo la última (checkout).
+        </p>
+      </div>
     </div>
   </form>
   <ng-template pTemplate="footer">
@@ -575,7 +641,7 @@
   [visible]="showAddActivity()"
   (visibleChange)="showAddActivity.set($event)"
   [modal]="true"
-  [style]="{ width: '460px' }"
+  [style]="{ width: 'min(480px, 96vw)' }"
 >
   <form [formGroup]="activityForm" class="dialog-form">
     <div class="field">
@@ -619,12 +685,111 @@
     </div>
     <div class="dialog-info">
       <i class="pi pi-calendar"></i>
-      Fecha: <strong>{{ activeLine()?.date | date:'dd/MM/yyyy' }}</strong>
+      <div class="dialog-info-body">
+        <p>Fecha: <strong>{{ activeLine()?.date | date:'dd/MM/yyyy' }}</strong></p>
+      </div>
     </div>
   </form>
   <ng-template pTemplate="footer">
     <p-button label="Cancelar" [text]="true" (onClick)="showAddActivity.set(false)" />
     <p-button label="Agregar" icon="pi pi-check" [loading]="saving()" (onClick)="submitActivity()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Desplazar todo el itinerario (nueva primera fecha) -->
+<p-dialog
+  header="Cambiar inicio del viaje"
+  [visible]="showShiftItinerary()"
+  (visibleChange)="showShiftItinerary.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(560px, 96vw)' }"
+>
+  <form [formGroup]="shiftItineraryForm" class="dialog-form">
+    <div class="dialog-info">
+      <i class="pi pi-info-circle"></i>
+      <div class="dialog-info-body">
+        <p>
+          La <strong>primera fecha</strong> de la agenda de la <strong>versión seleccionada</strong> es
+          <strong>{{ firstAgendaDateDisplay() }}</strong>.
+        </p>
+        <p>
+          Elige la nueva fecha de inicio: todos los días de esa versión se mueven el mismo número de días
+          (el itinerario conserva la misma estructura).
+        </p>
+        <p>
+          También se actualizan las fechas generales de la cotización: inicio y fin del viaje, y fechas de vuelo si están cargadas.
+        </p>
+        <p>Las demás versiones de la cotización no se modifican.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label>Nueva primera fecha *</label>
+      <p-datepicker
+        formControlName="new_first_date"
+        dateFormat="dd/mm/yy"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showShiftItinerary.set(false)" />
+    <p-button
+      label="Aplicar desplazamiento"
+      icon="pi pi-check"
+      [loading]="saving()"
+      (onClick)="submitShiftItinerary()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Ampliar fechas / días del itinerario -->
+<p-dialog
+  header="Ampliar itinerario"
+  [visible]="showExtendCalendar()"
+  (visibleChange)="showExtendCalendar.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(520px, 96vw)' }"
+>
+  <form [formGroup]="calendarForm" class="dialog-form">
+    <div class="dialog-info">
+      <i class="pi pi-info-circle"></i>
+      <div class="dialog-info-body">
+        <p>
+          Se actualizarán las fechas de la cotización y se crearán las líneas (días) que falten en la
+          <strong>versión seleccionada</strong>, sin crear una nueva versión.
+        </p>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Desde *</label>
+        <p-datepicker
+          formControlName="from_date"
+          dateFormat="dd/mm/yy"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div class="field">
+        <label>Hasta *</label>
+        <p-datepicker
+          formControlName="to_date"
+          dateFormat="dd/mm/yy"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showExtendCalendar.set(false)" />
+    <p-button
+      label="Aplicar"
+      icon="pi pi-check"
+      [loading]="saving()"
+      (onClick)="submitExtendCalendar()"
+    />
   </ng-template>
 </p-dialog>
 
@@ -634,7 +799,7 @@
   [visible]="showNewVersion()"
   (visibleChange)="showNewVersion.set($event)"
   [modal]="true"
-  [style]="{ width: '400px' }"
+  [style]="{ width: 'min(420px, 96vw)' }"
 >
   <form [formGroup]="versionForm" class="dialog-form">
     <div class="field">
@@ -642,13 +807,91 @@
       <input pInputText formControlName="notes" class="w-full"
         placeholder="Ej: Cambio de hotel en San José" />
     </div>
-    <p class="dialog-info">
+    <div class="dialog-info">
       <i class="pi pi-info-circle"></i>
-      Se copiará todo el itinerario de la versión actual como base.
-    </p>
+      <div class="dialog-info-body">
+        <p>Se copiará todo el itinerario de la versión actual como base.</p>
+      </div>
+    </div>
   </form>
   <ng-template pTemplate="footer">
     <p-button label="Cancelar" [text]="true" (onClick)="showNewVersion.set(false)" />
     <p-button label="Crear versión" icon="pi pi-copy" [loading]="saving()" (onClick)="submitNewVersion()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog editar cotización -->
+<p-dialog
+  header="Editar cotización"
+  [visible]="showEdit()"
+  (visibleChange)="showEdit.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(560px, 96vw)' }"
+>
+  <form [formGroup]="editForm" class="dialog-form">
+    <div class="field">
+      <label>Nombre *</label>
+      <input pInputText formControlName="name" class="w-full" placeholder="Nombre de la cotización" />
+    </div>
+    <div class="field">
+      <label>Notas</label>
+      <textarea pInputTextarea formControlName="notes" class="w-full" rows="2"
+        placeholder="Notas internas"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Fecha inicio</label>
+        <p-datepicker formControlName="from_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+      </div>
+      <div class="field">
+        <label>Fecha fin</label>
+        <p-datepicker formControlName="to_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Llegada</label>
+        <p-datepicker formControlName="arrival_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+      </div>
+      <div class="field">
+        <label>Salida</label>
+        <p-datepicker formControlName="departure_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Hora llegada</label>
+        <input pInputText formControlName="arrival_time" class="w-full" placeholder="HH:mm" />
+      </div>
+      <div class="field">
+        <label>Hora salida</label>
+        <input pInputText formControlName="departure_time" class="w-full" placeholder="HH:mm" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Vuelo llegada</label>
+        <input pInputText formControlName="flight_number_arrival" class="w-full" placeholder="Ej: IB6842" />
+      </div>
+      <div class="field">
+        <label>Vuelo salida</label>
+        <input pInputText formControlName="flight_number_departure" class="w-full" placeholder="Ej: IB6843" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Comisión</label>
+        <p-inputnumber formControlName="commission" [min]="1" [maxFractionDigits]="4"
+          [minFractionDigits]="2" styleClass="w-full" />
+      </div>
+      <div class="field flex items-center pt-6">
+        <p-checkbox formControlName="shared" [binary]="true" inputId="edit-shared" />
+        <label for="edit-shared" class="ml-2">Compartida</label>
+      </div>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showEdit.set(false)" />
+    <p-button label="Guardar" icon="pi pi-check" [loading]="saving()" (onClick)="submitEdit()" />
   </ng-template>
 </p-dialog>

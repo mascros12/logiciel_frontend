@@ -1,0 +1,214 @@
+<p-toast />
+
+@if (loading()) {
+  <div class="page-container">
+    <p-skeleton height="60px" styleClass="mb-3" />
+    <p-skeleton height="400px" />
+  </div>
+} @else if (vehicle(); as v) {
+
+  <!-- Header -->
+  <div class="detail-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="router.navigate(['/vehiculos'])">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div>
+        <div style="font-size: 24px;" [innerHTML]="v.name | richText"></div>
+        <div class="header-meta">
+          @if (v.brand) { <span class="meta-item"><i class="pi pi-car"></i> {{ v.brand }}</span> }
+          @if (v.category) { <span class="meta-item"><i class="pi pi-tags"></i> {{ v.category }}</span> }
+          <span class="meta-item"><i class="pi pi-users"></i> {{ v.seats }} asientos</span>
+          <span class="meta-item"><i class="pi pi-briefcase"></i> {{ v.bag }} maletas / {{ v.carryon_bag }} mano</span>
+          <span class="meta-item"><i class="pi pi-percentage"></i> Comisión: {{ v.commission | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+    <p-button label="Nueva temporada" icon="pi pi-calendar-plus" (onClick)="openSeasonDialog()" />
+  </div>
+
+  <div class="detail-body">
+    <p-tabs value="info">
+      <p-tablist>
+        <p-tab value="info">Información</p-tab>
+        <p-tab value="seasons">Temporadas</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <!-- Info -->
+        <p-tabpanel value="info">
+          <div class="info-grid">
+            <div class="info-card">
+              <h3>Especificaciones</h3>
+              <div class="info-row">
+                <span class="label">Asientos</span>
+                <span class="value">{{ v.seats }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Maletas</span>
+                <span class="value">{{ v.bag }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Maletas de mano</span>
+                <span class="value">{{ v.carryon_bag }}</span>
+              </div>
+              <!--div class="info-row">
+                <span class="label">Categoría</span>
+                <span class="value">{{ v.category || '—' }}</span>
+              </div-->
+            </div>
+
+            <div class="info-card">
+              <h3>Precios diarios — Neto / Rack</h3>
+              <table class="mini-prices-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Pico</th>
+                    <th>Alta</th>
+                    <th>Promocional</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="row-label">Neto</td>
+                    <td>$ {{ v.net_daily_high | number:'1.2-2' }}</td>
+                    <td>$ {{ v.net_daily_medium | number:'1.2-2' }}</td>
+                    <td>$ {{ v.net_daily_low | number:'1.2-2' }}</td>
+                  </tr>
+                  <tr>
+                    <td class="row-label">Rack</td>
+                    <td>$ {{ v.rack_daily_high | number:'1.2-2' }}</td>
+                    <td>$ {{ v.rack_daily_medium | number:'1.2-2' }}</td>
+                    <td>$ {{ v.rack_daily_low | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <br><br><br>
+
+              <h3 class="mt-4">Precios semanales — Neto / Rack</h3>
+              <table class="mini-prices-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Pico</th>
+                    <th>Alta</th>
+                    <th>Promocional</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="row-label">Neto</td>
+                    <td>${{ v.net_weekly_high | number:'1.2-2' }}</td>
+                    <td>${{ v.net_weekly_medium | number:'1.2-2' }}</td>
+                    <td>${{ v.net_weekly_low | number:'1.2-2' }}</td>
+                  </tr>
+                  <tr>
+                    <td class="row-label">Rack</td>
+                    <td>${{ v.rack_weekly_high | number:'1.2-2' }}</td>
+                    <td>${{ v.rack_weekly_medium | number:'1.2-2' }}</td>
+                    <td>${{ v.rack_weekly_low | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </p-tabpanel>
+
+        <!-- Temporadas -->
+        <p-tabpanel value="seasons">
+          <div class="vehicle-seasons-wrapper">
+            @for (grade of ['low', 'medium', 'high']; track grade) {
+              <div class="vehicle-season-card">
+                <h3 class="season-card-title">{{ gradeLabels[grade] }}</h3>
+                <p-table
+                  [value]="seasonsByGrade(grade)"
+                  styleClass="p-datatable-gridlines p-datatable-sm season-datatable"
+                >
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Fechas</th>
+                      <th>Diario</th>
+                      <th>Semanal</th>
+                      <th style="width:80px">Acción</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-s>
+                    <tr>
+                      <td>{{ s.start_date }} → {{ s.end_date }}</td>
+                      <td>${{ s.net_daily_price }}</td>
+                      <td>${{ s.net_weekly_price }}</td>
+                      <td>
+                        <p-button
+                          icon="pi pi-trash"
+                          [text]="true"
+                          severity="danger"
+                          size="small"
+                          (onClick)="deleteSeason(s.id)"
+                        />
+                      </td>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="emptymessage">
+                    <tr>
+                      <td colspan="4" class="season-empty">Sin temporadas</td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+            }
+          </div>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+}
+
+<!-- Dialog nueva temporada -->
+<p-dialog
+  header="Agregar temporada"
+  [visible]="showSeasonDialog()"
+  (visibleChange)="showSeasonDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(520px, 96vw)' }"
+>
+  <form [formGroup]="seasonForm" class="season-form">
+    <div class="field">
+      <label>Tipo *</label>
+      <p-select
+        formControlName="grade"
+        [options]="gradeOptions"
+        optionLabel="label"
+        optionValue="value"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Desde *</label>
+        <p-datepicker formControlName="start_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+      </div>
+      <div class="field">
+        <label>Hasta *</label>
+        <p-datepicker formControlName="end_date" dateFormat="dd/mm/yy" styleClass="w-full" appendTo="body" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Precio diario neto *</label>
+        <p-inputNumber formControlName="net_daily_price" mode="currency" currency="USD" styleClass="w-full" />
+      </div>
+      <div class="field">
+        <label>Precio semanal neto *</label>
+        <p-inputNumber formControlName="net_weekly_price" mode="currency" currency="USD" styleClass="w-full" />
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showSeasonDialog.set(false)" />
+    <p-button label="Agregar" icon="pi pi-check" [loading]="savingSeason()" (onClick)="submitSeason()" />
+  </ng-template>
+</p-dialog>
+
