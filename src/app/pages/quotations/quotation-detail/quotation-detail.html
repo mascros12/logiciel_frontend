@@ -1,4 +1,5 @@
 <p-toast />
+<p-confirmDialog appendTo="body" />
 
 @if (loading()) {
   <div class="page-container">
@@ -35,64 +36,74 @@
     </div>
 
     <div class="header-right">
-      <!-- Selector de versión -->
-      <div class="version-selector">
-        <label>Versión</label>
-        <p-select
-            [options]="versionOptions"
-            optionLabel="label"
-            optionValue="value"
-            [ngModel]="selectedVersionId()"
-            (ngModelChange)="onVersionChange($event)"
-            appendTo="body"
-        />
-      </div>
+      <div class="header-toolbar">
+        <div class="header-toolbar-cluster">
+          <div class="version-selector">
+            <label>Versión</label>
+            <p-select
+              [options]="versionOptions"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="selectedVersionId()"
+              (ngModelChange)="onVersionChange($event)"
+              appendTo="body"
+              styleClass="header-version-select"
+            />
+          </div>
 
-      <div class="header-actions">
-        <p-button
-          icon="pi pi-pencil"
-          label="Editar"
-          [text]="true"
-          size="small"
-          pTooltip="Editar datos de la cotización"
-          (onClick)="openEdit()"
-        />
-        <p-button
-          icon="pi pi-calendar-plus"
-          label="Ampliar fechas"
-          [text]="true"
-          size="small"
-          pTooltip="Añadir días al itinerario (misma versión)"
-          (onClick)="openExtendCalendar()"
-        />
-        <p-button
-          icon="pi pi-sync"
-          label="Cambiar inicio del viaje"
-          [text]="true"
-          size="small"
-          [disabled]="!firstAgendaDate()"
-          pTooltip="Indica la nueva primera fecha del itinerario; el resto de días se mueve igual"
-          (onClick)="openShiftItinerary()"
-        />
-        <p-button
-          icon="pi pi-plus"
-          label="Nueva versión"
-          [text]="true"
-          size="small"
-          (onClick)="showNewVersion.set(true)"
-        />
-        <p-button
-          icon="pi pi-refresh"
-          label="Recalcular"
-          [text]="true"
-          size="small"
-          (onClick)="recalculate()"
-        />
-      </div>
+          <div class="header-actions" role="toolbar" aria-label="Acciones de cotización">
+            <p-button
+              label="Editar"
+              icon="pi pi-pencil"
+              size="small"
+              [outlined]="true"
+              pTooltip="Datos generales, fechas de vuelo, comisión…"
+              tooltipPosition="bottom"
+              (onClick)="openEdit()"
+            />
+            <p-button
+              label="Nueva versión"
+              icon="pi pi-plus"
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+              pTooltip="Nueva versión a partir de la actual"
+              tooltipPosition="bottom"
+              (onClick)="showNewVersion.set(true)"
+            />
+            <p-button
+              label="Itinerario"
+              icon="pi pi-angle-down"
+              iconPos="right"
+              size="small"
+              [outlined]="true"
+              severity="secondary"
+              styleClass="header-itinerary-menu-btn"
+              pTooltip="Ampliar fechas, mover inicio, organizar días, recalcular"
+              tooltipPosition="bottom"
+              [attr.aria-haspopup]="'menu'"
+              (onClick)="openItineraryMenu($event, itineraryMenu)"
+            />
+            <p-menu
+              #itineraryMenu
+              [model]="itineraryMenuItems"
+              [popup]="true"
+              appendTo="body"
+              styleClass="quotation-itinerary-menu"
+            />
+          </div>
+        </div>
 
-      <div class="total-display">
-        <span class="total-label">Total</span>
-        <span class="total-amount">{{ selectedVersion()?.total | currency:'USD' }}</span>
+        <div class="header-total-card">
+          <span class="header-total-label">
+            @if (selectedVersion(); as sv) {
+              {{ getVersionLabel(sv) }}
+            } @else {
+              Total
+            }
+          </span>
+          <span class="header-total-amount">{{ selectedVersion()?.total | currency:'USD' }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -162,8 +173,8 @@
 
                       <!-- Habitaciones -->
                       <td class="cell-services">
-                        @if (line.rooms.length > 0) {
-                          @for (room of line.rooms; track room.id) {
+                        @if (visibleRooms(line).length > 0) {
+                          @for (room of visibleRooms(line); track room.id) {
                             <div class="service-chip" [ngClass]="getChipClass(room)">
                               <span class="service-name" [innerHTML]="room.name | richText"></span>
                               @if (room.additional_adults > 0) {
@@ -197,8 +208,8 @@
 
                       <!-- Actividades (chip + comentario en la misma celda) -->
                       <td class="cell-services cell-services-activities">
-                        @if (line.activities.length > 0) {
-                          @for (act of line.activities; track act.id) {
+                        @if (visibleActivities(line).length > 0) {
+                          @for (act of visibleActivities(line); track act.id) {
                             <div class="activity-block">
                               <div class="service-chip" [ngClass]="getChipClass(act)">
                                 <span class="service-name" [innerHTML]="act.name | richText"></span>
@@ -235,8 +246,8 @@
 
                       <!-- Vehículos -->
                       <td class="cell-services">
-                        @if (line.vehicles.length > 0) {
-                          @for (v of line.vehicles; track v.id) {
+                        @if (visibleVehicles(line).length > 0) {
+                          @for (v of visibleVehicles(line); track v.id) {
                             <div class="service-chip" [ngClass]="getChipClass(v)">
                               <span class="service-name" [innerHTML]="v.name | richText"></span>
                               @if (!v.deleted) {
@@ -473,16 +484,379 @@
         </p-tabpanel>
         <!-- Tab Ficha AA -->
         <p-tabpanel value="fileaa">
-          <div class="fileaa-container">
-            <div class="flex justify-between items-center mb-4">
-              <h3>Fichas AA</h3>
+          <div class="fileaa-container" [class.fileaa-compact]="!!fichaFileAA()">
+            @if (!fichaFileAA()) {
+            <div class="ficha-aa-intro">
+              <p>
+                La Ficha AA sustituye la tabla en Word: encabezado con nombre del viaje, fechas y noches, y los datos
+                operativos para proveedores. Antes de generarla deben estar completos los <strong>vuelos</strong>
+                (en «Editar»), la <strong>composición familiar</strong> y las <strong>habitaciones</strong> abajo.
+              </p>
+            </div>
+
+            <div class="ficha-aa-header-card">
+              <h3 class="ficha-aa-doc-title">{{ q.name }}</h3>
+              <p class="ficha-aa-doc-dates">{{ fichaHeaderDatesLine(q) }}</p>
+            </div>
+
+            <div class="ficha-aa-checklist">
+              <h4 class="ficha-aa-section-title">Requisitos previos (vuelos)</h4>
+              <ul class="ficha-aa-checklist-list">
+                <li [class.ficha-ok]="fichaFlightArrivalOk(q)" [class.ficha-miss]="!fichaFlightArrivalOk(q)">
+                  <i class="pi" [ngClass]="fichaFlightArrivalOk(q) ? 'pi-check-circle' : 'pi-times-circle'"></i>
+                  Llegada: hora
+                  @if (q.arrival_time) {
+                    <strong>{{ formatTime(q.arrival_time) }}</strong>
+                  } @else {
+                    <span class="text-muted">(falta)</span>
+                  }
+                  · vuelo
+                  @if (q.flight_number_arrival) {
+                    <strong>{{ q.flight_number_arrival }}</strong>
+                  } @else {
+                    <span class="text-muted">(falta)</span>
+                  }
+                </li>
+                <li [class.ficha-ok]="fichaFlightDepartureOk(q)" [class.ficha-miss]="!fichaFlightDepartureOk(q)">
+                  <i class="pi" [ngClass]="fichaFlightDepartureOk(q) ? 'pi-check-circle' : 'pi-times-circle'"></i>
+                  Salida: hora
+                  @if (q.departure_time) {
+                    <strong>{{ formatTime(q.departure_time) }}</strong>
+                  } @else {
+                    <span class="text-muted">(falta)</span>
+                  }
+                  · vuelo
+                  @if (q.flight_number_departure) {
+                    <strong>{{ q.flight_number_departure }}</strong>
+                  } @else {
+                    <span class="text-muted">(falta)</span>
+                  }
+                </li>
+              </ul>
               <p-button
-                icon="pi pi-file-plus"
-                label="Generar Ficha AA"
-                (onClick)="generateFileAA()"
+                label="Completar en Editar cotización"
+                icon="pi pi-pencil"
+                [outlined]="true"
+                size="small"
+                (onClick)="openEdit()"
               />
             </div>
-            <p class="text-muted">Selecciona Generar Ficha AA para crear una nueva ficha desde la versión actual.</p>
+
+            <div class="ficha-aa-section">
+              <h4 class="ficha-aa-section-title">Composición familiar</h4>
+              <p class="ficha-aa-hint">Una fila por persona. Niños/as: edad obligatoria. Adultos: categoría.</p>
+              <div class="ficha-aa-table-wrap">
+                <table class="ficha-aa-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Tipo</th>
+                      <th>Edad (niño/a)</th>
+                      <th>Categoría (adulto)</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (m of fichaFamilyRows(); track $index) {
+                      <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>
+                          <p-select
+                            [options]="fichaRoleOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            [ngModel]="m.role"
+                            (ngModelChange)="patchFichaMember($index, { role: $event })"
+                            appendTo="body"
+                            styleClass="w-full"
+                          />
+                        </td>
+                        <td>
+                          @if (m.role === 'child') {
+                            <p-inputNumber
+                              [ngModel]="m.age"
+                              (ngModelChange)="patchFichaMember($index, { age: $event ?? 0 })"
+                              [min]="0"
+                              [max]="17"
+                              [showButtons]="true"
+                              styleClass="w-full"
+                              inputStyleClass="w-full"
+                            />
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
+                        </td>
+                        <td>
+                          @if (m.role === 'adult') {
+                            <p-select
+                              [options]="fichaAdultCategoryOptions"
+                              optionLabel="label"
+                              optionValue="value"
+                              [ngModel]="m.adult_category"
+                              (ngModelChange)="patchFichaMember($index, { adult_category: $event })"
+                              appendTo="body"
+                              styleClass="w-full"
+                            />
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
+                        </td>
+                        <td>
+                          <p-button
+                            icon="pi pi-trash"
+                            [rounded]="true"
+                            [text]="true"
+                            severity="danger"
+                            [disabled]="fichaFamilyRows().length <= 1"
+                            (onClick)="removeFichaFamilyRow($index)"
+                          />
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <p-button
+                label="Añadir persona"
+                icon="pi pi-plus"
+                [outlined]="true"
+                size="small"
+                class="mt-2"
+                (onClick)="addFichaFamilyRow()"
+              />
+            </div>
+
+            <div class="ficha-aa-section">
+              <h4 class="ficha-aa-section-title">Habitaciones necesarias</h4>
+              <p class="ficha-aa-hint">Tipo (doble, triple, etc.) y cantidad de habitaciones de ese tipo.</p>
+              <div class="ficha-aa-table-wrap">
+                <table class="ficha-aa-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Tipo</th>
+                      <th>Cantidad</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of fichaRoomRows(); track $index) {
+                      <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>
+                          <p-select
+                            [options]="fichaRoomTypeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            [ngModel]="r.room_type"
+                            (ngModelChange)="patchFichaRoom($index, { room_type: $event })"
+                            appendTo="body"
+                            styleClass="w-full"
+                          />
+                        </td>
+                        <td>
+                          <p-inputNumber
+                            [ngModel]="r.quantity"
+                            (ngModelChange)="patchFichaRoom($index, { quantity: $event ?? 1 })"
+                            [min]="1"
+                            [max]="50"
+                            [showButtons]="true"
+                            styleClass="w-full"
+                            inputStyleClass="w-full"
+                          />
+                        </td>
+                        <td>
+                          <p-button
+                            icon="pi pi-trash"
+                            [rounded]="true"
+                            [text]="true"
+                            severity="danger"
+                            [disabled]="fichaRoomRows().length <= 1"
+                            (onClick)="removeFichaRoomRow($index)"
+                          />
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <p-button
+                label="Añadir tipo de habitación"
+                icon="pi pi-plus"
+                [outlined]="true"
+                size="small"
+                class="mt-2"
+                (onClick)="addFichaRoomRow()"
+              />
+            </div>
+            }
+
+            <div class="ficha-aa-actions" [class.ficha-aa-actions--compact]="!!fichaFileAA()">
+              @if (!fichaFileAA()) {
+                <p-button
+                  label="Guardar borrador"
+                  icon="pi pi-save"
+                  [outlined]="true"
+                  [loading]="saving()"
+                  (onClick)="saveFichaDraft()"
+                />
+              }
+              <p-button
+                label="Generar Ficha AA"
+                icon="pi pi-file-export"
+                [loading]="saving()"
+                (onClick)="generateFileAA()"
+              />
+              @if (fichaFileAA()) {
+                <p-button
+                  label="Descargar Word"
+                  icon="pi pi-download"
+                  [outlined]="true"
+                  [loading]="downloadingFichaWord()"
+                  (onClick)="downloadFichaAAWord()"
+                />
+                <p-button
+                  label="Descargar PDF"
+                  icon="pi pi-file-pdf"
+                  [outlined]="true"
+                  [loading]="downloadingFichaPdf()"
+                  (onClick)="downloadFichaAAPdf()"
+                />
+              }
+            </div>
+
+            @if (fichaFileAA(); as ficha) {
+              <div class="ficha-aa-generated ficha-aa-generated--minimal">
+                <div class="ficha-aa-generated-table-wrap">
+                  <table class="ficha-aa-generated-table">
+                    <thead>
+                      <tr class="ficha-aa-table-summary-row">
+                        <td colspan="8" class="ficha-aa-table-summary-cell">
+                          <div class="ficha-aa-table-summary-inner">
+                            <p class="ficha-aa-summary-title">{{ ficha.name }}</p>
+                            <p class="ficha-aa-summary-dates">{{ fichaGeneratedDatesLine(ficha) }}</p>
+                            @if (ficha.family_description) {
+                              <p class="ficha-aa-summary-family">{{ ficha.family_description }}</p>
+                            }
+                            @if (fichaRoomsSummaryLine()) {
+                              <p class="ficha-aa-summary-rooms">
+                                <span class="ficha-aa-summary-label">Habitaciones:</span>
+                                {{ fichaRoomsSummaryLine() }}
+                              </p>
+                            }
+                            <ul class="ficha-aa-summary-flights">
+                              <li [class.ficha-ok]="fichaFlightArrivalOk(q)" [class.ficha-miss]="!fichaFlightArrivalOk(q)">
+                                <i class="pi" [ngClass]="fichaFlightArrivalOk(q) ? 'pi-check-circle' : 'pi-times-circle'"></i>
+                                Llegada:
+                                @if (q.arrival_time) {
+                                  <strong>{{ formatTime(q.arrival_time) }}</strong>
+                                }
+                                @if (q.flight_number_arrival) {
+                                  · vuelo <strong>{{ q.flight_number_arrival }}</strong>
+                                }
+                              </li>
+                              <li [class.ficha-ok]="fichaFlightDepartureOk(q)" [class.ficha-miss]="!fichaFlightDepartureOk(q)">
+                                <i class="pi" [ngClass]="fichaFlightDepartureOk(q) ? 'pi-check-circle' : 'pi-times-circle'"></i>
+                                Salida:
+                                @if (q.departure_time) {
+                                  <strong>{{ formatTime(q.departure_time) }}</strong>
+                                }
+                                @if (q.flight_number_departure) {
+                                  · vuelo <strong>{{ q.flight_number_departure }}</strong>
+                                }
+                              </li>
+                            </ul>
+                            <p class="ficha-aa-summary-meta">Generada el {{ ficha.created_at | date: 'short' }}</p>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th class="col-cb" scope="col">F</th>
+                        <th scope="col">Servicio</th>
+                        <th scope="col">Fechas</th>
+                        <th class="col-cb" scope="col">Reservado</th>
+                        <th scope="col">Nº reserva</th>
+                        <th class="col-money" scope="col">Precio sistema</th>
+                        <th class="col-money" scope="col">Precio proveedor</th>
+                        <th class="col-cb" scope="col">Pagado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (d of ficha.details ?? []; track d.id) {
+                        <tr>
+                          <td class="col-cb">
+                            <p-checkbox
+                              [binary]="true"
+                              [ngModel]="d.confirmed"
+                              (onChange)="patchFileDetail(d.id, { confirmed: $event.checked })"
+                              [inputId]="'aa-conf-' + d.id"
+                            />
+                          </td>
+                          <td>
+                            <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
+                            <span class="ficha-name">{{ d.name }}</span>
+                          </td>
+                          <td>
+                            <input
+                              pInputText
+                              class="ficha-cell-input"
+                              [ngModel]="d.dates"
+                              (blur)="onFichaDetailDatesBlur(d, $event.target)"
+                            />
+                          </td>
+                          <td class="col-cb">
+                            <p-checkbox
+                              [binary]="true"
+                              [ngModel]="d.reserved"
+                              (onChange)="patchFileDetail(d.id, { reserved: $event.checked })"
+                              [inputId]="'aa-rsv-' + d.id"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              pInputText
+                              class="ficha-cell-input"
+                              [ngModel]="d.reservation_number ?? ''"
+                              (blur)="onFichaDetailReservationNoBlur(d, $event.target)"
+                            />
+                          </td>
+                          <td class="col-money">
+                            <input
+                              pInputText
+                              class="ficha-cell-input ficha-price-input"
+                              [ngModel]="fichaDetailPriceDisplay(d.total_price)"
+                              (blur)="onFichaDetailTotalBlur(d, $event.target)"
+                            />
+                          </td>
+                          <td class="col-money">
+                            <input
+                              pInputText
+                              class="ficha-cell-input ficha-price-input"
+                              [ngModel]="fichaDetailPriceDisplay(d.provider_price)"
+                              (blur)="onFichaDetailProviderBlur(d, $event.target)"
+                            />
+                          </td>
+                          <td class="col-cb">
+                            <p-checkbox
+                              [binary]="true"
+                              [ngModel]="d.paid"
+                              (onChange)="patchFileDetail(d.id, { paid: $event.checked })"
+                              [inputId]="'aa-paid-' + d.id"
+                            />
+                          </td>
+                        </tr>
+                      }
+                      <tr class="ficha-aa-totals-row">
+                        <td colspan="5" class="totals-label">Totales</td>
+                        <td class="col-money">{{ fichaTotals().system | currency: 'USD' }}</td>
+                        <td class="col-money">{{ fichaTotals().provider | currency: 'USD' }}</td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
           </div>
         </p-tabpanel>
 
@@ -739,6 +1113,147 @@
       icon="pi pi-check"
       [loading]="saving()"
       (onClick)="submitShiftItinerary()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Reordenar días e insertar líneas vacías -->
+<p-dialog
+  header="Organizar itinerario"
+  [visible]="showOrganizeItinerary()"
+  (visibleChange)="showOrganizeItinerary.set($event)"
+  [modal]="true"
+  appendTo="body"
+  styleClass="organize-itinerary-dialog"
+  [style]="{ width: 'min(640px, 96vw)' }"
+  [contentStyle]="{
+    maxHeight: 'min(72vh, 640px)',
+    overflow: 'auto',
+    padding: '0.65rem 0.35rem 0.5rem 0.85rem'
+  }"
+>
+  <div class="organize-itinerary">
+    <div class="organize-help">
+      <p>
+        <strong>Reordenar:</strong> arrastra el asa
+        <i class="pi pi-bars organize-help-icon"></i>
+        ; las fechas del calendario no cambian, solo qué contenido va en cada día.
+      </p>
+      <p>
+        <strong>Días vacíos:</strong> al inicio del viaje o tras un día concreto; el resto de fechas se desplaza.
+        Para alargar el rango usa antes <strong>Ampliar fechas</strong>.
+      </p>
+      <p>
+        <strong>Quitar días:</strong> el icono de papelera elimina ese día del itinerario (y sus servicios);
+        las fechas siguientes se adelantan para no dejar huecos. Debe quedar al menos un día.
+      </p>
+      <p>
+        Pasa el ratón por el <strong>resumen</strong> (p. ej. «1 hab.») para ver el detalle completo.
+      </p>
+    </div>
+
+    <div class="organize-toolbar">
+      <span class="organize-toolbar-label">Insertar al inicio</span>
+      <div class="organize-toolbar-controls">
+        <p-inputNumber
+          [ngModel]="insertStartCount()"
+          (ngModelChange)="insertStartCount.set($event ?? 1)"
+          [min]="1"
+          [max]="60"
+          [showButtons]="true"
+          inputStyleClass="organize-count-input"
+        />
+        <p-button
+          label="Añadir"
+          icon="pi pi-plus"
+          size="small"
+          [loading]="saving()"
+          (onClick)="submitInsertDaysAtStart()"
+        />
+      </div>
+    </div>
+
+    <div class="organize-list-head">
+      <span class="organize-list-head-spacer" aria-hidden="true"></span>
+      <span>Día</span>
+      <span>Resumen</span>
+      <span class="organize-col-insert-h">Tras este día</span>
+      <span class="organize-col-remove-h" aria-hidden="true"></span>
+    </div>
+
+    <div
+      cdkDropList
+      class="organize-drop-list"
+      (cdkDropListDropped)="dropOrganizeLine($event)"
+    >
+      @for (line of organizeDraftLines(); track line.id) {
+        <div class="organize-row" cdkDrag>
+          <button
+            type="button"
+            class="organize-drag-handle"
+            cdkDragHandle
+            aria-label="Arrastrar para reordenar"
+          >
+            <i class="pi pi-bars"></i>
+          </button>
+          <div class="organize-row-main">
+            <div class="organize-row-date">{{ lineDateDisplay(line.date) }}</div>
+            <div
+              class="organize-row-meta"
+              [pTooltip]="lineDetailTooltip(line)"
+              tooltipPosition="bottom"
+              tooltipStyleClass="organize-line-detail-tooltip"
+              [showDelay]="350"
+              [hideDelay]="100"
+            >
+              {{ lineSummary(line) }}
+            </div>
+          </div>
+          <div class="organize-row-insert">
+            <p-inputNumber
+              [ngModel]="getInsertAfterCount(line.id)"
+              (ngModelChange)="setInsertAfterCount(line.id, $event)"
+              [min]="1"
+              [max]="60"
+              [showButtons]="false"
+              inputStyleClass="organize-count-input organize-count-input--row"
+            />
+            <p-button
+              icon="pi pi-plus"
+              [rounded]="true"
+              [text]="true"
+              size="small"
+              [loading]="saving()"
+              pTooltip="Insertar estos días vacíos justo después de esta fecha"
+              tooltipPosition="left"
+              (onClick)="submitInsertDaysAfterLine(line.id)"
+            />
+          </div>
+          <div class="organize-row-remove">
+            <p-button
+              icon="pi pi-trash"
+              [rounded]="true"
+              [text]="true"
+              severity="danger"
+              size="small"
+              [disabled]="organizeDraftLines().length <= 1"
+              [loading]="saving()"
+              pTooltip="Quitar este día del itinerario"
+              tooltipPosition="left"
+              (onClick)="confirmRemoveOrganizeDay(line)"
+            />
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showOrganizeItinerary.set(false)" />
+    <p-button
+      label="Guardar orden"
+      icon="pi pi-check"
+      [loading]="saving()"
+      (onClick)="submitOrganizeOrder()"
     />
   </ng-template>
 </p-dialog>

@@ -5,7 +5,11 @@ import {
   Quotation, QuotationFull, QuotationListResponse, QuotationLine,
   QuotationCreate, QuotationUpdate, QuotationVersion,
   AddVehicleRequest, AddRoomRequest, AddActivityRequest,
-  QuotationSummary
+  QuotationSummary,
+  FileAAGenerateRequest,
+  FileAAWithDetails,
+  FileAADetailRow,
+  FileAADetailPatch,
 } from '../models/quotation.model';
 
 @Injectable({ providedIn: 'root' })
@@ -46,6 +50,39 @@ export class QuotationService {
       old_first: string;
       new_first: string;
     }>(`${this.url}/${quotationId}/versions/${versionId}/shift-itinerary-dates`, body);
+  }
+
+  /**
+   * Reordena el contenido de los días: mismo conjunto de fechas calendario, distinta asignación por línea.
+   * Debe incluir todos los ids de línea de la versión, sin duplicados.
+   */
+  reorderVersionLines(quotationId: string, versionId: string, body: { line_ids_in_order: string[] }) {
+    return this.http.post<{ ok: boolean; lines: number }>(
+      `${this.url}/${quotationId}/versions/${versionId}/reorder-lines`,
+      body
+    );
+  }
+
+  /**
+   * Inserta días vacíos al inicio (after_line_id null) o después de la línea indicada; desplaza fechas posteriores.
+   */
+  insertLineDays(
+    quotationId: string,
+    versionId: string,
+    body: { after_line_id: string | null; count: number }
+  ) {
+    return this.http.post<{ ok: boolean; inserted: number }>(
+      `${this.url}/${quotationId}/versions/${versionId}/insert-line-days`,
+      body
+    );
+  }
+
+  /** Quita líneas-día (soft delete) y compacta fechas del resto del itinerario. */
+  removeVersionLines(quotationId: string, versionId: string, body: { line_ids: string[] }) {
+    return this.http.post<{ ok: boolean; removed: number }>(
+      `${this.url}/${quotationId}/versions/${versionId}/remove-line-days`,
+      body
+    );
   }
 
   create(body: QuotationCreate) {
@@ -90,8 +127,31 @@ export class QuotationService {
     );
   }
 
-  generateFileAA(quotationId: string) {
-    return this.http.post(`${this.url}/${quotationId}/file-aa`, {});
+  generateFileAA(quotationId: string, body: FileAAGenerateRequest) {
+    return this.http.post<FileAAWithDetails>(`${this.url}/${quotationId}/file-aa`, body);
+  }
+
+  /** Última Ficha AA de la cotización (404 si no existe). */
+  getLatestFileAA(quotationId: string) {
+    return this.http.get<FileAAWithDetails>(`${this.url}/${quotationId}/file-aa/latest`);
+  }
+
+  patchFileAADetail(detailId: string, body: FileAADetailPatch) {
+    return this.http.patch<FileAADetailRow>(`${this.url}/details/${detailId}`, body);
+  }
+
+  /** Documento Word con resumen y tabla de la Ficha AA (blob). */
+  downloadFichaAAWord(fileId: string) {
+    return this.http.get(`${this.url}/file-aa/${fileId}/word`, {
+      responseType: 'blob',
+    });
+  }
+
+  /** PDF con resumen y tabla de la Ficha AA (blob). */
+  downloadFichaAAPdf(fileId: string) {
+    return this.http.get(`${this.url}/file-aa/${fileId}/pdf`, {
+      responseType: 'blob',
+    });
   }
 
   getSummary(quotationId: string, versionId: string) {

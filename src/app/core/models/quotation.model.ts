@@ -53,6 +53,96 @@ export interface QuotationVersion {
   created_at: string;
 }
 
+export type FichaMemberRole = 'child' | 'adult';
+export type FichaAdultCategory = 'young' | 'regular' | 'senior';
+export type FichaRoomType = 'double' | 'triple' | 'quadruple' | 'quintuple' | 'mixed';
+
+/** Fila UI / API para composición familiar (Ficha AA) */
+export interface FichaFamilyMemberRow {
+  role: FichaMemberRole;
+  age?: number | null;
+  adult_category?: FichaAdultCategory | null;
+}
+
+export interface FichaRoomRequirementRow {
+  room_type: FichaRoomType;
+  quantity: number;
+}
+
+export interface FileAAGenerateRequest {
+  /** Itinerario a usar; si no se envía, el backend usa la versión actual. */
+  version_id?: string;
+  family_members: FichaFamilyMemberRow[];
+  room_requirements: FichaRoomRequirementRow[];
+}
+
+export type FileAADetailCategory = 'vehicle' | 'room' | 'activity';
+export type FileAARowStatus = 'normal' | 'yellow' | 'red';
+
+/** Línea de la Ficha AA generada (hotel / actividad / vehículo) */
+export interface FileAADetailRow {
+  id: string;
+  file_id: string;
+  quotation_id: string;
+  category: FileAADetailCategory;
+  name: string;
+  observations: string | null;
+  dates: string;
+  date_from: string;
+  date_to: string;
+  days: number;
+  total_price: number | string;
+  provider_price: number | string | null;
+  confirmed: boolean;
+  reserved: boolean;
+  reservation_number: string | null;
+  paid: boolean;
+  send_message: boolean;
+  send_email: boolean;
+  row_status: FileAARowStatus;
+  evaluation: number;
+  evaluation_notes: string | null;
+  ville: string | null;
+}
+
+export interface FileAAWithDetails {
+  id: string;
+  quotation_id: string;
+  name: string;
+  notes: string | null;
+  family_description: string | null;
+  from_date: string | null;
+  to_date: string | null;
+  quantity_adults: number;
+  quantity_children: number;
+  children_ages: string | null;
+  need_booster: boolean;
+  need_kid_seat: boolean;
+  sent: boolean;
+  created_at: string;
+  details: FileAADetailRow[];
+}
+
+export interface FileAADetailPatch {
+  name?: string;
+  observations?: string;
+  dates?: string;
+  date_from?: string;
+  date_to?: string;
+  days?: number;
+  total_price?: number | null;
+  provider_price?: number | null;
+  confirmed?: boolean;
+  reserved?: boolean;
+  reservation_number?: string | null;
+  paid?: boolean;
+  send_message?: boolean;
+  row_status?: FileAARowStatus;
+  evaluation?: number;
+  evaluation_notes?: string | null;
+  ville?: string | null;
+}
+
 export interface Quotation {
   id: string;
   name: string;
@@ -74,6 +164,8 @@ export interface Quotation {
   created_at: string;
   updated_at: string;
   versions: QuotationVersion[];
+  ficha_family_members?: FichaFamilyMemberRow[] | null;
+  ficha_room_requirements?: FichaRoomRequirementRow[] | null;
 }
 
 export interface QuotationFull extends Quotation {
@@ -112,6 +204,8 @@ export interface QuotationUpdate {
   commission?: number;
   contact_id?: string;
   shared?: boolean;
+  ficha_family_members?: FichaFamilyMemberRow[];
+  ficha_room_requirements?: FichaRoomRequirementRow[];
 }
 
 export interface AddVehicleRequest {
