@@ -16,7 +16,17 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
-import { Hotel, Room, RoomSeason, RoomSeasonCreate, HotelSeason } from '../../../core/models/hotel.model';
+import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
+import { AuthService } from '../../../core/auth/auth.service';
+import {
+  Hotel,
+  HotelCategory,
+  HotelCreate,
+  Room,
+  RoomSeason,
+  RoomSeasonCreate,
+  HotelSeason,
+} from '../../../core/models/hotel.model';
 import { DecimalPipe } from '@angular/common';
 @Component({
   selector: 'app-hotel-detail',
@@ -26,7 +36,7 @@ import { DecimalPipe } from '@angular/common';
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
     DatePickerModule, TagModule, SkeletonModule, TooltipModule,
-    DecimalPipe,
+    DecimalPipe, RichTextPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-detail.html',
@@ -53,9 +63,37 @@ export class HotelDetail implements OnInit {
   showHotelSeasonDialog = signal(false);
   savingHotelSeason = signal(false);
 
+  /** Editar datos generales del hotel (incl. correo reservas) */
+  showHotelMetaDialog = signal(false);
+  savingHotelMeta = signal(false);
+  hotelMetaForm: FormGroup;
+
   roomForm: FormGroup;
   seasonForm: FormGroup;
   hotelSeasonForm: FormGroup;
+
+  provincesMeta = [
+    { label: 'San José', value: 'San Jose' },
+    { label: 'Alajuela', value: 'Alajuela' },
+    { label: 'Cartago', value: 'Cartago' },
+    { label: 'Heredia', value: 'Heredia' },
+    { label: 'Guanacaste', value: 'Guanacaste' },
+    { label: 'Puntarenas', value: 'Puntarenas' },
+    { label: 'Limón', value: 'Limon' },
+  ];
+
+  categoryOptions = [
+    { label: 'Gama Alta', value: 'high' as const },
+    { label: 'Gama Media', value: 'medium' as const },
+    { label: 'Gama Baja', value: 'low' as const },
+  ];
+
+  /** Etiquetas para la gama del hotel (distintas de temporadas Pico/Alta/Baja). */
+  categoryLabels: Record<string, string> = {
+    high: 'Gama Alta',
+    medium: 'Gama Media',
+    low: 'Gama Baja',
+  };
 
   gradeOptions = [
     { label: 'Temporada Pico', value: 'high' },
@@ -68,10 +106,16 @@ export class HotelDetail implements OnInit {
     high: 'danger', medium: 'warn', low: 'success'
   };
 
+  /** Texto de gama en cabecera; valores legacy no mapeados se muestran tal cual. */
+  hotelCategoryLabel(category: string): string {
+    return category in this.categoryLabels ? this.categoryLabels[category] : category;
+  }
+
   constructor(
     private route: ActivatedRoute,
     protected router: Router,
     private hotelService: HotelService,
+    private auth: AuthService,
     private fb: FormBuilder,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
@@ -113,6 +157,15 @@ export class HotelDetail implements OnInit {
       grade:      [null, Validators.required],
       start_date: [null, Validators.required],
       end_date:   [null, Validators.required],
+    });
+
+    this.hotelMetaForm = this.fb.group({
+      name: ['', Validators.required],
+      province: [null as string | null],
+      address: [''],
+      category: [null as HotelCategory | null],
+      commission: [1.2, Validators.required],
+      reservation_email: [''],
     });
   }
 
@@ -387,5 +440,59 @@ export class HotelDetail implements OnInit {
         this.loadHotelSeasons(h.id);
       },
     });
+  }
+
+  openHotelMetaDialog() {
+    const h = this.hotel();
+    if (!h) return;
+    this.hotelMetaForm.patchValue({
+      name: h.name,
+      province: h.province,
+      address: h.address ?? '',
+      category: this.parseHotelCategory(h.category),
+      commission: h.commission,
+      reservation_email: h.reservation_email ?? '',
+    });
+    this.showHotelMetaDialog.set(true);
+  }
+
+  submitHotelMeta() {
+    if (this.hotelMetaForm.invalid) return;
+    const h = this.hotel();
+    if (!h) return;
+    this.savingHotelMeta.set(true);
+    const v = this.hotelMetaForm.value as Partial<HotelCreate>;
+    this.hotelService.update(h.id, v).subscribe({
+      next: (updated) => {
+        this.savingHotelMeta.set(false);
+        this.showHotelMetaDialog.set(false);
+        this.hotel.set(updated);
+        this.messageService.add({ severity: 'success', summary: 'Hotel actualizado' });
+      },
+      error: (err) => {
+        this.savingHotelMeta.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'Error al guardar',
+        });
+      },
+    });
+  }
+
+  private parseHotelCategory(v: string | null | undefined): HotelCategory | null {
+    if (v === 'high' || v === 'medium' || v === 'low') return v;
+    return null;
+  }
+
+  stripRichTextMarkers(value: string | null | undefined): string {
+    return String(value ?? '')
+      .replace(/[*_~]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  canManageHotels(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'admin_proveedores';
   }
 }

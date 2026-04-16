@@ -16,6 +16,7 @@ import { Activity } from '../../../core/models/activity.model';
 import { FormsModule } from '@angular/forms';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { ActivityFilterPipe } from './activity-filter.pipe';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-activity-list',
@@ -55,6 +56,7 @@ export class ActivityList implements OnInit {
 
   constructor(
     private activityService: ActivityService,
+    private auth: AuthService,
     private fb: FormBuilder,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
@@ -66,6 +68,7 @@ export class ActivityList implements OnInit {
       address: [''],
       category: [''],
       commission: [1.92],
+      reservation_email: [''],
       net_adult_price: [0, Validators.required],
       rack_adult_price: [0, Validators.required],  // ← calculado
       net_child_price: [0, Validators.required],
@@ -95,7 +98,14 @@ export class ActivityList implements OnInit {
 
   openCreate() {
     this.editingId.set(null);
-    this.form.reset({ commission: 1.2, net_adult_price: 0, rack_adult_price: 0, net_child_price: 0, rack_child_price: 0 });
+    this.form.reset({
+      commission: 1.2,
+      net_adult_price: 0,
+      rack_adult_price: 0,
+      net_child_price: 0,
+      rack_child_price: 0,
+      reservation_email: '',
+    });
     this.showDialog.set(true);
   }
 
@@ -134,6 +144,7 @@ export class ActivityList implements OnInit {
       address: activity.address,
       category: activity.category,
       commission: activity.commission,
+      reservation_email: activity.reservation_email ?? '',
       net_adult_price: activity.net_adult_price,
       rack_adult_price: activity.rack_adult_price,
       net_child_price: activity.net_child_price,
@@ -191,5 +202,10 @@ export class ActivityList implements OnInit {
 
   get dialogTitle(): string {
     return this.editingId() ? 'Editar Actividad' : 'Nueva Actividad';
+  }
+
+  canManageActivities(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'admin_proveedores';
   }
 }

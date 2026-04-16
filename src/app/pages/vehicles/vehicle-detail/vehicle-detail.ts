@@ -9,6 +9,7 @@ import { TagModule } from 'primeng/tag';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
+import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -18,7 +19,7 @@ import { MessageService } from 'primeng/api';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 
 import { VehicleService } from '../../../core/services/vehicle.service';
-import { Vehicle, VehicleSeason, VehicleSeasonCreate } from '../../../core/models/vehicle.model';
+import { Vehicle, VehicleCreate, VehicleSeason, VehicleSeasonCreate } from '../../../core/models/vehicle.model';
 
 @Component({
   selector: 'app-vehicle-detail',
@@ -29,7 +30,7 @@ import { Vehicle, VehicleSeason, VehicleSeasonCreate } from '../../../core/model
     DecimalPipe, RichTextPipe,
     ReactiveFormsModule,
     ButtonModule, TabsModule, TagModule, TableModule,
-    DialogModule, ToastModule, InputNumberModule,
+    DialogModule, ToastModule, InputTextModule, InputNumberModule,
     SelectModule, DatePickerModule, SkeletonModule,
   ],
   providers: [MessageService],
@@ -40,6 +41,10 @@ export class VehicleDetail implements OnInit {
 
   showSeasonDialog = signal(false);
   savingSeason = signal(false);
+
+  showVehicleMetaDialog = signal(false);
+  savingVehicleMeta = signal(false);
+  vehicleMetaForm: FormGroup;
 
   seasonForm: FormGroup;
 
@@ -74,6 +79,10 @@ export class VehicleDetail implements OnInit {
       end_date: [null, Validators.required],
       net_daily_price: [0, Validators.required],
       net_weekly_price: [0, Validators.required],
+    });
+
+    this.vehicleMetaForm = this.fb.group({
+      reservation_email: [''],
     });
   }
 
@@ -164,6 +173,39 @@ export class VehicleDetail implements OnInit {
 
   formatDate(d: Date): string {
     return d.toISOString().split('T')[0];
+  }
+
+  openVehicleMetaDialog() {
+    const v = this.vehicle();
+    if (!v) return;
+    this.vehicleMetaForm.patchValue({
+      reservation_email: v.reservation_email ?? '',
+    });
+    this.showVehicleMetaDialog.set(true);
+  }
+
+  submitVehicleMeta() {
+    const v = this.vehicle();
+    if (!v) return;
+    const raw = (this.vehicleMetaForm.value.reservation_email ?? '') as string;
+    const reservation_email = raw.trim() === '' ? null : raw.trim();
+    this.savingVehicleMeta.set(true);
+    const body: Partial<VehicleCreate> = { reservation_email };
+    this.vehicleService.update(v.id, body).subscribe({
+      next: (updated) => {
+        this.savingVehicleMeta.set(false);
+        this.showVehicleMetaDialog.set(false);
+        this.vehicle.set(updated);
+        this.messageService.add({ severity: 'success', summary: 'Correo actualizado' });
+      },
+      error: (err) => {
+        this.savingVehicleMeta.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'Error al guardar',
+        });
+      },
+    });
   }
 }
 

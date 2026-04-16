@@ -1,52 +1,83 @@
 .login-wrapper {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--p-surface-ground);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(37, 99, 235, 0.2) 0%, rgba(37, 99, 235, 0) 42%),
+    radial-gradient(circle at 88% 80%, rgba(249, 115, 22, 0.18) 0%, rgba(249, 115, 22, 0) 40%),
+    linear-gradient(135deg, #f7f9ff 0%, #f2f5fb 45%, #eef2ff 100%);
+}
+
+.login-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.12) 0,
+      rgba(255, 255, 255, 0.12) 14px,
+      rgba(255, 255, 255, 0) 14px,
+      rgba(255, 255, 255, 0) 34px
+    );
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow:
+    0 22px 44px rgba(15, 23, 42, 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+  position: relative;
+  z-index: 1;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  .login-logo {
+    display: block;
+    margin: 0 auto 0.9rem;
+    width: min(240px, 80%);
+    height: auto;
   }
-  
-  .login-card {
-    background: var(--p-surface-card);
-    border: 1px solid var(--p-surface-border);
-    border-radius: 12px;
-    padding: 2.5rem;
-    width: 100%;
-    max-width: 400px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--p-primary-color);
+    margin-bottom: 0.5rem;
   }
-  
-  .login-header {
-    text-align: center;
-    margin-bottom: 2rem;
-  
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: var(--p-primary-color);
-      margin-bottom: 0.5rem;
-    }
-  
-    p {
-      color: var(--p-text-muted-color);
-      font-size: 0.9rem;
-    }
+
+  p {
+    color: var(--p-text-muted-color);
+    font-size: 0.9rem;
   }
-  
-  .login-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-color);
   }
-  
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  
-    label {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--p-text-color);
-    }
-  }
+}

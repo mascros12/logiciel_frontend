@@ -41,14 +41,49 @@
           <div class="version-selector">
             <label>Versión</label>
             <p-select
-              [options]="versionOptions"
-              optionLabel="label"
+              [options]="versionSelectOptions"
               optionValue="value"
+              dataKey="value"
               [ngModel]="selectedVersionId()"
               (ngModelChange)="onVersionChange($event)"
               appendTo="body"
               styleClass="header-version-select"
-            />
+            >
+              <ng-template let-opt pTemplate="selectedItem">
+                @if (opt) {
+                  <span class="version-opt-row">
+                    <span class="version-opt-v"
+                      >V{{ opt.versionNumber }}{{ opt.isCurrent ? ' (actual)' : '' }}</span
+                    >
+                    @if (opt.createdByName) {
+                      <span class="version-opt-creator">{{ opt.createdByName }}</span>
+                    }
+                  </span>
+                }
+              </ng-template>
+              <ng-template let-opt pTemplate="item">
+                <span class="version-opt-row">
+                  <span class="version-opt-v"
+                    >V{{ opt.versionNumber }}{{ opt.isCurrent ? ' (actual)' : '' }}</span
+                  >
+                  @if (opt.createdByName) {
+                    <span class="version-opt-creator">{{ opt.createdByName }}</span>
+                  }
+                </span>
+              </ng-template>
+            </p-select>
+            @if (selectedVersion(); as sv) {
+              <p class="version-creator-hint">
+                Creador de esta versión:
+                <strong>{{ sv.created_by_name?.trim() || '—' }}</strong>
+              </p>
+              @if (sv.notes?.trim()) {
+                <p class="version-notes-hint">
+                  <span class="version-notes-label">Nota al crear la versión</span>
+                  <span class="version-notes-text">{{ sv.notes!.trim() }}</span>
+                </p>
+              }
+            }
           </div>
 
           <div class="header-actions" role="toolbar" aria-label="Acciones de cotización">
@@ -102,7 +137,13 @@
               Total
             }
           </span>
-          <span class="header-total-amount">{{ selectedVersion()?.total | currency:'USD' }}</span>
+          @if (loadingSummary()) {
+            <span class="header-total-amount header-total-amount--loading" aria-busy="true">…</span>
+          } @else if (summary(); as sum) {
+            <span class="header-total-amount">{{ sum.total | currency:'EUR' }}</span>
+          } @else {
+            <span class="header-total-amount header-total-amount--empty">—</span>
+          }
         </div>
       </div>
     </div>
@@ -110,12 +151,14 @@
 
   <!-- Tabs -->
   <div class="detail-body">
-    <p-tabs value="agenda">
+    <p-tabs [value]="activeTab()" (valueChange)="setActiveTab($event)">
 
       <!-- Tab Agenda -->
       <p-tablist>
         <p-tab value="agenda">Agenda</p-tab>
-        <p-tab value="cotizacion">Cotización</p-tab>
+        @if (canViewQuotationBreakdown()) {
+          <p-tab value="cotizacion">Cotización</p-tab>
+        }
         <p-tab value="fileaa">Ficha AA</p-tab>
       </p-tablist>
 
@@ -171,22 +214,38 @@
                         />
                       </td>
 
-                      <!-- Habitaciones -->
-                      <td class="cell-services">
+                      <!-- Habitaciones: una caja (habitación + hotel + adicionales + recomendaciones) -->
+                      <td class="cell-services cell-services-rooms">
                         @if (visibleRooms(line).length > 0) {
                           @for (room of visibleRooms(line); track room.id) {
-                            <div class="service-chip" [ngClass]="getChipClass(room)">
-                              <span class="service-name" [innerHTML]="room.name | richText"></span>
-                              @if (room.additional_adults > 0) {
-                                <small>+{{ room.additional_adults }}A</small>
-                              }
-                              @if (room.additional_children > 0) {
-                                <small>+{{ room.additional_children }}N</small>
-                              }
-                              @if (!room.deleted) {
-                              <p-button icon="pi pi-times" [text]="true" size="small"
-                                styleClass="chip-delete-btn"
-                                (onClick)="deleteRoom(room.id)" />
+                            @let rparts = parseQuotationRoomDisplay(room);
+                            <div class="agenda-service-card" [ngClass]="getChipClass(room)">
+                              <div class="agenda-service-card__top">
+                                <div class="agenda-service-card__left">
+                                  @if (rparts.useFullRichName) {
+                                    <div class="agenda-service-card__title" [innerHTML]="room.name | richText"></div>
+                                  } @else {
+                                    <div class="agenda-service-card__title">{{ rparts.roomLabel }}</div>
+                                    @if (rparts.hotel) {
+                                      <div class="agenda-service-card__hotel">{{ rparts.hotel }}</div>
+                                    }
+                                  }
+                                </div>
+                                <div class="agenda-service-card__right">
+                                  <span class="agenda-service-card__qty">{{ roomExtrasLine(room) }}</span>
+                                  @if (!room.deleted) {
+                                    <p-button icon="pi pi-times" [text]="true" size="small"
+                                      styleClass="chip-delete-btn"
+                                      (onClick)="deleteRoom(room.id)" />
+                                  }
+                                </div>
+                              </div>
+                              @if (hasRecommendation(room.recommendation)) {
+                                <div class="agenda-service-card__rule"></div>
+                                <div class="agenda-service-card__rec">
+                                  <span class="agenda-service-card__rec-label">Recomendaciones</span>
+                                  <span class="agenda-service-card__rec-text">{{ room.recommendation }}</span>
+                                </div>
                               }
                             </div>
                           }
@@ -206,24 +265,29 @@
                         />
                       </td>
 
-                      <!-- Actividades (chip + comentario en la misma celda) -->
+                      <!-- Actividades: una caja (nombre + adultos/niños + recomendaciones) -->
                       <td class="cell-services cell-services-activities">
                         @if (visibleActivities(line).length > 0) {
                           @for (act of visibleActivities(line); track act.id) {
-                            <div class="activity-block">
-                              <div class="service-chip" [ngClass]="getChipClass(act)">
-                                <span class="service-name" [innerHTML]="act.name | richText"></span>
-                                <small>{{ act.adults }}A {{ act.children }}N</small>
-                                @if (!act.deleted) {
-                                <p-button icon="pi pi-times" [text]="true" size="small"
-                                  styleClass="chip-delete-btn"
-                                  (onClick)="deleteActivity(act.id)" />
-                                }
+                            <div class="agenda-service-card" [ngClass]="getChipClass(act)">
+                              <div class="agenda-service-card__top">
+                                <div class="agenda-service-card__left">
+                                  <div class="agenda-service-card__title" [innerHTML]="act.name | richText"></div>
+                                </div>
+                                <div class="agenda-service-card__right">
+                                  <span class="agenda-service-card__qty">{{ act.adults }}A · {{ act.children }}N</span>
+                                  @if (!act.deleted) {
+                                    <p-button icon="pi pi-times" [text]="true" size="small"
+                                      styleClass="chip-delete-btn"
+                                      (onClick)="deleteActivity(act.id)" />
+                                  }
+                                </div>
                               </div>
-                              @if (act.recommendation) {
-                                <div class="activity-comment">
-                                  <i class="pi pi-comment"></i>
-                                  <span>{{ act.recommendation }}</span>
+                              @if (hasRecommendation(act.recommendation)) {
+                                <div class="agenda-service-card__rule"></div>
+                                <div class="agenda-service-card__rec">
+                                  <span class="agenda-service-card__rec-label">Recomendaciones</span>
+                                  <span class="agenda-service-card__rec-text">{{ act.recommendation }}</span>
                                 </div>
                               }
                             </div>
@@ -271,6 +335,7 @@
         </p-tabpanel>
 
         <!-- Tab Cotización -->
+        @if (canViewQuotationBreakdown()) {
         <p-tabpanel value="cotizacion">
         @if (loadingSummary()) {
             <div class="summary-table-wrapper">
@@ -482,6 +547,7 @@
             </div>
         }
         </p-tabpanel>
+        }
         <!-- Tab Ficha AA -->
         <p-tabpanel value="fileaa">
           <div class="fileaa-container" [class.fileaa-compact]="!!fichaFileAA()">
@@ -691,52 +757,89 @@
             </div>
             }
 
-            <div class="ficha-aa-actions" [class.ficha-aa-actions--compact]="!!fichaFileAA()">
-              @if (!fichaFileAA()) {
+            @if (!fichaAABlockedForComercial()) {
+              <div class="ficha-aa-actions" [class.ficha-aa-actions--compact]="!!fichaFileAA()">
+                @if (!fichaFileAA()) {
+                  <p-button
+                    label="Guardar borrador"
+                    icon="pi pi-save"
+                    [outlined]="true"
+                    [loading]="saving()"
+                    (onClick)="saveFichaDraft()"
+                  />
+                }
                 <p-button
-                  label="Guardar borrador"
-                  icon="pi pi-save"
-                  [outlined]="true"
+                  label="Generar Ficha AA"
+                  icon="pi pi-file-export"
                   [loading]="saving()"
-                  (onClick)="saveFichaDraft()"
+                  (onClick)="generateFileAA()"
                 />
-              }
-              <p-button
-                label="Generar Ficha AA"
-                icon="pi pi-file-export"
-                [loading]="saving()"
-                (onClick)="generateFileAA()"
-              />
-              @if (fichaFileAA()) {
-                <p-button
-                  label="Descargar Word"
-                  icon="pi pi-download"
-                  [outlined]="true"
-                  [loading]="downloadingFichaWord()"
-                  (onClick)="downloadFichaAAWord()"
-                />
-                <p-button
-                  label="Descargar PDF"
-                  icon="pi pi-file-pdf"
-                  [outlined]="true"
-                  [loading]="downloadingFichaPdf()"
-                  (onClick)="downloadFichaAAPdf()"
-                />
-              }
-            </div>
+                @if (fichaFileAA()) {
+                  <p-button
+                    label="Descargar Word"
+                    icon="pi pi-download"
+                    [outlined]="true"
+                    [loading]="downloadingFichaWord()"
+                    (onClick)="downloadFichaAAWord()"
+                  />
+                  <p-button
+                    label="Descargar PDF"
+                    icon="pi pi-file-pdf"
+                    [outlined]="true"
+                    [loading]="downloadingFichaPdf()"
+                    (onClick)="downloadFichaAAPdf()"
+                  />
+                }
+              </div>
+            } @else {
+              <div class="ficha-aa-blocked-msg">
+                Esta Ficha AA ya fue generada. El rol Comercial no puede editarla.
+              </div>
+            }
 
-            @if (fichaFileAA(); as ficha) {
+            @if (!fichaAABlockedForComercial() && fichaFileAA(); as ficha) {
               <div class="ficha-aa-generated ficha-aa-generated--minimal">
                 <div class="ficha-aa-generated-table-wrap">
                   <table class="ficha-aa-generated-table">
                     <thead>
+                      <tr>
+                      <th colspan="11">
+                        <button
+                        style="width: 100% !important;"
+                          type="button"
+                          class="ficha-aa-color-line"
+                          [style.background-color]="fichaHeaderColor()"
+                          (click)="toggleFichaColorPicker()"
+                          pTooltip="Elegir color de cabecera"
+                          tooltipPosition="top"
+                          aria-label="Cambiar color de la cabecera de la Ficha AA"
+                        ></button>
+                        @if (showFichaColorPicker()) {
+                          <div class="ficha-aa-color-picker" role="listbox" aria-label="Selector de color">
+                            @for (c of ['#DC2626', '#EAB308', '#2563EB', '#16A34A', '#F97316', '#9333EA']; track c) {
+                              <button
+                                type="button"
+                                class="ficha-aa-color-dot"
+                                [style.background-color]="c"
+                                [class.ficha-aa-color-dot--active]="fichaHeaderColor().toUpperCase() === c"
+                                (click)="setFichaHeaderColor(c)"
+                                [attr.aria-label]="'Seleccionar color ' + c"
+                              ></button>
+                            }
+                          </div>
+                        }
+                      </th>
+                      </tr>
                       <tr class="ficha-aa-table-summary-row">
-                        <td colspan="8" class="ficha-aa-table-summary-cell">
+                        <td colspan="11" class="ficha-aa-table-summary-cell">
                           <div class="ficha-aa-table-summary-inner">
+                            <br><br>
+
                             <p class="ficha-aa-summary-title">{{ ficha.name }}</p>
                             <p class="ficha-aa-summary-dates">{{ fichaGeneratedDatesLine(ficha) }}</p>
-                            @if (ficha.family_description) {
-                              <p class="ficha-aa-summary-family">{{ ficha.family_description }}</p>
+                            @let famSummary = fichaCompositionSummary(ficha);
+                            @if (famSummary) {
+                              <p class="ficha-aa-summary-family">{{ famSummary }}</p>
                             }
                             @if (fichaRoomsSummaryLine()) {
                               <p class="ficha-aa-summary-rooms">
@@ -772,17 +875,20 @@
                       </tr>
                       <tr>
                         <th class="col-cb" scope="col">F</th>
+                        <th class="col-ficha-row-actions" scope="col" pTooltip="Añadir o quitar línea">±</th>
                         <th scope="col">Servicio</th>
                         <th scope="col">Fechas</th>
+                        <th scope="col" class="ficha-col-obs">Observaciones</th>
                         <th class="col-cb" scope="col">Reservado</th>
                         <th scope="col">Nº reserva</th>
                         <th class="col-money" scope="col">Precio sistema</th>
                         <th class="col-money" scope="col">Precio proveedor</th>
                         <th class="col-cb" scope="col">Pagado</th>
+                        <th class="col-ficha-email" scope="col" pTooltip="Enviar solicitud por correo al proveedor">Correo</th>
                       </tr>
                     </thead>
                     <tbody>
-                      @for (d of ficha.details ?? []; track d.id) {
+                      @for (d of ficha.details; track d.id) {
                         <tr>
                           <td class="col-cb">
                             <p-checkbox
@@ -792,7 +898,28 @@
                               [inputId]="'aa-conf-' + d.id"
                             />
                           </td>
-                          <td>
+                          <td class="col-ficha-row-actions">
+                            <div class="ficha-row-actions-btns">
+                              <p-button
+                                icon="pi pi-plus"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Añadir línea (nueva o reemplazo)"
+                                (onClick)="openFichaAddDetailDialog(d)"
+                              />
+                              <p-button
+                                icon="pi pi-minus"
+                                [rounded]="true"
+                                [text]="true"
+                                severity="danger"
+                                size="small"
+                                pTooltip="Eliminar esta línea"
+                                (onClick)="confirmDeleteFichaDetailRow(d)"
+                              />
+                            </div>
+                          </td>
+                          <td [class.ficha-servicio-reemplazada]="d.row_status === 'red'">
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
                             <span class="ficha-name">{{ d.name }}</span>
                           </td>
@@ -803,6 +930,115 @@
                               [ngModel]="d.dates"
                               (blur)="onFichaDetailDatesBlur(d, $event.target)"
                             />
+                          </td>
+                          <td class="ficha-col-obs">
+                            @if (d.category === 'vehicle') {
+                              <div class="ficha-vehicle-obs">
+                                <div class="ficha-obs-block ficha-obs-block--inline">
+                                  <span class="ficha-obs-label" [attr.id]="'aa-vlug-l-' + d.id">Cobertor de equipaje</span>
+                                  <p-checkbox
+                                    [binary]="true"
+                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).luggage_cover"
+                                    (ngModelChange)="commitVehicleFichaObs(d)"
+                                    [inputId]="'aa-vlug-' + d.id"
+                                    [attr.aria-labelledby]="'aa-vlug-l-' + d.id"
+                                  />
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-vpu-' + d.id">Fecha, hora y lugar de Recibo del Auto (hotel o vuelo)</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-vpu-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).pickup_detail"
+                                    (blur)="commitVehicleFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-vdo-' + d.id">Fecha, hora y lugar de Devolución del Auto (hotel o vuelo)</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-vdo-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).dropoff_detail"
+                                    (blur)="commitVehicleFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-vno-' + d.id">Observaciones</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-vno-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).notes"
+                                    (blur)="commitVehicleFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                              </div>
+                            } @else if (d.category === 'room') {
+                              <div class="ficha-vehicle-obs">
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-rmq-' + d.id">Número de habitaciones</label>
+                                  <input
+                                    pInputText
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    [id]="'aa-rmq-' + d.id"
+                                    class="ficha-cell-input"
+                                    [(ngModel)]="ensureHotelFichaObsDraft(d).room_quantity"
+                                    (blur)="commitHotelFichaObs(d)"
+                                  />
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-rno-' + d.id">Observaciones</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-rno-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureHotelFichaObsDraft(d).notes"
+                                    (blur)="commitHotelFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                              </div>
+                            } @else if (d.category === 'activity') {
+                              <div class="ficha-vehicle-obs">
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-apu-' + d.id">Pick up</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-apu-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureActivityFichaObsDraft(d).pickup_detail"
+                                    (blur)="commitActivityFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-ano-' + d.id">Observaciones</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-ano-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureActivityFichaObsDraft(d).notes"
+                                    (blur)="commitActivityFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                              </div>
+                            } @else {
+                              <textarea
+                                pInputTextarea
+                                class="ficha-cell-input ficha-obs-textarea"
+                                rows="2"
+                                [ngModel]="d.observations ?? ''"
+                                (blur)="onFichaDetailObservationsBlur(d, $event.target)"
+                              ></textarea>
+                            }
                           </td>
                           <td class="col-cb">
                             <p-checkbox
@@ -844,12 +1080,51 @@
                               [inputId]="'aa-paid-' + d.id"
                             />
                           </td>
+                          <td class="col-ficha-email">
+                            @if (d.category === 'vehicle' || d.category === 'activity' || d.category === 'room') {
+                              @if (d.row_status === 'red') {
+                                <span
+                                  class="text-muted"
+                                  pTooltip="No se puede enviar correo a una fila sustituida (marcada en rojo)."
+                                  tooltipPosition="top"
+                                >—</span>
+                              } @else if (d.supplier_email_sent_at) {
+                                <span
+                                  class="ficha-email-sent"
+                                  [pTooltip]="fichaSupplierEmailSentTooltip(d)"
+                                  tooltipPosition="top"
+                                >
+                                  <i class="pi pi-check-circle ficha-email-sent__icon" aria-hidden="true"></i>
+                                  <span class="ficha-email-sent__label">Enviado</span>
+                                </span>
+                              } @else if (!d.send_email) {
+                                <p-button
+                                  icon="pi pi-send"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  size="small"
+                                  [loading]="sendingFichaEmailDetailId() === d.id"
+                                  pTooltip="Enviar al proveedor (Word y PDF de la línea)"
+                                  (onClick)="sendSupplierReservationEmail(d)"
+                                />
+                              } @else {
+                                <span
+                                  class="text-muted"
+                                  pTooltip="Esta fila no admite envío de correo."
+                                  tooltipPosition="top"
+                                >—</span>
+                              }
+                            } @else {
+                              <span class="text-muted">—</span>
+                            }
+                          </td>
                         </tr>
                       }
                       <tr class="ficha-aa-totals-row">
-                        <td colspan="5" class="totals-label">Totales</td>
+                        <td colspan="7" class="totals-label">Totales</td>
                         <td class="col-money">{{ fichaTotals().system | currency: 'USD' }}</td>
                         <td class="col-money">{{ fichaTotals().provider | currency: 'USD' }}</td>
+                        <td></td>
                         <td></td>
                       </tr>
                     </tbody>
@@ -864,6 +1139,138 @@
     </p-tabs>
   </div>
 }
+
+<!-- Añadir línea en Ficha AA (nueva / reemplazo) -->
+<p-dialog
+  styleClass="ficha-add-detail-dialog"
+  [header]="fichaAddDetailStep() === 'kind' ? 'Añadir línea a la ficha' : 'Elegir servicio del itinerario'"
+  [visible]="showFichaAddDetailDialog()"
+  (visibleChange)="showFichaAddDetailDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(520px, 96vw)' }"
+  (onHide)="onFichaAddDetailDialogHide()"
+>
+  @if (fichaAddDetailStep() === 'kind') {
+    <p class="ficha-add-dialog-hint">
+      ¿Cómo desea añadir la línea respecto a
+      <strong>{{ fichaAddAnchorRow()?.name }}</strong>?
+    </p>
+    <ul class="ficha-add-dialog-bullets">
+      <li><strong>Nueva línea</strong>: copia observaciones, precios proveedor y estado de la fila actual al nuevo servicio que elija. La fila actual no cambia.</li>
+      <li>
+        <strong>Reemplazo</strong>: igual que nueva, pero la fila actual se marca en <span class="ficha-add-red-label">rojo</span> (sustituida).
+      </li>
+    </ul>
+    <div class="ficha-add-kind-buttons">
+      <p-button
+        label="Nueva línea"
+        icon="pi pi-plus-circle"
+        styleClass="ficha-add-kind-btn"
+        (onClick)="chooseFichaAddKind('new')"
+      />
+      <p-button
+        label="Reemplazo"
+        icon="pi pi-sync"
+        severity="warn"
+        styleClass="ficha-add-kind-btn"
+        (onClick)="chooseFichaAddKind('replace')"
+      />
+    </div>
+  } @else {
+    @if (loadingFichaAddSource()) {
+      <p class="ficha-add-loading">Cargando servicios del itinerario…</p>
+    } @else if (fichaAddSourcePickItems().length === 0) {
+      <p class="ficha-add-empty">No hay servicios de este tipo en el itinerario actual.</p>
+    } @else {
+      <p class="ficha-add-pick-hint">
+        Categoría: <strong>{{ fichaCategoryLabel(fichaAddAnchorRow()!.category) }}</strong>
+      </p>
+      @if (fichaAddAnchorRow()?.category === 'room') {
+        <p class="ficha-add-pick-note">
+          Se copian las <strong>fechas</strong> y las <strong>observaciones</strong> de la fila donde pulsó +. El
+          <strong>precio sistema</strong> es la suma de tarifas <strong>públicas (rack)</strong> de la habitación
+          elegida por cada noche entre la primera y la última fecha de esa fila.
+        </p>
+      } @else if (fichaAddAnchorRow()?.category === 'activity') {
+        <p class="ficha-add-pick-note">
+          Se copian <strong>fechas</strong> y <strong>observaciones</strong>. Los <strong>adultos y niños</strong> para
+          el precio rack se toman del texto <code>[A:n N:m]</code> en el nombre de la fila ancla; si no aparece, se usa
+          <strong>1 adulto</strong> y <strong>0 niños</strong>. El total es rack diario de la actividad elegida × los
+          <strong>días</strong> guardados en esa fila.
+        </p>
+      } @else if (fichaAddAnchorRow()?.category === 'vehicle') {
+        <p class="ficha-add-pick-note">
+          Se copian <strong>fechas</strong> y <strong>observaciones</strong>. El <strong>precio sistema</strong> usa
+          tarifas <strong>rack</strong> del vehículo elegido con la misma regla <strong>semanal + diaria</strong> que en
+          la ficha, según la temporada del <strong>primer día</strong> del ancla y el número de <strong>días</strong> de
+          esa fila.
+        </p>
+      }
+      <label class="ficha-add-select-label" for="ficha-add-source-sel">Servicio</label>
+      <p-select
+        inputId="ficha-add-source-sel"
+        [options]="fichaAddSourcePickItems()"
+        [ngModel]="fichaAddSelectedPickKey()"
+        (ngModelChange)="fichaAddSelectedPickKey.set($event)"
+        dataKey="key"
+        optionLabel="listLabel"
+        optionValue="key"
+        placeholder="Seleccione hotel, actividad o vehículo…"
+        styleClass="w-full"
+        appendTo="body"
+        [filter]="true"
+        filterBy="listLabel"
+      >
+        <ng-template pTemplate="selectedItem">
+          @let pick = fichaAddSelectedPickItem();
+          @if (pick) {
+            <span
+              [class.pick-gama-high]="pick.hotelCategory === 'high'"
+              [class.pick-gama-medium]="pick.hotelCategory === 'medium'"
+              [class.pick-gama-low]="pick.hotelCategory === 'low'"
+              [innerHTML]="pick.listLabel | richText"
+            ></span>
+          }
+        </ng-template>
+        <ng-template let-item pTemplate="item">
+          <div class="ficha-add-source-item">
+            @if (item.roomId) {
+              <div
+                class="ficha-add-source-name"
+                [class.pick-gama-high]="item.hotelCategory === 'high'"
+                [class.pick-gama-medium]="item.hotelCategory === 'medium'"
+                [class.pick-gama-low]="item.hotelCategory === 'low'"
+                [innerHTML]="item.listLabel | richText"
+              ></div>
+              <div class="ficha-add-source-meta">Hotel · habitación · rack por noche</div>
+            } @else if (item.activityId) {
+              <div class="ficha-add-source-name" [innerHTML]="item.listLabel | richText"></div>
+              <div class="ficha-add-source-meta">Actividad · precio rack según pax de la fila</div>
+            } @else {
+              <div class="ficha-add-source-name" [innerHTML]="item.listLabel | richText"></div>
+              <div class="ficha-add-source-meta">Vehículo · rack diario / semanal</div>
+            }
+          </div>
+        </ng-template>
+      </p-select>
+    }
+  }
+  <ng-template pTemplate="footer">
+    @if (fichaAddDetailStep() === 'pick') {
+      <p-button label="Atrás" [text]="true" icon="pi pi-arrow-left" (onClick)="backFichaAddDetailStep()" />
+    }
+    <p-button label="Cancelar" [text]="true" (onClick)="closeFichaAddDetailDialog()" />
+    @if (fichaAddDetailStep() === 'pick') {
+      <p-button
+        label="Añadir a la ficha"
+        icon="pi pi-check"
+        [loading]="savingFichaAddDetail()"
+        [disabled]="!fichaAddSelectedPickKey() || loadingFichaAddSource()"
+        (onClick)="submitFichaAddDetailRow()"
+      />
+    }
+  </ng-template>
+</p-dialog>
 
 <!-- Dialog agregar vehículo -->
 <p-dialog
@@ -947,7 +1354,20 @@
         appendTo="body"
       >
         <ng-template let-h pTemplate="selectedItem">
-          <span [innerHTML]="h.name | richText"></span>
+          <span
+            [class.pick-gama-high]="h.category === 'high'"
+            [class.pick-gama-medium]="h.category === 'medium'"
+            [class.pick-gama-low]="h.category === 'low'"
+            [innerHTML]="h.name | richText"
+          ></span>
+        </ng-template>
+        <ng-template let-h pTemplate="item">
+          <span
+            [class.pick-gama-high]="h.category === 'high'"
+            [class.pick-gama-medium]="h.category === 'medium'"
+            [class.pick-gama-low]="h.category === 'low'"
+            [innerHTML]="h.name | richText"
+          ></span>
         </ng-template>
       </p-select>
     </div>
@@ -961,7 +1381,14 @@
         styleClass="w-full"
         [disabled]="roomOptions().length === 0"
         appendTo="body"
-      />
+      >
+        <ng-template let-r pTemplate="selectedItem">
+          <span [innerHTML]="r.name | richText"></span>
+        </ng-template>
+        <ng-template let-r pTemplate="item">
+          <span [innerHTML]="r.name | richText"></span>
+        </ng-template>
+      </p-select>
     </div>
     <div class="field-row">
       <div class="field">
@@ -992,6 +1419,10 @@
         <label>Niños adicionales</label>
         <p-inputNumber formControlName="additional_children" [min]="0" styleClass="w-full" />
       </div>
+    </div>
+    <div class="field">
+      <label>Recomendaciones</label>
+      <input pInputText formControlName="recommendation" class="w-full" />
     </div>
     <div class="dialog-info">
       <i class="pi pi-calendar"></i>
@@ -1394,11 +1825,13 @@
       </div>
     </div>
     <div class="field-row">
-      <div class="field">
-        <label>Comisión</label>
-        <p-inputnumber formControlName="commission" [min]="1" [maxFractionDigits]="4"
-          [minFractionDigits]="2" styleClass="w-full" />
-      </div>
+      @if (isAdmin()) {
+        <div class="field">
+          <label>Comisión</label>
+          <p-inputnumber formControlName="commission" [min]="1" [maxFractionDigits]="4"
+            [minFractionDigits]="2" styleClass="w-full" />
+        </div>
+      }
       <div class="field flex items-center pt-6">
         <p-checkbox formControlName="shared" [binary]="true" inputId="edit-shared" />
         <label for="edit-shared" class="ml-2">Compartida</label>

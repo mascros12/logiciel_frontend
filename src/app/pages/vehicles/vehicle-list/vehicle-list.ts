@@ -19,6 +19,7 @@ import { Vehicle, VehicleSeason } from '../../../core/models/vehicle.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { FormsModule } from '@angular/forms';
 import { VehicleFilterPipe } from './vehicle-filter.pipe';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-vehicle-list',
@@ -68,6 +69,7 @@ export class VehicleList implements OnInit {
   constructor(
     private router: Router,
     private vehicleService: VehicleService,
+    private auth: AuthService,
     private fb: FormBuilder,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
@@ -79,6 +81,7 @@ export class VehicleList implements OnInit {
       bag: [3, Validators.required],
       carryon_bag: [3, Validators.required],
       category: [''],
+      reservation_email: [''],
       commission: [1.2],
       // Diarios neto
       net_daily_high: [0],
@@ -118,6 +121,7 @@ export class VehicleList implements OnInit {
   }
 
   goToDetail(v: Vehicle) {
+    if (!this.canManageVehicles()) return;
     this.router.navigate(['/vehiculos', v.id]);
   }
 
@@ -197,7 +201,7 @@ export class VehicleList implements OnInit {
   openCreate() {
     this.editingVehicle.set(null);
     this.form.reset({
-      seats: 5, bag: 3, carryon_bag: 3, commission: 1.2,
+      seats: 5, bag: 3, carryon_bag: 3, commission: 1.2, reservation_email: '',
       net_daily_high: 0, net_daily_medium: 0, net_daily_low: 0,
       rack_daily_high: 0, rack_daily_medium: 0, rack_daily_low: 0,
       net_weekly_high: 0, net_weekly_medium: 0, net_weekly_low: 0,
@@ -312,5 +316,10 @@ export class VehicleList implements OnInit {
 
   seasonsByGrade(seasons: VehicleSeason[], grade: string) {
     return seasons.filter(s => s.grade === grade);
+  }
+
+  canManageVehicles(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'admin_proveedores';
   }
 }

@@ -29,6 +29,7 @@ export interface VehicleSeason {
     rack_weekly_medium: number;
     net_weekly_low: number;
     rack_weekly_low: number;
+    reservation_email?: string | null;
     seasons: VehicleSeason[];
     created_at: string;
   }
@@ -60,6 +61,7 @@ export interface VehicleSeason {
     rack_weekly_medium: number;
     net_weekly_low: number;
     rack_weekly_low: number;
+    reservation_email?: string | null;
   }
   
   export interface VehicleSeasonCreate {

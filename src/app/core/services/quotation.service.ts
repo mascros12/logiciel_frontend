@@ -10,6 +10,11 @@ import {
   FileAAWithDetails,
   FileAADetailRow,
   FileAADetailPatch,
+  FileAADetailSourceOption,
+  FileAADetailCreateBody,
+  FileAARoomCatalogOption,
+  FileAAActivityCatalogOption,
+  FileAAVehicleCatalogOption,
 } from '../models/quotation.model';
 
 @Injectable({ providedIn: 'root' })
@@ -140,6 +145,40 @@ export class QuotationService {
     return this.http.patch<FileAADetailRow>(`${this.url}/details/${detailId}`, body);
   }
 
+  /** Servicios del itinerario actual por categoría (hotel, actividad, vehículo). */
+  getFichaDetailSourceOptions(quotationId: string, category: 'room' | 'activity' | 'vehicle') {
+    const params = new HttpParams().set('category', category);
+    return this.http.get<FileAADetailSourceOption[]>(
+      `${this.url}/${quotationId}/file-aa/detail-source-options`,
+      { params },
+    );
+  }
+
+  /** Catálogo completo de habitaciones (tablas Hotel + Room) para Ficha AA. */
+  getFichaRoomCatalog() {
+    return this.http.get<FileAARoomCatalogOption[]>(`${this.url}/file-aa/room-catalog`);
+  }
+
+  getFichaActivityCatalog() {
+    return this.http.get<FileAAActivityCatalogOption[]>(`${this.url}/file-aa/activity-catalog`);
+  }
+
+  getFichaVehicleCatalog() {
+    return this.http.get<FileAAVehicleCatalogOption[]>(`${this.url}/file-aa/vehicle-catalog`);
+  }
+
+  createFileAADetailRow(fileId: string, body: FileAADetailCreateBody) {
+    return this.http.post<FileAADetailRow>(`${this.url}/file-aa/${fileId}/details`, body);
+  }
+
+  deleteFileAADetail(detailId: string) {
+    return this.http.delete<void>(`${this.url}/details/${detailId}`);
+  }
+
+  updateFileAA(fileId: string, body: { header_color?: string }) {
+    return this.http.patch<FileAAWithDetails>(`${this.url}/file-aa/${fileId}`, body);
+  }
+
   /** Documento Word con resumen y tabla de la Ficha AA (blob). */
   downloadFichaAAWord(fileId: string) {
     return this.http.get(`${this.url}/file-aa/${fileId}/word`, {
@@ -150,6 +189,21 @@ export class QuotationService {
   /** PDF con resumen y tabla de la Ficha AA (blob). */
   downloadFichaAAPdf(fileId: string) {
     return this.http.get(`${this.url}/file-aa/${fileId}/pdf`, {
+      responseType: 'blob',
+    });
+  }
+
+  /** Envía correo de solicitud al proveedor para una fila de la Ficha AA (vehículo: adjuntos + plantilla corta). */
+  sendFileAADetailReservationEmail(fileId: string, detailId: string) {
+    return this.http.post<{ message: string }>(
+      `${this.url}/file-aa/${fileId}/send/${detailId}`,
+      {},
+    );
+  }
+
+  /** Vista previa del PDF que se adjuntará al enviar correo de una fila de Ficha AA. */
+  previewFileAADetailReservationPdf(fileId: string, detailId: string) {
+    return this.http.get(`${this.url}/file-aa/${fileId}/send/${detailId}/preview-pdf`, {
       responseType: 'blob',
     });
   }

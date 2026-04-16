@@ -23,13 +23,18 @@ export interface RoomSeason {
     seasons: RoomSeason[];
   }
   
+  /** Gama del hotel (almacenado como high / medium / low). */
+  export type HotelCategory = 'high' | 'medium' | 'low';
+
   export interface Hotel {
     id: string;
     name: string;
     province: string | null;
     address: string | null;
-    category: string | null;
+    category: HotelCategory | null;
     commission: number;
+    /** Correo para envío de reservas (Ficha AA) */
+    reservation_email?: string | null;
     rooms: Room[];
     created_at: string;
   }
@@ -45,8 +50,9 @@ export interface RoomSeason {
     name: string;
     province?: string;
     address?: string;
-    category?: string;
+    category?: HotelCategory | null;
     commission?: number;
+    reservation_email?: string | null;
   }
   
   export interface RoomCreate {

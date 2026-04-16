@@ -1,18 +1,25 @@
 <div class="login-wrapper">
+    <div class="login-backdrop" aria-hidden="true"></div>
     <div class="login-card">
       <div class="login-header">
+        <img
+          class="login-logo"
+          src="/logo_text.png"
+          alt="Logiciel CRV"
+          decoding="async"
+        />
         <h1>Logiciel CRV</h1>
         <p>Ingresa tus credenciales para continuar</p>
       </div>
   
       <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
         <div class="field">
-          <label for="email">Usuario</label>
+          <label for="username">Usuario</label>
           <input
             pInputText
-            id="email"
-            formControlName="email"
-            placeholder="correo@ejemplo.com"
+            id="username"
+            formControlName="username"
+            placeholder="nombre.de.usuario"
             class="w-full"
             autocomplete="username"
           />

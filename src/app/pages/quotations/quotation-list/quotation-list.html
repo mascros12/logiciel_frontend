@@ -12,15 +12,30 @@
   </div>
 
   <p-table
+    #dt
     [value]="quotations()"
     [loading]="loading()"
     [rows]="pageSize"
     [totalRecords]="total()"
     dataKey="id"
     [expandedRowKeys]="expandedRows"
+    [globalFilterFields]="['name', 'created_by_id']"
     (onRowExpand)="onRowExpand($event)"
     styleClass="p-datatable-gridlines"
     >
+    <ng-template pTemplate="caption">
+      <div class="quotation-table-tools">
+        <span class="p-input-icon-left quotation-search">
+          <i class="pi pi-search"></i>
+          <input
+            pInputText
+            type="text"
+            placeholder="Buscar cotización..."
+            (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+          />
+        </span>
+      </div>
+    </ng-template>
     <ng-template pTemplate="header">
       <tr>
         <th style="width: 3rem"></th>

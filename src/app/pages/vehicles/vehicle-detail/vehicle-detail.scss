@@ -44,6 +44,18 @@
 
     i { font-size: 0.8rem; }
   }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+}
+
+.vehicle-email-hint {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
 }
 
 .detail-body {

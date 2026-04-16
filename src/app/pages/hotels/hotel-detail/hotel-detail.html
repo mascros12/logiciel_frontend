@@ -15,19 +15,29 @@
         <i class="pi pi-arrow-left"></i>
       </button>
       <div>
-        <h2>{{ h.name }}</h2>
+        <p [innerHTML]="h.name | richText" style="font-size: 24px;"></p>
         <div class="header-meta">
           @if (h.province) { <span class="meta-item"><i class="pi pi-map-marker"></i> {{ h.province }}</span> }
           @if (h.address)  { <span class="meta-item"><i class="pi pi-home"></i> {{ h.address }}</span> }
-          @if (h.category) { <span class="meta-item"><i class="pi pi-star"></i> {{ h.category }}</span> }
-          <span class="meta-item"><i class="pi pi-percentage"></i> Comisión: {{ h.commission | number:'1.2-2' }}</span>
+          @if (h.category) { <span class="meta-item"><i class="pi pi-star"></i> {{ hotelCategoryLabel(h.category) }}</span> }
+          @if (canManageHotels()) {
+            <span class="meta-item"><i class="pi pi-percentage"></i> Comisión: {{ h.commission | number:'1.2-2' }}</span>
+          }
+          @if (h.reservation_email) {
+            <span class="meta-item"><i class="pi pi-envelope"></i> {{ h.reservation_email }}</span>
+          }
         </div>
       </div>
     </div>
-    @if (activeTab() === 'seasons') {
-      <p-button label="Nueva temporada" icon="pi pi-plus" (onClick)="openAddHotelSeason()" />
-    } @else {
-      <p-button label="Nueva habitación" icon="pi pi-plus" (onClick)="openAddRoom()" />
+    @if (canManageHotels()) {
+      <div class="header-actions">
+        <p-button label="Editar hotel" icon="pi pi-pencil" [outlined]="true" severity="secondary" (onClick)="openHotelMetaDialog()" />
+        @if (activeTab() === 'seasons') {
+          <p-button label="Nueva temporada" icon="pi pi-plus" (onClick)="openAddHotelSeason()" />
+        } @else {
+          <p-button label="Nueva habitación" icon="pi pi-plus" (onClick)="openAddRoom()" />
+        }
+      </div>
     }
   </div>
 
@@ -35,7 +45,9 @@
     <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
       <p-tablist>
         <p-tab value="rooms">Habitaciones</p-tab>
-        <p-tab value="seasons">Temporadas</p-tab>
+        @if (canManageHotels()) {
+          <p-tab value="seasons">Temporadas</p-tab>
+        }
       </p-tablist>
 
       <p-tabpanels>
@@ -44,64 +56,82 @@
           @if (h.rooms.length === 0) {
             <div class="empty-rooms">
               <i class="pi pi-inbox" style="font-size:2rem; color: var(--p-text-muted-color)"></i>
-              <p>Sin habitaciones — agrega la primera</p>
+              <p>Sin habitaciones registradas.</p>
             </div>
           } @else {
             <p-table [value]="h.rooms" styleClass="p-datatable-gridlines" [rowHover]="true">
               <ng-template pTemplate="header">
                 <tr>
                   <th>Habitación</th>
-                  <th style="width:80px">Año</th>
-                  <th colspan="2" class="th-center th-high">Pico</th>
-                  <th colspan="2" class="th-center th-medium">Alta</th>
-                  <th colspan="2" class="th-center th-low">Baja</th>
-                  <th colspan="2" class="th-center">Adulto adicional</th>
-                  <th colspan="2" class="th-center">Niño adicional</th>
-                  <th style="width:110px">Acciones</th>
+                  @if (canManageHotels()) {
+                    <th style="width:80px">Año</th>
+                    <th colspan="2" class="th-center th-high">Pico</th>
+                    <th colspan="2" class="th-center th-medium">Alta</th>
+                    <th colspan="2" class="th-center th-low">Baja</th>
+                    <th colspan="2" class="th-center">Adulto adicional</th>
+                    <th colspan="2" class="th-center">Niño adicional</th>
+                    <th style="width:110px">Acciones</th>
+                  }
                 </tr>
-                <tr>
-                  <th></th>
-                  <th></th>
-                  <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
-                  <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
-                  <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
-                  <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
-                  <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
-                  <th></th>
-                </tr>
+                @if (canManageHotels()) {
+                  <tr>
+                    <th></th>
+                    <th></th>
+                    <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+                    <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+                    <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+                    <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+                    <th class="th-sub">Neto</th><th class="th-sub">Rack</th>
+                    <th></th>
+                  </tr>
+                }
               </ng-template>
 
               <ng-template pTemplate="body" let-room>
-                @for (year of getSeasonYears(); track year) {
+                @if (canManageHotels()) {
+                  @for (year of getSeasonYears(); track year) {
+                    <tr>
+                      @if (year === getSeasonYears()[0]) {
+                        <td [attr.rowspan]="getSeasonYears().length">
+                          <strong
+                            [attr.title]="stripRichTextMarkers(room.name)"
+                            [innerHTML]="room.name | richText"
+                          ></strong>
+                        </td>
+                      }
+                      <td>{{ year }}</td>
+                      <td>{{ priceForYearAndGrade(room, year, 'high') }}</td>
+                      <td class="rack">{{ rackForYearAndGrade(room, year, 'high') }}</td>
+                      <td>{{ priceForYearAndGrade(room, year, 'medium') }}</td>
+                      <td class="rack">{{ rackForYearAndGrade(room, year, 'medium') }}</td>
+                      <td>{{ priceForYearAndGrade(room, year, 'low') }}</td>
+                      <td class="rack">{{ rackForYearAndGrade(room, year, 'low') }}</td>
+                      <td>{{ priceOrDash(room.net_additional_adult) }}</td>
+                      <td class="rack">{{ priceOrDash(room.rack_additional_adult) }}</td>
+                      <td>{{ priceOrDash(room.net_additional_child) }}</td>
+                      <td class="rack">{{ priceOrDash(room.rack_additional_child) }}</td>
+                      @if (year === getSeasonYears()[0]) {
+                        <td [attr.rowspan]="getSeasonYears().length">
+                          <div class="flex gap-1">
+                            <p-button icon="pi pi-calendar" [text]="true" size="small"
+                              pTooltip="Temporadas" (onClick)="openSeasons(room)" />
+                            <p-button icon="pi pi-pencil" [text]="true" size="small"
+                              (onClick)="openEditRoom(room)" />
+                            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+                              (onClick)="confirmDeleteRoom($event, room.id)" />
+                          </div>
+                        </td>
+                      }
+                    </tr>
+                  }
+                } @else {
                   <tr>
-                    @if (year === getSeasonYears()[0]) {
-                      <td [attr.rowspan]="getSeasonYears().length">
-                        <strong>{{ room.name }}</strong>
-                      </td>
-                    }
-                    <td>{{ year }}</td>
-                    <td>{{ priceForYearAndGrade(room, year, 'high') }}</td>
-                    <td class="rack">{{ rackForYearAndGrade(room, year, 'high') }}</td>
-                    <td>{{ priceForYearAndGrade(room, year, 'medium') }}</td>
-                    <td class="rack">{{ rackForYearAndGrade(room, year, 'medium') }}</td>
-                    <td>{{ priceForYearAndGrade(room, year, 'low') }}</td>
-                    <td class="rack">{{ rackForYearAndGrade(room, year, 'low') }}</td>
-                    <td>{{ priceOrDash(room.net_additional_adult) }}</td>
-                    <td class="rack">{{ priceOrDash(room.rack_additional_adult) }}</td>
-                    <td>{{ priceOrDash(room.net_additional_child) }}</td>
-                    <td class="rack">{{ priceOrDash(room.rack_additional_child) }}</td>
-                    @if (year === getSeasonYears()[0]) {
-                      <td [attr.rowspan]="getSeasonYears().length">
-                        <div class="flex gap-1">
-                          <p-button icon="pi pi-calendar" [text]="true" size="small"
-                            pTooltip="Temporadas" (onClick)="openSeasons(room)" />
-                          <p-button icon="pi pi-pencil" [text]="true" size="small"
-                            (onClick)="openEditRoom(room)" />
-                          <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
-                            (onClick)="confirmDeleteRoom($event, room.id)" />
-                        </div>
-                      </td>
-                    }
+                    <td>
+                      <strong
+                        [attr.title]="stripRichTextMarkers(room.name)"
+                        [innerHTML]="room.name | richText"
+                      ></strong>
+                    </td>
                   </tr>
                 }
               </ng-template>
@@ -110,6 +140,7 @@
         </p-tabpanel>
 
         <!-- Tab Temporadas del hotel -->
+        @if (canManageHotels()) {
         <p-tabpanel value="seasons">
           <div class="hotel-seasons-wrapper">
             @for (grade of ['low', 'medium', 'high']; track grade) {
@@ -146,12 +177,81 @@
             }
           </div>
         </p-tabpanel>
+        }
       </p-tabpanels>
     </p-tabs>
   </div>
 }
 
+<!-- Dialog datos del hotel (correo reservas, etc.) -->
+@if (canManageHotels()) {
+<p-dialog
+  header="Editar hotel"
+  [visible]="showHotelMetaDialog()"
+  (visibleChange)="showHotelMetaDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(480px, 96vw)' }"
+>
+  <form [formGroup]="hotelMetaForm" class="season-form">
+    <div class="field">
+      <label>Nombre *</label>
+      <input pInputText formControlName="name" class="w-full" placeholder="Hotel Bougainvillea" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Provincia</label>
+        <p-select
+          formControlName="province"
+          [options]="provincesMeta"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div class="field">
+        <label>Comisión</label>
+        <p-inputNumber
+          formControlName="commission"
+          [minFractionDigits]="2"
+          [maxFractionDigits]="4"
+          styleClass="w-full"
+        />
+      </div>
+    </div>
+    <div class="field">
+      <label>Dirección / Ciudad</label>
+      <input pInputText formControlName="address" class="w-full" placeholder="Heredia, Santo Domingo" />
+    </div>
+    <div class="field">
+      <label>Categoría</label>
+      <p-select
+        formControlName="category"
+        [options]="categoryOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Seleccionar"
+        [showClear]="true"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+    <div class="field">
+      <label>Correo reservas</label>
+      <input pInputText type="email" formControlName="reservation_email" class="w-full" placeholder="reservas@hotel.com" />
+      <small class="field-hint">Usado para enviar solicitudes desde la Ficha AA</small>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showHotelMetaDialog.set(false)" />
+    <p-button label="Guardar" icon="pi pi-check" [loading]="savingHotelMeta()" (onClick)="submitHotelMeta()" />
+  </ng-template>
+</p-dialog>
+}
+
 <!-- Dialog habitación -->
+@if (canManageHotels()) {
 <p-dialog
   [header]="editingRoom() ? 'Editar Habitación' : 'Nueva Habitación'"
   [visible]="showRoomDialog()"
@@ -210,8 +310,10 @@
       [loading]="savingRoom()" (onClick)="submitRoom()" />
   </ng-template>
 </p-dialog>
+}
 
 <!-- Dialog nueva temporada del hotel -->
+@if (canManageHotels()) {
 <p-dialog
   header="Nueva temporada"
   [visible]="showHotelSeasonDialog()"
@@ -247,8 +349,10 @@
     <p-button label="Agregar" icon="pi pi-plus" [loading]="savingHotelSeason()" (onClick)="submitHotelSeason()" />
   </ng-template>
 </p-dialog>
+}
 
 <!-- Dialog temporadas de habitación -->
+@if (canManageHotels()) {
 <p-dialog
   [header]="'Temporadas — ' + (seasonRoom()?.name ?? '')"
   [visible]="showSeasonDialog()"
@@ -304,3 +408,4 @@
     </form>
   }
 </p-dialog>
+}

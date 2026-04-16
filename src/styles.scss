@@ -86,3 +86,29 @@ html, body {
     }
   }
 }
+
+// Selector de versión en detalle de cotización (panel con appendTo="body")
+.version-opt-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.version-opt-v {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.version-opt-creator {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--p-text-muted-color);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 11rem;
+}

@@ -20,6 +20,7 @@ export interface Activity {
   rack_adult_price: number;
   net_child_price: number;
   rack_child_price: number;
+  reservation_email?: string | null;
   seasons: ActivitySeason[];
   created_at: string;
 }
@@ -42,6 +43,7 @@ export interface ActivityCreate {
   rack_adult_price: number;
   net_child_price: number;
   rack_child_price: number;
+  reservation_email?: string | null;
 }
 
 export interface ActivityUpdate extends Partial<ActivityCreate> {}

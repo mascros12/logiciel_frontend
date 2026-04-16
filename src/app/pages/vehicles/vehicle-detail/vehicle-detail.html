@@ -21,10 +21,16 @@
           <span class="meta-item"><i class="pi pi-users"></i> {{ v.seats }} asientos</span>
           <span class="meta-item"><i class="pi pi-briefcase"></i> {{ v.bag }} maletas / {{ v.carryon_bag }} mano</span>
           <span class="meta-item"><i class="pi pi-percentage"></i> Comisión: {{ v.commission | number:'1.2-2' }}</span>
+          @if (v.reservation_email) {
+            <span class="meta-item"><i class="pi pi-envelope"></i> {{ v.reservation_email }}</span>
+          }
         </div>
       </div>
     </div>
-    <p-button label="Nueva temporada" icon="pi pi-calendar-plus" (onClick)="openSeasonDialog()" />
+    <div class="header-actions">
+      <p-button label="Correo reservas" icon="pi pi-envelope" [outlined]="true" severity="secondary" (onClick)="openVehicleMetaDialog()" />
+      <p-button label="Nueva temporada" icon="pi pi-calendar-plus" (onClick)="openSeasonDialog()" />
+    </div>
   </div>
 
   <div class="detail-body">
@@ -45,17 +51,17 @@
                 <span class="value">{{ v.seats }}</span>
               </div>
               <div class="info-row">
-                <span class="label">Maletas</span>
+                <span class="label">Maletas de Bodega</span>
                 <span class="value">{{ v.bag }}</span>
               </div>
               <div class="info-row">
                 <span class="label">Maletas de mano</span>
                 <span class="value">{{ v.carryon_bag }}</span>
               </div>
-              <!--div class="info-row">
-                <span class="label">Categoría</span>
-                <span class="value">{{ v.category || '—' }}</span>
-              </div-->
+              <div class="info-row">
+                <span class="label">Correo reservas</span>
+                <span class="value">{{ v.reservation_email || '—' }}</span>
+              </div>
             </div>
 
             <div class="info-card">
@@ -163,6 +169,27 @@
     </p-tabs>
   </div>
 }
+
+<!-- Correo de reservas (Ficha AA) -->
+<p-dialog
+  header="Correo de reservas"
+  [visible]="showVehicleMetaDialog()"
+  (visibleChange)="showVehicleMetaDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(440px, 96vw)' }"
+>
+  <form [formGroup]="vehicleMetaForm" class="season-form">
+    <div class="field">
+      <label>Correo</label>
+      <input pInputText type="email" formControlName="reservation_email" class="w-full" placeholder="flota@rentacar.com" />
+      <small class="vehicle-email-hint">Para envío de correos desde la Ficha AA. Déjelo vacío para quitar el correo.</small>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showVehicleMetaDialog.set(false)" />
+    <p-button label="Guardar" icon="pi pi-check" [loading]="savingVehicleMeta()" (onClick)="submitVehicleMeta()" />
+  </ng-template>
+</p-dialog>
 
 <!-- Dialog nueva temporada -->
 <p-dialog

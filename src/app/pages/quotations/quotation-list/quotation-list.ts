@@ -109,7 +109,7 @@ export class QuotationList implements OnInit {
   }
 
   openCreate() {
-    this.createForm.reset({ commission: 1.20 });
+    this.createForm.reset({ commission: 1.92 });
     this.showCreateDialog.set(true);
   }
 

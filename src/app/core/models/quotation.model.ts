@@ -17,6 +17,7 @@ interface QuotationRoom {
   rack_price: number;
   additional_adults: number;
   additional_children: number;
+  recommendation?: string;
   is_original: boolean;
   deleted: boolean;
   total?: number;
@@ -51,6 +52,8 @@ export interface QuotationVersion {
   is_current: boolean;
   total: number;
   created_at: string;
+  /** Nombre del usuario que creó la versión (API enriquecida). */
+  created_by_name?: string | null;
 }
 
 export type FichaMemberRole = 'child' | 'adult';
@@ -79,6 +82,26 @@ export interface FileAAGenerateRequest {
 export type FileAADetailCategory = 'vehicle' | 'room' | 'activity';
 export type FileAARowStatus = 'normal' | 'yellow' | 'red';
 
+/** Observaciones estructuradas en Ficha AA — filas categoría vehículo */
+export interface FileAADetailVehicleObsState {
+  luggage_cover: boolean;
+  pickup_detail: string;
+  dropoff_detail: string;
+  notes: string;
+}
+
+/** Observaciones estructuradas en Ficha AA — filas categoría actividad */
+export interface FileAADetailActivityObsState {
+  pickup_detail: string;
+  notes: string;
+}
+
+/** Observaciones estructuradas en Ficha AA — filas categoría hotel */
+export interface FileAADetailRoomObsState {
+  room_quantity: number | null;
+  notes: string;
+}
+
 /** Línea de la Ficha AA generada (hotel / actividad / vehículo) */
 export interface FileAADetailRow {
   id: string;
@@ -87,6 +110,8 @@ export interface FileAADetailRow {
   category: FileAADetailCategory;
   name: string;
   observations: string | null;
+  /** JSON backend: campos según categoría (vehículo: cobertor, recogida, devolución, notas) */
+  observation_extras?: Record<string, unknown> | null;
   dates: string;
   date_from: string;
   date_to: string;
@@ -99,6 +124,8 @@ export interface FileAADetailRow {
   paid: boolean;
   send_message: boolean;
   send_email: boolean;
+  /** Marca de tiempo del envío al proveedor (correo de reserva), si aplica */
+  supplier_email_sent_at?: string | null;
   row_status: FileAARowStatus;
   evaluation: number;
   evaluation_notes: string | null;
@@ -118,14 +145,60 @@ export interface FileAAWithDetails {
   children_ages: string | null;
   need_booster: boolean;
   need_kid_seat: boolean;
+  header_color: string;
   sent: boolean;
   created_at: string;
   details: FileAADetailRow[];
 }
 
+/** Opción de servicio del itinerario para añadir fila en Ficha AA (misma agregación que al generar la ficha). */
+export interface FileAADetailSourceOption {
+  name: string;
+  dates: string;
+  date_from: string;
+  date_to: string;
+  days: number;
+  total_price: number | string;
+}
+
+/** Opción del catálogo maestro Hotel + Room (Ficha AA). */
+export interface FileAARoomCatalogOption {
+  room_id: string;
+  label: string;
+  /** Gama del hotel (high / medium / low). */
+  hotel_category?: 'high' | 'medium' | 'low' | string | null;
+}
+
+export interface FileAAActivityCatalogOption {
+  activity_id: string;
+  label: string;
+}
+
+export interface FileAAVehicleCatalogOption {
+  vehicle_id: string;
+  label: string;
+}
+
+/** Crear fila Ficha AA: un id de catálogo o campos manuales (compat.). */
+export interface FileAADetailCreateBody {
+  category: FileAADetailCategory;
+  copy_operational_from_detail_id: string;
+  mark_anchor_row_red: boolean;
+  room_id?: string;
+  activity_id?: string;
+  vehicle_id?: string;
+  name?: string;
+  dates?: string;
+  date_from?: string;
+  date_to?: string;
+  days?: number;
+  total_price?: number | string;
+}
+
 export interface FileAADetailPatch {
   name?: string;
-  observations?: string;
+  observations?: string | null;
+  observation_extras?: Record<string, unknown> | null;
   dates?: string;
   date_from?: string;
   date_to?: string;
@@ -218,6 +291,7 @@ export interface AddRoomRequest {
   date: string;
   additional_adults?: number;
   additional_children?: number;
+  recommendation?: string;
 }
 
 export interface AddActivityRequest {

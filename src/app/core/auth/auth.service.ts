@@ -1,7 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface LoginResponse {
@@ -28,10 +29,11 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router) {}
 
-  login(email: string, password: string) {
+  login(username: string, password: string) {
     return this.http.post<LoginResponse>(
       `${environment.apiUrl}/auth/login`,
-      { email, password }
+      // Backend aún espera el campo "email", pero aquí usamos username en la UI.
+      { email: username, password }
     ).pipe(
       tap(response => {
         localStorage.setItem(this.TOKEN_KEY, response.access_token);
@@ -52,11 +54,15 @@ export class AuthService {
   }
 
   logout() {
+    this.clearSession();
+    this.router.navigate(['/login']);
+  }
+
+  clearSession() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_KEY);
     localStorage.removeItem(this.USER_KEY);
     this.currentUser.set(null);
-    this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
@@ -67,8 +73,26 @@ export class AuthService {
     return !!this.getToken();
   }
 
+  ensureAuthenticated(): Observable<boolean> {
+    const token = this.getToken();
+    if (!token) return of(false);
+    if (this.currentUser()) return of(true);
+    return this.fetchCurrentUser().pipe(
+      map(() => true),
+      catchError(() => {
+        this.clearSession();
+        return of(false);
+      }),
+    );
+  }
+
   private loadUser(): CurrentUser | null {
     const raw = localStorage.getItem(this.USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as CurrentUser;
+    } catch {
+      return null;
+    }
   }
 }

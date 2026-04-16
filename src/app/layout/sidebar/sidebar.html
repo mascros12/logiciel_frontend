@@ -1,26 +1,41 @@
 <aside class="sidebar" [class.collapsed]="collapsed()">
     <div class="sidebar-logo">
       @if (!collapsed()) {
-        <span class="logo-text">Logiciel CRV</span>
+        <div class="sidebar-brand">
+          <img
+            class="sidebar-brand__mark sidebar-brand__mark--logo"
+            src="/logo.png"
+            alt=""
+            decoding="async"
+          />
+          <span class="logo-text">Logiciel CRV</span>
+        </div>
       } @else {
-        <span class="logo-icon">CRV</span>
+        <img
+          class="sidebar-brand__mark sidebar-brand__mark--collapsed sidebar-brand__mark--logo"
+          src="/logo.png"
+          alt="Logiciel CRV"
+          decoding="async"
+        />
       }
     </div>
   
     <nav class="sidebar-nav">
       @for (item of navItems; track item.route) {
-        <a
-          [routerLink]="item.route"
-          routerLinkActive="active"
-          class="nav-item"
-          [class.collapsed]="collapsed()"
-          [title]="collapsed() ? item.label : ''"
-        >
-          <i [class]="item.icon"></i>
-          @if (!collapsed()) {
-            <span>{{ item.label }}</span>
-          }
-        </a>
+        @if (canShowItem(item)) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            class="nav-item"
+            [class.collapsed]="collapsed()"
+            [title]="collapsed() ? item.label : ''"
+          >
+            <i [class]="item.icon"></i>
+            @if (!collapsed()) {
+              <span>{{ item.label }}</span>
+            }
+          </a>
+        }
       }
     </nav>
   

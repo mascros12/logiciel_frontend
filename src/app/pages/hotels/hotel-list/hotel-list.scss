@@ -30,6 +30,37 @@
 
 .clickable-row { cursor: pointer; }
 
+/** Franja lateral por gama (tonos suavizados para fondo blanco) */
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-gama-high > td:first-child,
+:host ::ng-deep .p-datatable tbody > tr.row-gama-high > td:first-child {
+  box-shadow: inset 4px 0 0 #d67b7b;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-gama-medium > td:first-child,
+:host ::ng-deep .p-datatable tbody > tr.row-gama-medium > td:first-child {
+  box-shadow: inset 4px 0 0 #d4b24a;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-gama-low > td:first-child,
+:host ::ng-deep .p-datatable tbody > tr.row-gama-low > td:first-child {
+  box-shadow: inset 4px 0 0 #6bab7d;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-gama-high:hover > td:first-child,
+:host ::ng-deep .p-datatable tbody > tr.row-gama-high:hover > td:first-child {
+  box-shadow: inset 4px 0 0 #c96a6a;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-gama-medium:hover > td:first-child,
+:host ::ng-deep .p-datatable tbody > tr.row-gama-medium:hover > td:first-child {
+  box-shadow: inset 4px 0 0 #c4a23e;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-gama-low:hover > td:first-child,
+:host ::ng-deep .p-datatable tbody > tr.row-gama-low:hover > td:first-child {
+  box-shadow: inset 4px 0 0 #5f9a70;
+}
+
 .hotel-name { font-weight: 500; }
 .hotel-address {
   font-size: 0.8rem;

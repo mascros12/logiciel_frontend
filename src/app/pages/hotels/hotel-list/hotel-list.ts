@@ -12,11 +12,12 @@ import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
-import { Hotel } from '../../../core/models/hotel.model';
+import { Hotel, HotelCategory } from '../../../core/models/hotel.model';
 import { FormsModule } from '@angular/forms';
 import { HotelFilterPipe } from './hotel-filter.pipe';
 import { DecimalPipe } from '@angular/common';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-hotel-list',
@@ -42,6 +43,12 @@ export class HotelList implements OnInit {
 
   form: FormGroup;
 
+  categoryOptions = [
+    { label: 'Gama Alta', value: 'high' as const },
+    { label: 'Gama Media', value: 'medium' as const },
+    { label: 'Gama Baja', value: 'low' as const },
+  ];
+
   provinces = [
     { label: 'San José',    value: 'San Jose' },
     { label: 'Alajuela',    value: 'Alajuela' },
@@ -56,6 +63,7 @@ export class HotelList implements OnInit {
     private hotelService: HotelService,
     private fb: FormBuilder,
     private router: Router,
+    private auth: AuthService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
   ) {
@@ -63,8 +71,9 @@ export class HotelList implements OnInit {
       name: ['', Validators.required],
       province: [null],
       address: [''],
-      category: [''],
+      category: [null as HotelCategory | null],
       commission: [1.2],
+      reservation_email: [''],
     });
   }
 
@@ -80,15 +89,27 @@ export class HotelList implements OnInit {
 
   openCreate() {
     this.editingHotel.set(null);
-    this.form.reset({ commission: 1.2 });
+    this.form.reset({ commission: 1.2, reservation_email: '', category: null });
     this.showDialog.set(true);
   }
 
   openEdit(h: Hotel, event: Event) {
     event.stopPropagation();
     this.editingHotel.set(h);
-    this.form.patchValue(h);
+    this.form.patchValue({
+      name: h.name,
+      province: h.province,
+      address: h.address ?? '',
+      category: this.parseCategory(h.category),
+      commission: h.commission,
+      reservation_email: h.reservation_email ?? '',
+    });
     this.showDialog.set(true);
+  }
+
+  private parseCategory(v: string | null | undefined): HotelCategory | null {
+    if (v === 'high' || v === 'medium' || v === 'low') return v;
+    return null;
   }
 
   submit() {
@@ -137,5 +158,10 @@ export class HotelList implements OnInit {
 
   get dialogTitle() {
     return this.editingHotel() ? 'Editar Hotel' : 'Nuevo Hotel';
+  }
+
+  canManageHotels(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'admin_proveedores';
   }
 }

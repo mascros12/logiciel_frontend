@@ -17,7 +17,9 @@
           [(ngModel)]="searchTerm"
         />
       </span>
-      <p-button label="Nuevo vehículo" icon="pi pi-plus" (onClick)="openCreate()" />
+      @if (canManageVehicles()) {
+        <p-button label="Nuevo vehículo" icon="pi pi-plus" (onClick)="openCreate()" />
+      }
     </div>
   </div>
 
@@ -31,78 +33,93 @@
       <tr>
         <th>Vehículo</th>
         <th style="width:80px">Asientos</th>
-        <th style="width:80px">Maletas</th>
+        <th style="width:80px">M. Bodega</th>
         <th style="width:90px">M. Mano</th>
-        <th style="width:80px">Año</th>
-        <th>Precio diario (<span style="color: darkred">Pico</span>/<span style="color: darkorange">Alta</span>/<span style="color: darkgreen">Baja</span>)</th>
-        <th>Precio semanal (<span style="color: darkred">Pico</span>/<span style="color: darkorange">Alta</span>/<span style="color: darkgreen">Baja</span>)</th>
-        <th style="width:120px">Acciones</th>
+        @if (canManageVehicles()) {
+          <th style="width:80px">Año</th>
+          <th>Precio diario (<span style="color: darkred">Pico</span>/<span style="color: darkorange">Alta</span>/<span style="color: darkgreen">Baja</span>)</th>
+          <th>Precio semanal (<span style="color: darkred">Pico</span>/<span style="color: darkorange">Alta</span>/<span style="color: darkgreen">Baja</span>)</th>
+          <th style="width:120px">Acciones</th>
+        }
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-v>
-      @for (year of getSeasonYears(); track year) {
-        <tr>
-          @if (year === getSeasonYears()[0]) {
-            <td [attr.rowspan]="getSeasonYears().length" (click)="goToDetail(v)">
-              <div [innerHTML]="v.name | richText"></div>
-              @if (v.brand) {
-                <div class="vehicle-brand">{{ v.brand }}</div>
-              }
-            </td>
-            <td class="text-center" [attr.rowspan]="getSeasonYears().length">{{ v.seats }}</td>
-            <td class="text-center" [attr.rowspan]="getSeasonYears().length">{{ v.bag }}</td>
-            <td class="text-center" [attr.rowspan]="getSeasonYears().length">{{ v.carryon_bag }}</td>
-          }
-          <td class="text-center">{{ year }}</td>
-          <td>
-            <div class="price-grid">
-              <span class="grade-high">
-                {{ priceForYearAndGrade(v, year, 'high', 'daily') }}
-              </span>
-              <span class="grade-medium">
-                {{ priceForYearAndGrade(v, year, 'medium', 'daily') }}
-              </span>
-              <span class="grade-low">
-                {{ priceForYearAndGrade(v, year, 'low', 'daily') }}
-              </span>
-            </div>
-          </td>
-          <td>
-            <div class="price-grid">
-              <span class="grade-high">
-                {{ priceForYearAndGrade(v, year, 'high', 'weekly') }}
-              </span>
-              <span class="grade-medium">
-                {{ priceForYearAndGrade(v, year, 'medium', 'weekly') }}
-              </span>
-              <span class="grade-low">
-                {{ priceForYearAndGrade(v, year, 'low', 'weekly') }}
-              </span>
-            </div>
-          </td>
-          @if (year === getSeasonYears()[0]) {
-            <td [attr.rowspan]="getSeasonYears().length">
-              <div class="flex gap-1">
-                <!--p-button icon="pi pi-calendar" [text]="true" size="small"
-                  pTooltip="Temporadas" (onClick)="openSeasons(v)" /-->
-                <p-button icon="pi pi-pencil" [text]="true" size="small"
-                  (onClick)="openEdit(v)" />
-                <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
-                  (onClick)="confirmDelete($event, v.id)" />
+      @if (canManageVehicles()) {
+        @for (year of getSeasonYears(); track year) {
+          <tr>
+            @if (year === getSeasonYears()[0]) {
+              <td [attr.rowspan]="getSeasonYears().length" (click)="goToDetail(v)">
+                <div [innerHTML]="v.name | richText"></div>
+                @if (v.brand) {
+                  <div class="vehicle-brand">{{ v.brand }}</div>
+                }
+              </td>
+              <td class="text-center" [attr.rowspan]="getSeasonYears().length">{{ v.seats }}</td>
+              <td class="text-center" [attr.rowspan]="getSeasonYears().length">{{ v.bag }}</td>
+              <td class="text-center" [attr.rowspan]="getSeasonYears().length">{{ v.carryon_bag }}</td>
+            }
+            <td class="text-center">{{ year }}</td>
+            <td>
+              <div class="price-grid">
+                <span class="grade-high">
+                  {{ priceForYearAndGrade(v, year, 'high', 'daily') }}
+                </span>
+                <span class="grade-medium">
+                  {{ priceForYearAndGrade(v, year, 'medium', 'daily') }}
+                </span>
+                <span class="grade-low">
+                  {{ priceForYearAndGrade(v, year, 'low', 'daily') }}
+                </span>
               </div>
             </td>
-          }
+            <td>
+              <div class="price-grid">
+                <span class="grade-high">
+                  {{ priceForYearAndGrade(v, year, 'high', 'weekly') }}
+                </span>
+                <span class="grade-medium">
+                  {{ priceForYearAndGrade(v, year, 'medium', 'weekly') }}
+                </span>
+                <span class="grade-low">
+                  {{ priceForYearAndGrade(v, year, 'low', 'weekly') }}
+                </span>
+              </div>
+            </td>
+            @if (year === getSeasonYears()[0]) {
+              <td [attr.rowspan]="getSeasonYears().length">
+                <div class="flex gap-1">
+                  <p-button icon="pi pi-pencil" [text]="true" size="small"
+                    (onClick)="openEdit(v)" />
+                  <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+                    (onClick)="confirmDelete($event, v.id)" />
+                </div>
+              </td>
+            }
+          </tr>
+        }
+      } @else {
+        <tr>
+          <td>
+            <div [innerHTML]="v.name | richText"></div>
+            @if (v.brand) {
+              <div class="vehicle-brand">{{ v.brand }}</div>
+            }
+          </td>
+          <td class="text-center">{{ v.seats }}</td>
+          <td class="text-center">{{ v.bag }}</td>
+          <td class="text-center">{{ v.carryon_bag }}</td>
         </tr>
       }
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td colspan="8" class="text-center">No hay vehículos registrados</td></tr>
+      <tr><td [attr.colspan]="canManageVehicles() ? 8 : 4" class="text-center">No hay vehículos registrados</td></tr>
     </ng-template>
   </p-table>
 </div>
 
+@if (canManageVehicles()) {
 <!-- ── Dialog crear/editar ─────────────────────────────────── -->
 <p-dialog
   [header]="dialogTitle"
@@ -145,7 +162,7 @@
                 <p-inputNumber formControlName="seats" [min]="1" [max]="50" styleClass="w-full" />
               </div>
               <div class="field">
-                <label>Maletas *</label>
+                <label>Maletas de Bodega *</label>
                 <p-inputNumber formControlName="bag" [min]="0" styleClass="w-full" />
               </div>
               <div class="field">
@@ -162,6 +179,11 @@
                 <label>Comisión</label>
                 <p-inputNumber formControlName="commission" [minFractionDigits]="2" [maxFractionDigits]="4" styleClass="w-full" />
               </div>
+            </div>
+            <div class="field">
+              <label>Correo reservas</label>
+              <input pInputText type="email" formControlName="reservation_email" class="w-full" placeholder="flota@rentacar.com" />
+              <small class="vehicle-email-hint">Para envío de correos desde la Ficha AA</small>
             </div>
           </div>
         </p-tabpanel>
@@ -331,3 +353,4 @@
     </form>
   }
 </p-dialog>
+}

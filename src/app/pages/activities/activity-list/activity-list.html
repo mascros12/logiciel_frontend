@@ -17,7 +17,9 @@
           [(ngModel)]="searchTerm"
         />
       </span>
-      <p-button label="Nueva actividad" icon="pi pi-plus" (onClick)="openCreate()" />
+      @if (canManageActivities()) {
+        <p-button label="Nueva actividad" icon="pi pi-plus" (onClick)="openCreate()" />
+      }
     </div>
   </div>
 
@@ -30,10 +32,12 @@
   <ng-template pTemplate="header">
     <tr>
       <th>Actividad</th>
-      <th style="width: 110px;">Precio Adulto</th>
-      <th style="width: 110px;">Precio Niño</th>
-      <th style="width: 90px;">Comisión</th>
-      <th style="width: 100px;">Acciones</th>
+      @if (canManageActivities()) {
+        <th style="width: 110px;">Precio Adulto</th>
+        <th style="width: 110px;">Precio Niño</th>
+        <th style="width: 90px;">Comisión</th>
+        <th style="width: 100px;">Acciones</th>
+      }
     </tr>
   </ng-template>
 
@@ -45,33 +49,36 @@
           <div class="activity-name-es">{{ a.name_es }}</div>
         }
       </td>
-      <td>
-        <div>N: ${{ a.net_adult_price | number:'1.2-2' }}</div>
-        <div class="rack-price">R: ${{ a.rack_adult_price | number:'1.2-2' }}</div>
-      </td>
-      <td>
-        <div>N: ${{ a.net_child_price | number:'1.2-2' }}</div>
-        <div class="rack-price">R: ${{ a.rack_child_price | number:'1.2-2' }}</div>
-      </td>
-      <td>{{ a.commission | number:'1.2-2' }}</td>
-      <td>
-        <div class="flex gap-2">
-          <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="openEdit(a)" />
-          <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
-            (onClick)="confirmDelete($event, a.id)" />
-        </div>
-      </td>
+      @if (canManageActivities()) {
+        <td>
+          <div>N: ${{ a.net_adult_price | number:'1.2-2' }}</div>
+          <div class="rack-price">R: ${{ a.rack_adult_price | number:'1.2-2' }}</div>
+        </td>
+        <td>
+          <div>N: ${{ a.net_child_price | number:'1.2-2' }}</div>
+          <div class="rack-price">R: ${{ a.rack_child_price | number:'1.2-2' }}</div>
+        </td>
+        <td>{{ a.commission | number:'1.2-2' }}</td>
+        <td>
+          <div class="flex gap-2">
+            <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="openEdit(a)" />
+            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+              (onClick)="confirmDelete($event, a.id)" />
+          </div>
+        </td>
+      }
     </tr>
   </ng-template>
 
   <ng-template pTemplate="emptymessage">
     <tr>
-      <td colspan="5" class="text-center">No hay actividades registradas</td>
+      <td [attr.colspan]="canManageActivities() ? 5 : 1" class="text-center">No hay actividades registradas</td>
     </tr>
   </ng-template>
 </p-table>
 </div>
 
+@if (canManageActivities()) {
 <!-- Dialog crear/editar -->
 <p-dialog
   [header]="dialogTitle"
@@ -154,6 +161,12 @@
         />
     </div>
 
+    <div class="field">
+        <label>Correo reservas</label>
+        <input pInputText type="email" formControlName="reservation_email" class="w-full" placeholder="reservas@actividad.com" />
+        <small class="activity-email-hint">Para envío de correos desde la Ficha AA</small>
+    </div>
+
     <!-- Datos opcionales colapsables -->
     <details class="optional-section">
         <summary>Datos adicionales (provincia, dirección, categoría)</summary>
@@ -195,3 +208,4 @@
     />
   </ng-template>
 </p-dialog>
+}

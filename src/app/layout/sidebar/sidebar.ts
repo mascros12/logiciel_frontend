@@ -1,6 +1,5 @@
 import { Component, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { NgClass } from '@angular/common';
 import { AuthService } from '../../core/auth/auth.service';
 
 interface NavItem {
@@ -25,7 +24,14 @@ export class Sidebar {
     { label: 'Vehículos', icon: 'pi pi-car', route: '/vehiculos' },
     { label: 'Actividades', icon: 'pi pi-map-marker', route: '/actividades' },
     { label: 'Cotizaciones', icon: 'pi pi-file', route: '/cotizaciones' },
+    { label: 'Usuarios', icon: 'pi pi-users', route: '/usuarios', roles: ['admin'] },
   ];
 
   constructor(public auth: AuthService) {}
+
+  canShowItem(item: NavItem): boolean {
+    if (!item.roles?.length) return true;
+    const role = this.auth.currentUser()?.role;
+    return !!role && item.roles.includes(role);
+  }
 }

@@ -16,6 +16,7 @@ export interface VehicleOption {
     id: string;
     name: string;
     province: string;
+    category?: 'high' | 'medium' | 'low' | string | null;
   }
   
   export interface ActivityOption {

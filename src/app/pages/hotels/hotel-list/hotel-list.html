@@ -17,7 +17,9 @@
           [(ngModel)]="searchTerm"
         />
       </span>
-      <p-button label="Nuevo hotel" icon="pi pi-plus" (onClick)="openCreate()" />
+      @if (canManageHotels()) {
+        <p-button label="Nuevo hotel" icon="pi pi-plus" (onClick)="openCreate()" />
+      }
     </div>
   </div>
 
@@ -31,13 +33,21 @@
       <tr>
         <th>Hotel</th>
         <th style="width:120px">Provincia</th>
-        <th style="width:100px">Comisión</th>
-        <th style="width:110px">Acciones</th>
+        @if (canManageHotels()) {
+          <th style="width:100px">Comisión</th>
+          <th style="width:110px">Acciones</th>
+        }
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-h>
-      <tr class="clickable-row" (click)="goToDetail(h.id)">
+      <tr
+        class="clickable-row"
+        [class.row-gama-high]="h.category === 'high'"
+        [class.row-gama-medium]="h.category === 'medium'"
+        [class.row-gama-low]="h.category === 'low'"
+        (click)="goToDetail(h.id)"
+      >
         <td>
           <span class="hotel-name" [innerHTML]="h.name | richText"></span>
           @if (h.address) {
@@ -45,24 +55,27 @@
           }
         </td>
         <td>{{ h.province ?? '—' }}</td>
-        <td>{{ h.commission | number:'1.2-2' }}</td>
-        <td>
-          <div class="flex gap-1" (click)="$event.stopPropagation()">
-            <p-button icon="pi pi-pencil" [text]="true" size="small"
-              (onClick)="openEdit(h, $event)" />
-            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
-              (onClick)="confirmDelete($event, h.id)" />
-          </div>
-        </td>
+        @if (canManageHotels()) {
+          <td>{{ h.commission | number:'1.2-2' }}</td>
+          <td>
+            <div class="flex gap-1" (click)="$event.stopPropagation()">
+              <p-button icon="pi pi-pencil" [text]="true" size="small"
+                (onClick)="openEdit(h, $event)" />
+              <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+                (onClick)="confirmDelete($event, h.id)" />
+            </div>
+          </td>
+        }
       </tr>
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td colspan="5" class="text-center">No hay hoteles registrados</td></tr>
+      <tr><td [attr.colspan]="canManageHotels() ? 4 : 2" class="text-center">No hay hoteles registrados</td></tr>
     </ng-template>
   </p-table>
 </div>
 
+@if (canManageHotels()) {
 <p-dialog
   [header]="dialogTitle"
   [visible]="showDialog()"
@@ -94,7 +107,21 @@
     </div>
     <div class="field">
       <label>Categoría</label>
-      <input pInputText formControlName="category" class="w-full" placeholder="3 estrellas, Boutique..." />
+      <p-select
+        formControlName="category"
+        [options]="categoryOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Seleccionar"
+        [showClear]="true"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+    <div class="field">
+      <label>Correo reservas</label>
+      <input pInputText type="email" formControlName="reservation_email" class="w-full" placeholder="reservas@hotel.com" />
+      <small class="field-hint">Usado para enviar solicitudes desde la Ficha AA</small>
     </div>
   </form>
 
@@ -104,3 +131,4 @@
       [loading]="saving()" (onClick)="submit()" />
   </ng-template>
 </p-dialog>
+}

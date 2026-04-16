@@ -26,18 +26,45 @@ import { DatePickerModule } from 'primeng/datepicker';
 
 import { QuotationService } from '../../../core/services/quotation.service';
 import { ProviderService } from '../../../core/services/provider.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import {
   QuotationFull, QuotationVersion, QuotationLine,
   AddVehicleRequest, AddRoomRequest, AddActivityRequest,
   FichaFamilyMemberRow, FichaRoomRequirementRow, FileAAGenerateRequest,
   FichaAdultCategory, FichaMemberRole, FichaRoomType,
-  FileAAWithDetails, FileAADetailRow, FileAADetailPatch,
+  FileAAWithDetails,
+  FileAADetailRow,
+  FileAADetailPatch,
+  FileAADetailVehicleObsState,
+  FileAADetailActivityObsState,
+  FileAADetailRoomObsState,
+  FileAADetailCreateBody,
 } from '../../../core/models/quotation.model';
 import {
   VehicleOption, HotelOption, RoomOption, ActivityOption
 } from '../../../core/models/provider.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+
+/** Entrada del desplegable Ficha AA: catálogo maestro hotel / actividad / vehículo. */
+interface FichaAddSourcePickItem {
+  key: string;
+  listLabel: string;
+  roomId?: string;
+  activityId?: string;
+  vehicleId?: string;
+  /** Gama del hotel (solo opciones de habitación). */
+  hotelCategory?: 'high' | 'medium' | 'low' | null;
+}
+
+const FICHA_HEADER_COLORS = [
+  '#DC2626', // rojo
+  '#EAB308', // amarillo
+  '#2563EB', // azul
+  '#16A34A', // verde
+  '#F97316', // naranja
+  '#9333EA', // morado
+] as const;
 
 @Component({
   selector: 'app-quotation-detail',
@@ -59,6 +86,14 @@ export class QuotationDetail implements OnInit {
   loading = signal(true);
   summary = signal<QuotationSummary | null>(null);
   loadingSummary = signal(false);
+  isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
+  isOperaciones = computed(() => this.auth.currentUser()?.role === 'operaciones');
+  canViewQuotationBreakdown = computed(() => {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'admin_proveedores';
+  });
+  isComercial = computed(() => this.auth.currentUser()?.role === 'comercial');
+  activeTab = signal<'agenda' | 'cotizacion' | 'fileaa'>('agenda');
 
   // Versión seleccionada para ver
   selectedVersionId = signal<string | null>(null);
@@ -130,6 +165,8 @@ export class QuotationDetail implements OnInit {
   saving = signal(false);
   downloadingFichaWord = signal(false);
   downloadingFichaPdf = signal(false);
+  /** Id del detalle de Ficha AA al que se está enviando correo (botón enviar). */
+  sendingFichaEmailDetailId = signal<string | null>(null);
 
   /** Borrador Ficha AA: composición familiar y habitaciones (también se guarda en la cotización). */
   fichaFamilyRows = signal<FichaFamilyMemberRow[]>([]);
@@ -149,6 +186,7 @@ export class QuotationDetail implements OnInit {
     }
     return { system, provider };
   });
+  fichaAABlockedForComercial = computed(() => this.isComercial() && !!this.fichaFileAA());
 
   readonly fichaRoleOptions = [
     { label: 'Niño/a', value: 'child' as FichaMemberRole },
@@ -174,10 +212,32 @@ export class QuotationDetail implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
+  /** Borrador UI para observaciones estructuradas (vehículo) en Ficha AA — evita pisar texto al teclear */
+  private vehicleFichaObsDraft: Record<string, FileAADetailVehicleObsState> = {};
+  /** Borrador UI para observaciones estructuradas (actividad): pick up + notas */
+  private activityFichaObsDraft: Record<string, FileAADetailActivityObsState> = {};
+  /** Borrador UI para filas hotel: número de habitaciones + observaciones */
+  private hotelFichaObsDraft: Record<string, FileAADetailRoomObsState> = {};
+
+  /** Diálogo: añadir fila en Ficha AA (nueva vs reemplazo + servicio del itinerario). */
+  showFichaAddDetailDialog = signal(false);
+  fichaAddDetailStep = signal<'kind' | 'pick'>('kind');
+  /** Fila desde la que se abrió el diálogo (solo UI / categoría). */
+  fichaAddAnchorRow = signal<FileAADetailRow | null>(null);
+  /** Id de esa fila al abrir — no depender del objeto ni del nombre al enviar. */
+  fichaAddAnchorDetailId = signal<string | null>(null);
+  fichaAddKind = signal<'new' | 'replace' | null>(null);
+  fichaAddSourcePickItems = signal<FichaAddSourcePickItem[]>([]);
+  fichaAddSelectedPickKey = signal<string | null>(null);
+  loadingFichaAddSource = signal(false);
+  savingFichaAddDetail = signal(false);
+  showFichaColorPicker = signal(false);
+
   constructor(
     private route: ActivatedRoute,
     private quotationService: QuotationService,
     private providerService: ProviderService,
+    private auth: AuthService,
     private fb: FormBuilder,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
@@ -194,6 +254,7 @@ export class QuotationDetail implements OnInit {
       additional_children: [0],
       start_date: [null, Validators.required],
       end_date: [null, Validators.required],
+      recommendation: [''],
     });
     this.activityForm = this.fb.group({
       activity: [null, Validators.required],
@@ -223,7 +284,7 @@ export class QuotationDetail implements OnInit {
       departure_time: [''],
       flight_number_arrival: [''],
       flight_number_departure: [''],
-      commission: [1.20],
+      commission: [1.92],
       shared: [false],
     });
 
@@ -292,6 +353,12 @@ export class QuotationDetail implements OnInit {
     this.insertAfterByLineId.update((rec) => ({ ...rec, [lineId]: v }));
   }
 
+  setActiveTab(value: string | number | undefined): void {
+    if (value === 'agenda' || value === 'cotizacion' || value === 'fileaa') {
+      this.activeTab.set(value);
+    }
+  }
+
   load(id: string) {
     this.loading.set(true);
     const prevVersionId = this.selectedVersionId();
@@ -348,14 +415,19 @@ export class QuotationDetail implements OnInit {
     const q = this.quotation();
     const version = this.selectedVersion();
     if (!q || !version) return;
-  
+
+    // Mismo total que la fila «Total» del tab Cotización: no reutilizar summary viejo al cambiar versión.
+    this.summary.set(null);
     this.loadingSummary.set(true);
     this.quotationService.getSummary(q.id, version.id).subscribe({
       next: (s) => {
         this.summary.set(s);
         this.loadingSummary.set(false);
       },
-      error: () => this.loadingSummary.set(false),
+      error: () => {
+        this.summary.set(null);
+        this.loadingSummary.set(false);
+      },
     });
   }
 
@@ -410,6 +482,7 @@ export class QuotationDetail implements OnInit {
       additional_children: 0,
       start_date: lineDate,
       end_date: endDate,
+      recommendation: '',
     });
     this.roomOptions.set([]);
     this.showAddRoom.set(true);
@@ -505,6 +578,7 @@ export class QuotationDetail implements OnInit {
         date,
         additional_adults: val.additional_adults,
         additional_children: val.additional_children,
+        recommendation: val.recommendation || undefined,
       })
     );
 
@@ -574,7 +648,7 @@ export class QuotationDetail implements OnInit {
       next: (v) => {
         this.showNewVersion.set(false);
         this.saving.set(false);
-        this.messageService.add({ severity: 'success', summary: `Versión v${v.version_number} creada` });
+        this.messageService.add({ severity: 'success', summary: `Versión V${v.version_number} creada` });
         // Refresca lista de versiones y, por seguridad, carga las líneas de la versión creada.
         this.selectedVersionId.set(v.id);
         this.load(q.id);
@@ -606,14 +680,22 @@ export class QuotationDetail implements OnInit {
   // ─── Helpers ───────────────────────────────────────────────
 
   getVersionLabel(v: QuotationVersion): string {
-    return `v${v.version_number}${v.is_current ? ' (actual)' : ''}`;
+    return `V${v.version_number}${v.is_current ? ' (actual)' : ''}`;
   }
 
-  get versionOptions() {
-    return this.quotation()?.versions.map(v => ({
-      label: this.getVersionLabel(v),
-      value: v.id,
-    })) ?? [];
+  /** Opciones del selector de versión: orden descendente (V3, V2, V1…). */
+  get versionSelectOptions() {
+    const q = this.quotation();
+    if (!q?.versions?.length) return [];
+    return [...q.versions]
+      .filter((v) => !(v as QuotationVersion & { deleted?: boolean }).deleted)
+      .sort((a, b) => b.version_number - a.version_number)
+      .map((v) => ({
+        value: v.id,
+        versionNumber: v.version_number,
+        isCurrent: v.is_current,
+        createdByName: (v.created_by_name && String(v.created_by_name).trim()) || null,
+      }));
   }
 
   onVersionChange(versionId: any) {
@@ -664,7 +746,7 @@ export class QuotationDetail implements OnInit {
       departure_time: this.formatTime(q.departure_time) || '',
       flight_number_arrival: q.flight_number_arrival ?? '',
       flight_number_departure: q.flight_number_departure ?? '',
-      commission: q.commission ?? 1.20,
+      commission: q.commission ?? 1.92,
       shared: q.shared ?? false,
     });
     this.showEdit.set(true);
@@ -685,9 +767,11 @@ export class QuotationDetail implements OnInit {
       departure_time: raw.departure_time ? (raw.departure_time.length === 5 ? raw.departure_time + ':00' : raw.departure_time) : null,
       flight_number_arrival: raw.flight_number_arrival || null,
       flight_number_departure: raw.flight_number_departure || null,
-      commission: raw.commission,
       shared: raw.shared,
     };
+    if (this.isAdmin()) {
+      body['commission'] = raw.commission;
+    }
     this.saving.set(true);
     this.quotationService.update(q.id, body).subscribe({
       next: () => {
@@ -732,7 +816,7 @@ export class QuotationDetail implements OnInit {
       },
       { separator: true },
       {
-        label: 'Recalcular total',
+        label: 'Actualizar total',
         icon: 'pi pi-refresh',
         command: () => this.recalculate(),
       },
@@ -819,6 +903,42 @@ export class QuotationDetail implements OnInit {
       .trim();
   }
 
+  /** Texto de recomendación / comentario no vacío (plantilla). */
+  hasRecommendation(text: string | null | undefined): boolean {
+    return !!(text && String(text).trim());
+  }
+
+  /**
+   * El backend arma `name` como "{hotel} - {habitación}".
+   * Parte por el último " - " por si el nombre del hotel incluye ese separador.
+   */
+  parseQuotationRoomDisplay(room: QuotationLine['rooms'][number]): {
+    hotel: string;
+    roomLabel: string;
+    useFullRichName: boolean;
+  } {
+    const plain = this.stripHtml(room.name);
+    const sep = ' - ';
+    const idx = plain.lastIndexOf(sep);
+    if (idx === -1) {
+      return { hotel: '', roomLabel: '', useFullRichName: true };
+    }
+    const hotel = plain.slice(0, idx).trim();
+    const roomLabel = plain.slice(idx + sep.length).trim();
+    if (!roomLabel) {
+      return { hotel: '', roomLabel: '', useFullRichName: true };
+    }
+    return { hotel, roomLabel, useFullRichName: false };
+  }
+
+  /** Adultos / niños adicionales en habitación (columna derecha). */
+  roomExtrasLine(room: QuotationLine['rooms'][number]): string {
+    const bits: string[] = [];
+    if (room.additional_adults > 0) bits.push(`+${room.additional_adults}A`);
+    if (room.additional_children > 0) bits.push(`+${room.additional_children}N`);
+    return bits.length ? bits.join(' ') : '—';
+  }
+
   /** Detalle legible de habitaciones, actividades y vehículos del día (versión visible en agenda). */
   lineDetailTooltip(line: QuotationLine): string {
     const parts: string[] = [];
@@ -828,6 +948,8 @@ export class QuotationDetail implements OnInit {
         let s = this.stripHtml(r.name);
         if (r.additional_adults > 0) s += ` +${r.additional_adults} adulto(s)`;
         if (r.additional_children > 0) s += ` +${r.additional_children} niño(s)`;
+        const rec = (r.recommendation || '').trim();
+        if (rec) s += ` — ${this.stripHtml(rec)}`;
         return s;
       });
       parts.push(`Hoteles: ${bits.join('; ')}`);
@@ -1186,6 +1308,30 @@ export class QuotationDetail implements OnInit {
     return `Del ${this.formatIsoDateEs(ficha.from_date)} al ${this.formatIsoDateEs(ficha.to_date)}${nights}`;
   }
 
+  /**
+   * Encabezado Ficha AA: adultos + menores con edades (usa quantity_* y children_ages, no el texto largo family_description).
+   * Ej.: "3 Adultos + 1 Menor (10 años)" · "3 Adultos + 2 Menores (15, 10 años)"
+   */
+  fichaCompositionSummary(ficha: FileAAWithDetails): string {
+    const na = Number(ficha.quantity_adults) || 0;
+    const nc = Number(ficha.quantity_children) || 0;
+    if (na === 0 && nc === 0) {
+      return '';
+    }
+    const adultPart = na === 1 ? '1 Adulto' : `${na} Adultos`;
+    if (nc === 0) {
+      return adultPart;
+    }
+    const minorPart = nc === 1 ? '1 Menor' : `${nc} Menores`;
+    const ages = (ficha.children_ages || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const agesSegment =
+      ages.length > 0 ? ` (${ages.join(', ')} años)` : '';
+    return `${adultPart} + ${minorPart}${agesSegment}`;
+  }
+
   fichaCategoryLabel(cat: string): string {
     switch (cat) {
       case 'vehicle':
@@ -1199,13 +1345,168 @@ export class QuotationDetail implements OnInit {
     }
   }
 
-  private loadLatestFileAA(quotationId: string): void {
-    this.quotationService.getLatestFileAA(quotationId).subscribe({
-      next: (f) => this.fichaFileAA.set(f),
+  fichaHeaderColor(): string {
+    return this.fichaFileAA()?.header_color ?? '#2563EB';
+  }
+
+  toggleFichaColorPicker(): void {
+    this.showFichaColorPicker.update((v) => !v);
+  }
+
+  setFichaHeaderColor(next: string): void {
+    const f = this.fichaFileAA();
+    if (!f) return;
+    const color = String(next || '').toUpperCase();
+    if (!FICHA_HEADER_COLORS.includes(color as (typeof FICHA_HEADER_COLORS)[number])) {
+      return;
+    }
+    if ((f.header_color || '').toUpperCase() === color) {
+      this.showFichaColorPicker.set(false);
+      return;
+    }
+    this.quotationService.updateFileAA(f.id, { header_color: color }).subscribe({
+      next: (updated) => {
+        this.fichaFileAA.set({
+          ...f,
+          ...updated,
+          header_color: updated.header_color || color,
+        });
+        this.showFichaColorPicker.set(false);
+      },
       error: (err) => {
-        if (err.status === 404) this.fichaFileAA.set(null);
+        this.messageService.add({
+          severity: 'error',
+          summary:
+            typeof err.error?.detail === 'string'
+              ? err.error.detail
+              : 'No se pudo cambiar el color de la Ficha AA',
+        });
       },
     });
+  }
+
+  private loadLatestFileAA(quotationId: string): void {
+    this.quotationService.getLatestFileAA(quotationId).subscribe({
+      next: (f) => {
+        this.clearAllVehicleFichaObsDrafts();
+        this.fichaFileAA.set({
+          ...f,
+          header_color: f.header_color || '#2563EB',
+        });
+        // Para operaciones, al entrar con Ficha AA existente abrir directamente ese tab.
+        if (this.isOperaciones() && this.activeTab() === 'agenda') {
+          this.activeTab.set('fileaa');
+        }
+      },
+      error: (err) => {
+        if (err.status === 404) {
+          this.clearAllVehicleFichaObsDrafts();
+          this.fichaFileAA.set(null);
+        }
+      },
+    });
+  }
+
+  /** Envía correo al proveedor para una fila de la Ficha AA (vehículo: adjuntos docx/pdf + firma si existe). */
+  sendSupplierReservationEmail(row: FileAADetailRow): void {
+    if (row.row_status === 'red' || row.send_email || row.supplier_email_sent_at) return;
+    const f = this.fichaFileAA();
+    const q = this.quotation();
+    if (!f || !q) return;
+
+    const previewWindow = window.open('', '_blank');
+    if (!previewWindow) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'No se pudo abrir la vista previa',
+        detail: 'Permita ventanas emergentes para revisar el PDF antes de enviar.',
+      });
+      return;
+    }
+
+    this.sendingFichaEmailDetailId.set(row.id);
+    this.quotationService.previewFileAADetailReservationPdf(f.id, row.id).subscribe({
+      next: (blob) => {
+        this.sendingFichaEmailDetailId.set(null);
+        if (blob.type === 'application/json' || blob.size < 32) {
+          previewWindow.close();
+          blob.text().then((t) => {
+            try {
+              const j = JSON.parse(t) as { detail?: string };
+              this.messageService.add({
+                severity: 'warn',
+                summary:
+                  typeof j.detail === 'string'
+                    ? j.detail
+                    : 'No se pudo generar la vista previa del PDF',
+              });
+            } catch {
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'No se pudo generar la vista previa del PDF',
+              });
+            }
+          });
+          return;
+        }
+
+        const previewUrl = URL.createObjectURL(blob);
+        previewWindow.location.href = previewUrl;
+        setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
+
+        this.confirmationService.confirm({
+          header: 'Confirmar envío al proveedor',
+          message: `Revise el borrador del PDF para "${this.stripHtml(row.name)}". ¿Desea enviar ahora el correo?`,
+          icon: 'pi pi-envelope',
+          acceptLabel: 'Enviar',
+          rejectLabel: 'Cancelar',
+          accept: () => this.executeSendSupplierReservationEmail(f.id, q.id, row.id),
+        });
+      },
+      error: (err) => {
+        this.sendingFichaEmailDetailId.set(null);
+        previewWindow.close();
+        const d = err.error?.detail;
+        const msg = typeof d === 'string' ? d : 'No se pudo generar la vista previa del PDF';
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Vista previa',
+          detail: msg,
+          life: 12000,
+        });
+      },
+    });
+  }
+
+  private executeSendSupplierReservationEmail(fileId: string, quotationId: string, detailId: string): void {
+    this.sendingFichaEmailDetailId.set(detailId);
+    this.quotationService.sendFileAADetailReservationEmail(fileId, detailId).subscribe({
+      next: () => {
+        this.sendingFichaEmailDetailId.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Correo enviado al proveedor' });
+        this.loadLatestFileAA(quotationId);
+      },
+      error: (err) => {
+        this.sendingFichaEmailDetailId.set(null);
+        const d = err.error?.detail;
+        const msg = typeof d === 'string' ? d : 'No se pudo enviar el correo';
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Envío de correo',
+          detail: msg,
+          life: 12000,
+        });
+      },
+    });
+  }
+
+  /** Tooltip al pasar el mouse sobre «Enviado» (solo si ya se envió correo al proveedor). */
+  fichaSupplierEmailSentTooltip(d: FileAADetailRow): string {
+    const raw = d.supplier_email_sent_at;
+    if (!raw) return '';
+    const dt = new Date(raw);
+    if (Number.isNaN(dt.getTime())) return 'Correo enviado al proveedor';
+    return `Enviado: ${dt.toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' })}`;
   }
 
   patchFileDetail(detailId: string, patch: FileAADetailPatch): void {
@@ -1217,6 +1518,11 @@ export class QuotationDetail implements OnInit {
         if (!f) return;
         const details = f.details.map((d) => (d.id === detailId ? { ...d, ...updated } : d));
         this.fichaFileAA.set({ ...f, details });
+        if (patch.observation_extras !== undefined || patch.observations !== undefined) {
+          delete this.vehicleFichaObsDraft[detailId];
+          delete this.activityFichaObsDraft[detailId];
+          delete this.hotelFichaObsDraft[detailId];
+        }
       },
       error: (err) => {
         this.messageService.add({
@@ -1230,6 +1536,139 @@ export class QuotationDetail implements OnInit {
   onFichaDetailDatesBlur(row: FileAADetailRow, target: EventTarget | null): void {
     const v = target instanceof HTMLInputElement ? target.value : '';
     this.patchFileDetail(row.id, { dates: v });
+  }
+
+  onFichaDetailObservationsBlur(row: FileAADetailRow, target: EventTarget | null): void {
+    if (row.category === 'vehicle' || row.category === 'activity' || row.category === 'room') return;
+    const v = target instanceof HTMLTextAreaElement ? target.value : '';
+    const t = v.trim();
+    this.patchFileDetail(row.id, { observations: t.length ? t : null });
+  }
+
+  private clearAllVehicleFichaObsDrafts(): void {
+    this.vehicleFichaObsDraft = {};
+    this.activityFichaObsDraft = {};
+    this.hotelFichaObsDraft = {};
+  }
+
+  private vehicleFichaObsFromServer(d: FileAADetailRow): FileAADetailVehicleObsState {
+    const raw = d.observation_extras;
+    const notes = typeof d.observations === 'string' ? d.observations : '';
+    const def: FileAADetailVehicleObsState = {
+      luggage_cover: false,
+      pickup_detail: '',
+      dropoff_detail: '',
+      notes,
+    };
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const o = raw as Record<string, unknown>;
+      return {
+        luggage_cover: !!o['luggage_cover'],
+        pickup_detail: String(o['pickup_detail'] ?? ''),
+        dropoff_detail: String(o['dropoff_detail'] ?? ''),
+        notes: String(o['notes'] ?? notes),
+      };
+    }
+    return def;
+  }
+
+  /** Referencia estable para ngModel en filas vehículo (Ficha AA). */
+  ensureVehicleFichaObsDraft(d: FileAADetailRow): FileAADetailVehicleObsState {
+    if (!this.vehicleFichaObsDraft[d.id]) {
+      this.vehicleFichaObsDraft[d.id] = { ...this.vehicleFichaObsFromServer(d) };
+    }
+    return this.vehicleFichaObsDraft[d.id];
+  }
+
+  commitVehicleFichaObs(d: FileAADetailRow): void {
+    const row = this.ensureVehicleFichaObsDraft(d);
+    const observation_extras = {
+      luggage_cover: row.luggage_cover,
+      pickup_detail: row.pickup_detail,
+      dropoff_detail: row.dropoff_detail,
+      notes: row.notes,
+    };
+    const notesTrim = row.notes.trim();
+    this.patchFileDetail(d.id, {
+      observation_extras,
+      observations: notesTrim ? notesTrim : null,
+    });
+  }
+
+  private activityFichaObsFromServer(d: FileAADetailRow): FileAADetailActivityObsState {
+    const raw = d.observation_extras;
+    const notes = typeof d.observations === 'string' ? d.observations : '';
+    const def: FileAADetailActivityObsState = {
+      pickup_detail: '',
+      notes,
+    };
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const o = raw as Record<string, unknown>;
+      return {
+        pickup_detail: String(o['pickup_detail'] ?? ''),
+        notes: String(o['notes'] ?? notes),
+      };
+    }
+    return def;
+  }
+
+  ensureActivityFichaObsDraft(d: FileAADetailRow): FileAADetailActivityObsState {
+    if (!this.activityFichaObsDraft[d.id]) {
+      this.activityFichaObsDraft[d.id] = { ...this.activityFichaObsFromServer(d) };
+    }
+    return this.activityFichaObsDraft[d.id];
+  }
+
+  commitActivityFichaObs(d: FileAADetailRow): void {
+    const row = this.ensureActivityFichaObsDraft(d);
+    const observation_extras = {
+      pickup_detail: row.pickup_detail,
+      notes: row.notes,
+    };
+    const notesTrim = row.notes.trim();
+    this.patchFileDetail(d.id, {
+      observation_extras,
+      observations: notesTrim ? notesTrim : null,
+    });
+  }
+
+  private hotelFichaObsFromServer(d: FileAADetailRow): FileAADetailRoomObsState {
+    const raw = d.observation_extras;
+    const notes = typeof d.observations === 'string' ? d.observations : '';
+    let room_quantity: number | null = null;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const o = raw as Record<string, unknown>;
+      const rq = o['room_quantity'];
+      if (rq !== null && rq !== undefined && rq !== '') {
+        const n = Number(rq);
+        room_quantity = Number.isFinite(n) ? n : null;
+      }
+    }
+    return { room_quantity, notes };
+  }
+
+  ensureHotelFichaObsDraft(d: FileAADetailRow): FileAADetailRoomObsState {
+    if (!this.hotelFichaObsDraft[d.id]) {
+      this.hotelFichaObsDraft[d.id] = { ...this.hotelFichaObsFromServer(d) };
+    }
+    return this.hotelFichaObsDraft[d.id];
+  }
+
+  commitHotelFichaObs(d: FileAADetailRow): void {
+    const row = this.ensureHotelFichaObsDraft(d);
+    let room_quantity: number | null = null;
+    const rawQty = row.room_quantity as unknown;
+    if (rawQty !== null && rawQty !== undefined && rawQty !== '') {
+      const n = Number(rawQty);
+      room_quantity = Number.isFinite(n) ? n : null;
+    }
+    row.room_quantity = room_quantity;
+    const observation_extras = { room_quantity };
+    const notesTrim = row.notes.trim();
+    this.patchFileDetail(d.id, {
+      observation_extras,
+      observations: notesTrim ? notesTrim : null,
+    });
   }
 
   onFichaDetailReservationNoBlur(row: FileAADetailRow, target: EventTarget | null): void {
@@ -1258,6 +1697,201 @@ export class QuotationDetail implements OnInit {
   fichaDetailPriceDisplay(v: number | string | null | undefined): string {
     if (v === null || v === undefined || v === '') return '';
     return String(v);
+  }
+
+  openFichaAddDetailDialog(anchor: FileAADetailRow): void {
+    this.fichaAddAnchorRow.set(anchor);
+    this.fichaAddAnchorDetailId.set(anchor.id);
+    this.fichaAddDetailStep.set('kind');
+    this.fichaAddKind.set(null);
+    this.fichaAddSelectedPickKey.set(null);
+    this.fichaAddSourcePickItems.set([]);
+    this.showFichaAddDetailDialog.set(true);
+  }
+
+  closeFichaAddDetailDialog(): void {
+    this.showFichaAddDetailDialog.set(false);
+  }
+
+  onFichaAddDetailDialogHide(): void {
+    this.fichaAddDetailStep.set('kind');
+    this.fichaAddKind.set(null);
+    this.fichaAddAnchorRow.set(null);
+    this.fichaAddAnchorDetailId.set(null);
+    this.fichaAddSelectedPickKey.set(null);
+    this.fichaAddSourcePickItems.set([]);
+    this.loadingFichaAddSource.set(false);
+    this.savingFichaAddDetail.set(false);
+  }
+
+  chooseFichaAddKind(kind: 'new' | 'replace'): void {
+    this.fichaAddKind.set(kind);
+    const anchor = this.fichaAddAnchorRow();
+    const q = this.quotation();
+    if (!anchor || !q) return;
+    this.fichaAddDetailStep.set('pick');
+    this.loadingFichaAddSource.set(true);
+    this.fichaAddSelectedPickKey.set(null);
+    const onError = (err: { error?: { detail?: unknown } }, summary: string) => {
+      this.loadingFichaAddSource.set(false);
+      const d = err.error?.detail;
+      this.messageService.add({
+        severity: 'error',
+        summary: typeof d === 'string' ? d : summary,
+      });
+      this.fichaAddDetailStep.set('kind');
+      this.fichaAddKind.set(null);
+    };
+
+    const mapRows = <T extends { label: string }>(
+      rows: T[],
+      pick: (
+        row: T,
+      ) => Partial<
+        Pick<FichaAddSourcePickItem, 'roomId' | 'activityId' | 'vehicleId' | 'hotelCategory'>
+      >,
+    ) =>
+      rows.map((row) => ({
+        key: crypto.randomUUID(),
+        listLabel: row.label,
+        ...pick(row),
+      })) as FichaAddSourcePickItem[];
+
+    if (anchor.category === 'room') {
+      this.quotationService.getFichaRoomCatalog().subscribe({
+        next: (rows) => {
+          this.fichaAddSourcePickItems.set(
+            mapRows(rows, (r) => ({
+              roomId: String(r.room_id),
+              hotelCategory: this.normalizeHotelCategory(r.hotel_category),
+            })),
+          );
+          this.loadingFichaAddSource.set(false);
+        },
+        error: (err) => onError(err, 'No se pudo cargar el catálogo de habitaciones'),
+      });
+    } else if (anchor.category === 'activity') {
+      this.quotationService.getFichaActivityCatalog().subscribe({
+        next: (rows) => {
+          this.fichaAddSourcePickItems.set(
+            mapRows(rows, (r) => ({ activityId: String(r.activity_id) })),
+          );
+          this.loadingFichaAddSource.set(false);
+        },
+        error: (err) => onError(err, 'No se pudo cargar el catálogo de actividades'),
+      });
+    } else {
+      this.quotationService.getFichaVehicleCatalog().subscribe({
+        next: (rows) => {
+          this.fichaAddSourcePickItems.set(
+            mapRows(rows, (r) => ({ vehicleId: String(r.vehicle_id) })),
+          );
+          this.loadingFichaAddSource.set(false);
+        },
+        error: (err) => onError(err, 'No se pudo cargar el catálogo de vehículos'),
+      });
+    }
+  }
+
+  backFichaAddDetailStep(): void {
+    if (this.fichaAddDetailStep() !== 'pick') return;
+    this.fichaAddDetailStep.set('kind');
+    this.fichaAddKind.set(null);
+    this.fichaAddSelectedPickKey.set(null);
+    this.fichaAddSourcePickItems.set([]);
+  }
+
+  submitFichaAddDetailRow(): void {
+    const f = this.fichaFileAA();
+    const anchor = this.fichaAddAnchorRow();
+    const anchorId = this.fichaAddAnchorDetailId();
+    const pickKey = this.fichaAddSelectedPickKey();
+    const kind = this.fichaAddKind();
+    if (!f || !anchor || !anchorId || !pickKey || !kind) return;
+    const item = this.fichaAddSourcePickItems().find((i) => i.key === pickKey);
+    if (!item) return;
+
+    const cat = anchor.category;
+    let body: FileAADetailCreateBody;
+    const base = {
+      copy_operational_from_detail_id: anchorId,
+      mark_anchor_row_red: kind === 'replace',
+    };
+    if (cat === 'room') {
+      if (!item.roomId) return;
+      body = { ...base, category: 'room', room_id: item.roomId };
+    } else if (cat === 'activity') {
+      if (!item.activityId) return;
+      body = { ...base, category: 'activity', activity_id: item.activityId };
+    } else if (cat === 'vehicle') {
+      if (!item.vehicleId) return;
+      body = { ...base, category: 'vehicle', vehicle_id: item.vehicleId };
+    } else {
+      return;
+    }
+    this.savingFichaAddDetail.set(true);
+    this.quotationService.createFileAADetailRow(f.id, body).subscribe({
+      next: () => {
+        this.savingFichaAddDetail.set(false);
+        this.showFichaAddDetailDialog.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Línea añadida a la ficha' });
+        const q = this.quotation();
+        if (q) this.loadLatestFileAA(q.id);
+      },
+      error: (err) => {
+        this.savingFichaAddDetail.set(false);
+        const d = err.error?.detail;
+        this.messageService.add({
+          severity: 'error',
+          summary: typeof d === 'string' ? d : 'No se pudo crear la línea',
+        });
+      },
+    });
+  }
+
+  confirmDeleteFichaDetailRow(row: FileAADetailRow): void {
+    const name = (row.name || 'Servicio').slice(0, 80);
+    this.confirmationService.confirm({
+      message: `¿Eliminar la línea «${name}» de esta ficha? Esta acción no se puede deshacer.`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.quotationService.deleteFileAADetail(row.id).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Línea eliminada' });
+            const q = this.quotation();
+            if (q) this.loadLatestFileAA(q.id);
+          },
+          error: (err) => {
+            const d = err.error?.detail;
+            this.messageService.add({
+              severity: 'error',
+              summary: typeof d === 'string' ? d : 'No se pudo eliminar la línea',
+            });
+          },
+        });
+      },
+    });
+  }
+
+  /** Opción seleccionada en el p-select Ficha AA (valor = `key`). */
+  fichaAddSelectedPickItem(): FichaAddSourcePickItem | null {
+    const key = this.fichaAddSelectedPickKey();
+    if (!key) return null;
+    return this.fichaAddSourcePickItems().find((i) => i.key === key) ?? null;
+  }
+
+  /** Texto plano del ítem seleccionado (filtros, accesibilidad). */
+  fichaAddSelectedPickLabel(): string {
+    return this.fichaAddSelectedPickItem()?.listLabel ?? '';
+  }
+
+  private normalizeHotelCategory(v: string | null | undefined): 'high' | 'medium' | 'low' | null {
+    if (v === 'high' || v === 'medium' || v === 'low') return v;
+    return null;
   }
 
   fichaFlightArrivalOk(q: QuotationFull): boolean {
@@ -1529,7 +2163,11 @@ export class QuotationDetail implements OnInit {
     this.quotationService.generateFileAA(q.id, body).subscribe({
       next: (ficha) => {
         this.saving.set(false);
-        this.fichaFileAA.set(ficha);
+        this.clearAllVehicleFichaObsDrafts();
+        this.fichaFileAA.set({
+          ...ficha,
+          header_color: ficha.header_color || '#2563EB',
+        });
         this.messageService.add({
           severity: 'success',
           summary: 'Ficha AA generada',

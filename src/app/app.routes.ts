@@ -40,6 +40,8 @@ export const routes: Routes = [
       },
       {
         path: 'vehiculos/:id',
+        canActivate: [authGuard],
+        data: { roles: ['admin', 'admin_proveedores'] },
         loadComponent: () =>
           import('./pages/vehicles/vehicle-detail/vehicle-detail')
             .then(m => m.VehicleDetail)
@@ -61,6 +63,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/contacts/contact-list/contact-list')
             .then(m => m.ContactList)
+      },
+      {
+        path: 'usuarios',
+        canActivate: [authGuard],
+        data: { roles: ['admin'] },
+        loadComponent: () =>
+          import('./pages/users/user-list/user-list')
+            .then(m => m.UserList)
       },
     ]
   },

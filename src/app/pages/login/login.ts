@@ -32,7 +32,7 @@ export class Login {
     private router: Router
   ) {
     this.form = this.fb.group({
-      email: ['', [Validators.required]],
+      username: ['', [Validators.required]],
       password: ['', Validators.required],
     });
   }
@@ -42,8 +42,8 @@ export class Login {
     this.loading = true;
     this.error = '';
 
-    const { email, password } = this.form.value;
-    this.auth.login(email, password).subscribe({
+    const { username, password } = this.form.value;
+    this.auth.login(username, password).subscribe({
       next: () => this.router.navigate(['/']),
       error: () => {
         this.error = 'Credenciales incorrectas';
