@@ -889,7 +889,7 @@
                     </thead>
                     <tbody>
                       @for (d of ficha.details; track d.id) {
-                        <tr>
+                        <tr [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)">
                           <td class="col-cb">
                             <p-checkbox
                               [binary]="true"
@@ -1061,7 +1061,7 @@
                               pInputText
                               class="ficha-cell-input ficha-price-input"
                               [ngModel]="fichaDetailPriceDisplay(d.total_price)"
-                              (blur)="onFichaDetailTotalBlur(d, $event.target)"
+                              readonly
                             />
                           </td>
                           <td class="col-money">

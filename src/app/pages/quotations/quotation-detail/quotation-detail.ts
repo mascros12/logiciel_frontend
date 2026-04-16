@@ -1699,6 +1699,16 @@ export class QuotationDetail implements OnInit {
     return String(v);
   }
 
+  fichaHasLargePriceGap(detail: FileAADetailRow): boolean {
+    const system = Number(detail.total_price ?? 0);
+    const providerRaw = detail.provider_price;
+    if (providerRaw === null || providerRaw === undefined || providerRaw === '') return false;
+    const provider = Number(providerRaw);
+    if (!Number.isFinite(system) || !Number.isFinite(provider)) return false;
+    if (provider <= 0) return false;
+    return Math.abs(system - provider) >= 50;
+  }
+
   openFichaAddDetailDialog(anchor: FileAADetailRow): void {
     this.fichaAddAnchorRow.set(anchor);
     this.fichaAddAnchorDetailId.set(anchor.id);
