@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
 import {
   Hotel, HotelListResponse, HotelCreate,
   Room, RoomCreate, RoomSeasonCreate,
   HotelSeason, HotelSeasonCreate,
 } from '../models/hotel.model';
+import { apiUrl } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class HotelService {
-  private url = `${environment.apiUrl}/hotels`;
+  private url = apiUrl('/hotels');
 
   constructor(private http: HttpClient) {}
 

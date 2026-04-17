@@ -96,7 +96,7 @@
     .version-notes-hint {
       font-size: 0.7rem;
       color: var(--p-text-muted-color);
-      margin: 0.35rem 0 0;
+      margin: 1rem 0 0;
       line-height: 1.4;
       display: flex;
       flex-direction: column;
@@ -114,6 +114,8 @@
     .version-notes-text {
       color: var(--p-text-color);
       font-weight: 500;
+      font-size: 1rem;
+      line-height: 1.45;
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -293,7 +295,9 @@
   
     .col-date { width: 80px; }
     .col-hotel { }
-    .col-activity { }
+    .col-activity {
+      max-width: 340px;
+    }
     .col-vehicle { }
   
     .cell-date {
@@ -323,6 +327,7 @@
 
     .cell-services-activities {
       min-width: 260px;
+      max-width: 340px;
     }
 
     .cell-services-rooms {

@@ -257,6 +257,8 @@ export interface QuotationCreate {
   name: string;
   from_date: string;
   to_date: string;
+  arrival_date?: string;
+  departure_date?: string;
   notes?: string;
   commission?: number;
   contact_id?: string;

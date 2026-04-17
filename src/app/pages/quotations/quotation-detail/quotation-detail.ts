@@ -31,7 +31,7 @@ import {
   QuotationFull, QuotationVersion, QuotationLine,
   AddVehicleRequest, AddRoomRequest, AddActivityRequest,
   FichaFamilyMemberRow, FichaRoomRequirementRow, FileAAGenerateRequest,
-  FichaAdultCategory, FichaMemberRole, FichaRoomType,
+  FichaMemberRole, FichaRoomType,
   FileAAWithDetails,
   FileAADetailRow,
   FileAADetailPatch,
@@ -191,12 +191,6 @@ export class QuotationDetail implements OnInit {
   readonly fichaRoleOptions = [
     { label: 'Niño/a', value: 'child' as FichaMemberRole },
     { label: 'Adulto/a', value: 'adult' as FichaMemberRole },
-  ];
-
-  readonly fichaAdultCategoryOptions = [
-    { label: 'Adulto joven', value: 'young' as FichaAdultCategory },
-    { label: 'Adulto', value: 'regular' as FichaAdultCategory },
-    { label: 'Adulto mayor', value: 'senior' as FichaAdultCategory },
   ];
 
   readonly fichaRoomTypeOptions = [
@@ -647,14 +641,26 @@ export class QuotationDetail implements OnInit {
     this.quotationService.createVersion(q.id, this.versionForm.value.notes).subscribe({
       next: (v) => {
         this.showNewVersion.set(false);
-        this.saving.set(false);
-        this.messageService.add({ severity: 'success', summary: `Versión V${v.version_number} creada` });
-        // Refresca lista de versiones y, por seguridad, carga las líneas de la versión creada.
         this.selectedVersionId.set(v.id);
-        this.load(q.id);
-        this.quotationService.getVersionLines(q.id, v.id).subscribe({
-          next: (lines) => this.lines.set(this.sortLinesByDate(lines)),
-          error: () => void 0,
+        this.recalculateVersion(q.id, v.id, {
+          successMessage: `Versión V${v.version_number} creada y recalculada`,
+          onDone: () => {
+            this.saving.set(false);
+            // Refresca lista de versiones y, por seguridad, carga las líneas de la versión creada.
+            this.load(q.id);
+            this.quotationService.getVersionLines(q.id, v.id).subscribe({
+              next: (lines) => this.lines.set(this.sortLinesByDate(lines)),
+              error: () => void 0,
+            });
+          },
+          onError: () => {
+            this.saving.set(false);
+            this.messageService.add({
+              severity: 'error',
+              summary: `La versión V${v.version_number} se creó, pero no se pudo recalcular`
+            });
+            this.load(q.id);
+          },
         });
       },
       error: () => {
@@ -669,11 +675,31 @@ export class QuotationDetail implements OnInit {
   recalculate() {
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
-    this.quotationService.recalculate(q.id, version.id).subscribe({
+    this.recalculateVersion(q.id, version.id, {
+      successMessage: 'Total recalculado',
+      onDone: () => this.load(q.id),
+    });
+  }
+
+  private recalculateVersion(
+    quotationId: string,
+    versionId: string,
+    options?: {
+      successMessage?: string;
+      onDone?: () => void;
+      onError?: () => void;
+    }
+  ) {
+    this.quotationService.recalculate(quotationId, versionId).subscribe({
       next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Total recalculado' });
-        this.load(q.id);
-      }
+        if (options?.successMessage) {
+          this.messageService.add({ severity: 'success', summary: options.successMessage });
+        }
+        options?.onDone?.();
+      },
+      error: () => {
+        options?.onError?.();
+      },
     });
   }
 
@@ -1213,7 +1239,7 @@ export class QuotationDetail implements OnInit {
     if (Array.isArray(fm) && fm.length > 0) {
       this.fichaFamilyRows.set(fm.map((raw) => this.normalizeFichaMember(raw)));
     } else {
-      this.fichaFamilyRows.set([{ role: 'adult', adult_category: 'regular' }]);
+      this.fichaFamilyRows.set([{ role: 'adult', age: null, adult_category: null }]);
     }
     const fr = q.ficha_room_requirements;
     if (Array.isArray(fr) && fr.length > 0) {
@@ -1237,9 +1263,7 @@ export class QuotationDetail implements OnInit {
       const age = Math.min(17, Math.max(0, Math.floor(Number(o['age']) || 0)));
       return { role: 'child', age, adult_category: null };
     }
-    const ac = String(o['adult_category'] || 'regular');
-    const cat = (['young', 'regular', 'senior'].includes(ac) ? ac : 'regular') as FichaAdultCategory;
-    return { role: 'adult', adult_category: cat, age: null };
+    return { role: 'adult', adult_category: null, age: null };
   }
 
   private normalizeFichaRoom(raw: unknown): FichaRoomRequirementRow {
@@ -1919,7 +1943,7 @@ export class QuotationDetail implements OnInit {
   }
 
   addFichaFamilyRow(): void {
-    this.fichaFamilyRows.update((rows) => [...rows, { role: 'adult', adult_category: 'regular' }]);
+    this.fichaFamilyRows.update((rows) => [...rows, { role: 'adult', age: null, adult_category: null }]);
   }
 
   removeFichaFamilyRow(index: number): void {
@@ -1944,7 +1968,7 @@ export class QuotationDetail implements OnInit {
         return {
           role: 'adult' as const,
           age: null,
-          adult_category: merged.adult_category ?? row.adult_category ?? 'regular',
+          adult_category: null,
         };
       })
     );
@@ -1973,15 +1997,12 @@ export class QuotationDetail implements OnInit {
     const versionId = ver?.id ?? q?.current_version?.id;
     return {
       ...(versionId ? { version_id: versionId } : {}),
-      family_members: this.fichaFamilyRows().map((m) =>
-        m.role === 'child'
-          ? { role: 'child' as const, age: m.age ?? 0, adult_category: null }
-          : {
-              role: 'adult' as const,
-              age: null,
-              adult_category: (m.adult_category ?? 'regular') as FichaAdultCategory,
-            }
-      ),
+      family_members: this.fichaFamilyRows().map((m) => {
+        if (m.role === 'child') {
+          return { role: 'child' as const, age: m.age ?? 0 };
+        }
+        return { role: 'adult' as const, age: null };
+      }),
       room_requirements: this.fichaRoomRows().map((r) => ({
         room_type: r.room_type,
         quantity: Math.min(50, Math.max(1, Math.floor(Number(r.quantity) || 1))),
@@ -2024,9 +2045,6 @@ export class QuotationDetail implements OnInit {
           errs.push('Cada niño/a debe tener edad entre 0 y 17.');
           break;
         }
-      } else if (!m.adult_category) {
-        errs.push('Cada adulto debe tener categoría (joven, adulto o mayor).');
-        break;
       }
     }
     const rooms = this.fichaRoomRows();

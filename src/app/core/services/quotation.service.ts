@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
 import {
   Quotation, QuotationFull, QuotationListResponse, QuotationLine,
   QuotationCreate, QuotationUpdate, QuotationVersion,
@@ -16,10 +15,11 @@ import {
   FileAAActivityCatalogOption,
   FileAAVehicleCatalogOption,
 } from '../models/quotation.model';
+import { apiUrl } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class QuotationService {
-  private url = `${environment.apiUrl}/quotations`;
+  private url = apiUrl('/quotations');
 
   constructor(private http: HttpClient) {}
 
@@ -215,14 +215,14 @@ export class QuotationService {
   }
 
   deleteVehicle(id: string) {
-    return this.http.delete(`${environment.apiUrl}/quotations/vehicles/${id}`);
+    return this.http.delete(apiUrl(`/quotations/vehicles/${id}`));
   }
   
   deleteRoom(id: string) {
-    return this.http.delete(`${environment.apiUrl}/quotations/rooms/${id}`);
+    return this.http.delete(apiUrl(`/quotations/rooms/${id}`));
   }
   
   deleteActivity(id: string) {
-    return this.http.delete(`${environment.apiUrl}/quotations/activities/${id}`);
+    return this.http.delete(apiUrl(`/quotations/activities/${id}`));
   }
 }

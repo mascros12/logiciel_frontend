@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
 import {
   VehicleOption, HotelOption, ActivityOption,
   ProviderListResponse, RoomOption
 } from '../models/provider.model';
+import { apiUrl } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class ProviderService {
@@ -13,14 +13,14 @@ export class ProviderService {
   getVehicles(search = '') {
     const params = new HttpParams().set('page_size', 100);
     return this.http.get<ProviderListResponse<VehicleOption>>(
-      `${environment.apiUrl}/vehicles`, { params }
+      apiUrl('/vehicles'), { params }
     );
   }
 
   getHotels(search = '') {
     const params = new HttpParams().set('page_size', 100);
     return this.http.get<ProviderListResponse<HotelOption>>(
-      `${environment.apiUrl}/hotels`, { params }
+      apiUrl('/hotels'), { params }
     );
   }
 
@@ -29,14 +29,14 @@ export class ProviderService {
    */
   getRoomsByHotel(hotelId: string) {
     return this.http.get<RoomOption[]>(
-      `${environment.apiUrl}/hotels/${hotelId}/rooms`
+      apiUrl(`/hotels/${hotelId}/rooms`)
     );
   }
 
   getActivities(search = '') {
     const params = new HttpParams().set('page_size', 100);
     return this.http.get<ProviderListResponse<ActivityOption>>(
-      `${environment.apiUrl}/activities`, { params }
+      apiUrl('/activities'), { params }
     );
   }
 }

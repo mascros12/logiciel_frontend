@@ -161,7 +161,7 @@
       <div class="field">
         <label>Fecha de llegada *</label>
         <p-datepicker 
-            formControlName="from_date" 
+            formControlName="arrival_date" 
             dateFormat="dd/mm/yy" 
             [showIcon]="true" 
             styleClass="w-full"
@@ -171,7 +171,7 @@
       <div class="field">
         <label>Fecha de salida *</label>
         <p-datepicker 
-            formControlName="to_date" 
+            formControlName="departure_date" 
             dateFormat="dd/mm/yy" 
             [showIcon]="true" 
             styleClass="w-full"
@@ -180,10 +180,21 @@
       </div>
     </div>
 
+    <div class="field">
+      <label>Notas internas *</label>
+      <textarea
+        pInputTextarea
+        formControlName="notes"
+        class="w-full"
+        rows="3"
+        placeholder="Notas internas de la cotización"
+      ></textarea>
+    </div>
+
     <p class="section-label">Datos del contacto</p>
 
     <div class="field">
-      <label>Email</label>
+      <label>Email (Opcional)</label>
       <input pInputText formControlName="email" class="w-full" placeholder="cliente@email.com" />
     </div>
 

@@ -33,6 +33,12 @@
           </span>
         }
       </div>
+      @if (q.notes?.trim()) {
+        <p class="version-notes-hint">
+          <span class="version-notes-label">Notas internas</span>
+          <span class="version-notes-text">{{ q.notes!.trim() }}</span>
+        </p>
+      }
     </div>
 
     <div class="header-right">
@@ -227,7 +233,7 @@
                                   } @else {
                                     <div class="agenda-service-card__title">{{ rparts.roomLabel }}</div>
                                     @if (rparts.hotel) {
-                                      <div class="agenda-service-card__hotel">{{ rparts.hotel }}</div>
+                                      <div class="agenda-service-card__hotel" [innerHTML]="rparts.hotel | richText"></div>
                                     }
                                   }
                                 </div>
@@ -610,7 +616,7 @@
 
             <div class="ficha-aa-section">
               <h4 class="ficha-aa-section-title">Composición familiar</h4>
-              <p class="ficha-aa-hint">Una fila por persona. Niños/as: edad obligatoria. Adultos: categoría.</p>
+              <p class="ficha-aa-hint">Una fila por persona. Niños/as: edad obligatoria.</p>
               <div class="ficha-aa-table-wrap">
                 <table class="ficha-aa-table">
                   <thead>
@@ -618,7 +624,6 @@
                       <th>#</th>
                       <th>Tipo</th>
                       <th>Edad (niño/a)</th>
-                      <th>Categoría (adulto)</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -647,21 +652,6 @@
                               [showButtons]="true"
                               styleClass="w-full"
                               inputStyleClass="w-full"
-                            />
-                          } @else {
-                            <span class="text-muted">—</span>
-                          }
-                        </td>
-                        <td>
-                          @if (m.role === 'adult') {
-                            <p-select
-                              [options]="fichaAdultCategoryOptions"
-                              optionLabel="label"
-                              optionValue="value"
-                              [ngModel]="m.adult_category"
-                              (ngModelChange)="patchFichaMember($index, { adult_category: $event })"
-                              appendTo="body"
-                              styleClass="w-full"
                             />
                           } @else {
                             <span class="text-muted">—</span>

@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
@@ -25,7 +26,7 @@ import { SelectModule } from 'primeng/select';
   standalone: true,
   imports: [
     TableModule, ButtonModule, TagModule, DialogModule,
-    InputTextModule, DatePickerModule, ReactiveFormsModule,
+    InputTextModule, TextareaModule, DatePickerModule, ReactiveFormsModule,
     ToastModule, ConfirmDialogModule, DatePipe, CurrencyPipe,
     SelectModule,
   ],
@@ -80,8 +81,11 @@ export class QuotationList implements OnInit {
   ) {
     this.createForm = this.fb.group({
       name: ['', Validators.required],
+      arrival_date: [null, Validators.required],
+      departure_date: [null, Validators.required],
       from_date: [null, Validators.required],
       to_date: [null, Validators.required],
+      notes: ['', Validators.required],
       commission: [1.92],
       // Contacto
       email: [''],
@@ -89,6 +93,14 @@ export class QuotationList implements OnInit {
       budget: [null],
       traveller_type: [null],
       ritm: [null],
+    });
+
+    // La llegada/salida alimentan automáticamente inicio/fin del viaje.
+    this.createForm.get('arrival_date')?.valueChanges.subscribe((arrivalDate: Date | null) => {
+      this.createForm.patchValue({ from_date: arrivalDate }, { emitEvent: false });
+    });
+    this.createForm.get('departure_date')?.valueChanges.subscribe((departureDate: Date | null) => {
+      this.createForm.patchValue({ to_date: departureDate }, { emitEvent: false });
     });
   }
 
@@ -109,7 +121,7 @@ export class QuotationList implements OnInit {
   }
 
   openCreate() {
-    this.createForm.reset({ commission: 1.92 });
+    this.createForm.reset({ commission: 1.92, notes: '' });
     this.showCreateDialog.set(true);
   }
 
@@ -134,6 +146,9 @@ export class QuotationList implements OnInit {
           name: val.name,
           from_date: this.formatDate(val.from_date),
           to_date: this.formatDate(val.to_date),
+          arrival_date: this.formatDate(val.arrival_date),
+          departure_date: this.formatDate(val.departure_date),
+          notes: val.notes?.trim(),
           commission: val.commission,
           contact_id: contact.id,
         }).subscribe({

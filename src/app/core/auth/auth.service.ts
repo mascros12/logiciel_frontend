@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
+import { apiUrl } from '../config/api.config';
 
 export interface LoginResponse {
   access_token: string;
@@ -31,7 +31,7 @@ export class AuthService {
 
   login(username: string, password: string) {
     return this.http.post<LoginResponse>(
-      `${environment.apiUrl}/auth/login`,
+      apiUrl('/auth/login'),
       // Backend aún espera el campo "email", pero aquí usamos username en la UI.
       { email: username, password }
     ).pipe(
@@ -45,7 +45,7 @@ export class AuthService {
   }
 
   fetchCurrentUser() {
-    return this.http.get<CurrentUser>(`${environment.apiUrl}/auth/me`).pipe(
+    return this.http.get<CurrentUser>(apiUrl('/auth/me')).pipe(
       tap(user => {
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
         this.currentUser.set(user);

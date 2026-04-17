@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
 import {
   Vehicle, VehicleListResponse, VehicleCreate, VehicleSeasonCreate
 } from '../models/vehicle.model';
+import { apiUrl } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
-  private url = `${environment.apiUrl}/vehicles`;
+  private url = apiUrl('/vehicles');
 
   constructor(private http: HttpClient) {}
 
