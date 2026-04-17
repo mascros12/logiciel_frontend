@@ -7,11 +7,6 @@ RUN npm ci
 
 COPY . /app
 
-# URL base de API embebida en build de producción del frontend.
-# Por defecto usa proxy relativo de Nginx: /api/v1
-ARG FRONTEND_API_URL=/api/v1
-RUN sed -i "s|https://tu-dominio.com/api/v1|${FRONTEND_API_URL}|g" src/environments/environment.prod.ts
-
 RUN npm run build -- --configuration production
 
 FROM nginx:1.27-alpine

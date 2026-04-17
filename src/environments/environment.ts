@@ -1,5 +1,5 @@
+/** Solo desarrollo (`ng serve`). En `ng build --configuration production` se reemplaza por `environment.prod.ts`. */
 export const environment = {
-    production: false,
-    apiUrl: 'https://16c6-201-198-177-7.ngrok-free.app/api/v1',
-    ///apiUrl: 'http://localhost:8000/api/v1'
-  };
+  production: false,
+  apiUrl: 'http://localhost:8000/api/v1',
+};
