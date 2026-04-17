@@ -9,6 +9,7 @@ import localeEs from '@angular/common/locales/es';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { httpsSameOriginInterceptor } from './core/http/https-same-origin.interceptor';
 
 registerLocaleData(localeEs);
 
@@ -16,7 +17,9 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(
+      withInterceptors([httpsSameOriginInterceptor, authInterceptor]),
+    ),
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
