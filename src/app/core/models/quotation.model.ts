@@ -21,6 +21,8 @@ interface QuotationRoom {
   is_original: boolean;
   deleted: boolean;
   total?: number;
+  /** Gama del hotel (high / medium / low), API enriquecida desde Room → Hotel */
+  hotel_category?: string | null;
 }
 
 interface QuotationActivity {
@@ -99,6 +101,12 @@ export interface FileAADetailActivityObsState {
 /** Observaciones estructuradas en Ficha AA — filas categoría hotel */
 export interface FileAADetailRoomObsState {
   room_quantity: number | null;
+  /** Entradas (check-in), p. ej. «20/3 y 30/3» */
+  ficha_entrada?: string;
+  /** Salidas (día de checkout), p. ej. «26/3 y 2/4» */
+  ficha_salida?: string;
+  /** Noches por estadía, p. ej. «6 y 3» */
+  ficha_noches_texto?: string;
   notes: string;
 }
 
@@ -112,6 +120,8 @@ export interface FileAADetailRow {
   observations: string | null;
   /** JSON backend: campos según categoría (vehículo: cobertor, recogida, devolución, notas) */
   observation_extras?: Record<string, unknown> | null;
+  /** Gama del hotel en filas habitación (también en observation_extras.hotel_category) */
+  hotel_category?: string | null;
   dates: string;
   date_from: string;
   date_to: string;

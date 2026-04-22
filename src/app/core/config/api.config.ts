@@ -25,7 +25,9 @@ function resolvedApiRoot(): string {
     if (raw.startsWith('http://') || raw.startsWith('https://')) {
       try {
         const u = new URL(raw);
-        if (u.hostname === loc.hostname) {
+        // Solo forzar ruta relativa en páginas HTTPS para evitar Mixed Content.
+        // En desarrollo (http://localhost:4200) debemos conservar el host:puerto del backend.
+        if (loc.protocol === 'https:' && u.hostname === loc.hostname) {
           let p = (u.pathname || '/').replace(/\/+$/, '') || '';
           return p.startsWith('/') ? p : `/${p}`;
         }

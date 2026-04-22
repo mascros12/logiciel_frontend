@@ -1,0 +1,167 @@
+<div class="page-container dashboard">
+  <div class="dashboard-header mb-4">
+    <div>
+      <h2 class="page-title">Panel administrativo</h2>
+      <p class="dashboard-subtitle">
+        Bienvenido, {{ userName }}. Vista resumida de cotizaciones y operación próxima.
+      </p>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <section class="dashboard-card dashboard-card--wide">
+      <p-card>
+        <ng-template pTemplate="header">
+          <div class="card-header">
+            <div>
+              <h3>Últimas cotizaciones</h3>
+              <p class="card-subtitle">Registro reciente del equipo</p>
+            </div>
+            <button
+              pButton
+              type="button"
+              class="p-button-text"
+              label="Ver todas"
+              (click)="goToQuotations()"
+            ></button>
+          </div>
+        </ng-template>
+
+        @if (loading()) {
+          <div class="skeleton-list">
+            <p-skeleton height="1.5rem" styleClass="mb-2" />
+            <p-skeleton height="1.5rem" styleClass="mb-2" />
+            <p-skeleton height="1.5rem" />
+          </div>
+        } @else if (recentQuotations().length === 0) {
+          <div class="empty-state">
+            <p>No hay cotizaciones para mostrar.</p>
+          </div>
+        } @else {
+          <p-table
+            [value]="recentQuotations()"
+            styleClass="p-datatable-sm p-datatable-gridlines dashboard-table"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Nombre</th>
+                <th>Fechas</th>
+                <th>Total</th>
+                <th>Creado</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-q>
+              <tr class="clickable-row" (click)="openQuotation(q)">
+                <td><span class="quotation-name">{{ q.name }}</span></td>
+                <td>
+                  @if (q.from_date && q.to_date) {
+                    {{ q.from_date | date:'dd/MM' }} -> {{ q.to_date | date:'dd/MM' }}
+                  } @else if (q.from_date) {
+                    {{ q.from_date | date:'dd/MM/yyyy' }}
+                  } @else {
+                    <span class="muted">Sin fechas</span>
+                  }
+                </td>
+                <td>
+                  @if (q.total !== undefined) {
+                    {{ q.total | currency:'EUR':'symbol':'1.0-0' }}
+                  } @else {
+                    <span class="muted">-</span>
+                  }
+                </td>
+                <td>{{ q.created_at | date:'dd/MM/yyyy' }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      </p-card>
+    </section>
+
+    <section class="dashboard-card">
+      <p-card>
+        <ng-template pTemplate="header">
+          <div class="card-header">
+            <div>
+              <h3>Top de servicios</h3>
+              <p class="card-subtitle">Más presentes en cotizaciones recientes</p>
+            </div>
+          </div>
+        </ng-template>
+
+        @if (loadingTop()) {
+          <div class="skeleton-list">
+            <p-skeleton height="1.3rem" styleClass="mb-2" />
+            <p-skeleton height="1.3rem" styleClass="mb-2" />
+            <p-skeleton height="1.3rem" />
+          </div>
+        } @else if (topItems().length === 0) {
+          <div class="empty-state small">
+            <p>Sin datos para ranking.</p>
+          </div>
+        } @else {
+          <ul class="top-list">
+            @for (item of topItems(); track item.kind + '-' + item.name) {
+              <li>
+                <div class="top-list__main">
+                  <span class="top-list__name">{{ item.name }}</span>
+                  <span class="top-list__kind" [ngClass]="'kind-' + item.kind">
+                    @if (item.kind === 'hotel') { Hotel }
+                    @if (item.kind === 'activity') { Actividad }
+                    @if (item.kind === 'vehicle') { Vehículo }
+                  </span>
+                </div>
+                <div class="top-list__meta">
+                  <span class="qty">x{{ item.qty }}</span>
+                  <span class="total">{{ item.total | currency:'EUR':'symbol':'1.0-0' }}</span>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </p-card>
+    </section>
+
+    <section class="dashboard-card">
+      <p-card>
+        <ng-template pTemplate="header">
+          <div class="card-header">
+            <div>
+              <h3>Mapa de calor</h3>
+              <p class="card-subtitle">Llegadas próximas (6 semanas)</p>
+            </div>
+          </div>
+        </ng-template>
+
+        <div class="calendar-legend">
+          <span class="legend-label">Intensidad</span>
+          <div class="legend-scale">
+            <span class="legend-box level-0"></span>
+            <span class="legend-box level-1"></span>
+            <span class="legend-box level-2"></span>
+            <span class="legend-box level-3"></span>
+          </div>
+        </div>
+
+        <div class="calendar-grid">
+          @for (day of calendarDays(); track day.date) {
+            <div
+              class="calendar-cell"
+              [ngClass]="{
+                'level-0': day.count === 0,
+                'level-1': day.count === 1,
+                'level-2': day.count === 2,
+                'level-3': day.count >= 3
+              }"
+            >
+              <span class="day-label">{{ day.label }}</span>
+              @if (day.count > 0) {
+                <span class="day-count">{{ day.count }}</span>
+              }
+            </div>
+          }
+        </div>
+      </p-card>
+    </section>
+  </div>
+</div>
+

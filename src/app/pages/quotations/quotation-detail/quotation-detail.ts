@@ -66,6 +66,7 @@ const FICHA_HEADER_COLORS = [
   '#9333EA', // morado
 ] as const;
 
+
 @Component({
   selector: 'app-quotation-detail',
   standalone: true,
@@ -174,6 +175,15 @@ export class QuotationDetail implements OnInit {
 
   /** Última Ficha AA generada con tabla de servicios (se recarga al abrir la cotización). */
   fichaFileAA = signal<FileAAWithDetails | null>(null);
+  fichaAATab = signal<'ficha' | 'config'>('ficha');
+  fichaNeedBabyBed = signal(false);
+  fichaHasSpecialDate = signal(false);
+  fichaSpecialDate = signal('');
+  fichaNeedAC = signal(false);
+  fichaHasDisability = signal(false);
+  fichaDisabilityInfo = signal('');
+  fichaNeedConnectingRooms = signal(false);
+  fichaNeedBabyChairs = signal(false);
 
   fichaTotals = computed(() => {
     const f = this.fichaFileAA();
@@ -938,6 +948,22 @@ export class QuotationDetail implements OnInit {
    * El backend arma `name` como "{hotel} - {habitación}".
    * Parte por el último " - " por si el nombre del hotel incluye ese separador.
    */
+  /** Fila Ficha AA (habitación): hotel + tipo en dos líneas si el nombre trae « - ». */
+  fichaDetailRoomDisplay(d: FileAADetailRow): { hotel: string; roomLabel: string; twoLines: boolean } {
+    const plain = this.stripHtml(d.name);
+    const sep = ' - ';
+    const idx = plain.lastIndexOf(sep);
+    if (idx === -1) {
+      return { hotel: '', roomLabel: (plain || d.name || '').trim(), twoLines: false };
+    }
+    const hotel = plain.slice(0, idx).trim();
+    const roomLabel = plain.slice(idx + sep.length).trim();
+    if (!roomLabel) {
+      return { hotel: '', roomLabel: (plain || d.name || '').trim(), twoLines: false };
+    }
+    return { hotel, roomLabel, twoLines: true };
+  }
+
   parseQuotationRoomDisplay(room: QuotationLine['rooms'][number]): {
     hotel: string;
     roomLabel: string;
@@ -1249,6 +1275,20 @@ export class QuotationDetail implements OnInit {
     }
   }
 
+  setFichaAATab(value: unknown): void {
+    if (value === 'ficha' || value === 'config') this.fichaAATab.set(value);
+  }
+
+  onFichaSpecialDateToggle(checked: boolean): void {
+    this.fichaHasSpecialDate.set(!!checked);
+    if (!checked) this.fichaSpecialDate.set('');
+  }
+
+  onFichaDisabilityToggle(checked: boolean): void {
+    this.fichaHasDisability.set(!!checked);
+    if (!checked) this.fichaDisabilityInfo.set('');
+  }
+
   private asRecord(raw: unknown): Record<string, unknown> {
     if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
       return raw as Record<string, unknown>;
@@ -1413,10 +1453,13 @@ export class QuotationDetail implements OnInit {
     this.quotationService.getLatestFileAA(quotationId).subscribe({
       next: (f) => {
         this.clearAllVehicleFichaObsDrafts();
-        this.fichaFileAA.set({
+        const loaded = {
           ...f,
           header_color: f.header_color || '#2563EB',
-        });
+        };
+        this.fichaFileAA.set(loaded);
+        this.hydrateChecklistFromFichaDetails(loaded);
+        this.fichaAATab.set('ficha');
         // Para operaciones, al entrar con Ficha AA existente abrir directamente ese tab.
         if (this.isOperaciones() && this.activeTab() === 'agenda') {
           this.activeTab.set('fileaa');
@@ -1426,6 +1469,8 @@ export class QuotationDetail implements OnInit {
         if (err.status === 404) {
           this.clearAllVehicleFichaObsDrafts();
           this.fichaFileAA.set(null);
+          this.resetChecklistDraft();
+          this.fichaAATab.set('config');
         }
       },
     });
@@ -1656,10 +1701,54 @@ export class QuotationDetail implements OnInit {
     });
   }
 
+  /** día/mes desde ISO YYYY-MM-DD (sin año), p. ej. 20/3 */
+  formatIsoDateDm(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    if (!y || !m || !d) return iso;
+    return `${Number(d)}/${Number(m)}`;
+  }
+
+  private isoAddDays(iso: string, delta: number): string {
+    const dt = new Date(`${iso}T12:00:00`);
+    if (Number.isNaN(dt.getTime())) return iso;
+    dt.setDate(dt.getDate() + delta);
+    const y = dt.getFullYear();
+    const mo = String(dt.getMonth() + 1).padStart(2, '0');
+    const da = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${da}`;
+  }
+
+  /** Parsea líneas «Entrada: … / Salida: … / Noches: …» generadas al exportar o desde API. */
+  private parseFichaHotelDatesCell(dates: string | null | undefined): {
+    ficha_entrada: string;
+    ficha_salida: string;
+    ficha_noches_texto: string;
+  } {
+    const empty = { ficha_entrada: '', ficha_salida: '', ficha_noches_texto: '' };
+    if (!dates) return empty;
+    const acc = { ...empty };
+    for (const line of dates.split('\n')) {
+      const t = line.trim();
+      const m = /^(Entrada|Salida|Noches)\s*:\s*(.*)$/i.exec(t);
+      if (!m) continue;
+      const val = (m[2] ?? '').trim();
+      const key = m[1].toLowerCase();
+      if (key === 'entrada') acc.ficha_entrada = val;
+      else if (key === 'salida') acc.ficha_salida = val;
+      else if (key === 'noches') acc.ficha_noches_texto = val;
+    }
+    if (acc.ficha_entrada || acc.ficha_salida || acc.ficha_noches_texto) return acc;
+    return empty;
+  }
+
   private hotelFichaObsFromServer(d: FileAADetailRow): FileAADetailRoomObsState {
     const raw = d.observation_extras;
     const notes = typeof d.observations === 'string' ? d.observations : '';
     let room_quantity: number | null = null;
+    let ficha_entrada = '';
+    let ficha_salida = '';
+    let ficha_noches_texto = '';
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       const o = raw as Record<string, unknown>;
       const rq = o['room_quantity'];
@@ -1667,8 +1756,23 @@ export class QuotationDetail implements OnInit {
         const n = Number(rq);
         room_quantity = Number.isFinite(n) ? n : null;
       }
+      ficha_entrada = String(o['ficha_entrada'] ?? '');
+      ficha_salida = String(o['ficha_salida'] ?? '');
+      ficha_noches_texto = String(o['ficha_noches_texto'] ?? '');
     }
-    return { room_quantity, notes };
+    if (!ficha_entrada && !ficha_salida && !ficha_noches_texto) {
+      const parsed = this.parseFichaHotelDatesCell(d.dates);
+      ficha_entrada = parsed.ficha_entrada;
+      ficha_salida = parsed.ficha_salida;
+      ficha_noches_texto = parsed.ficha_noches_texto;
+    }
+    if (!ficha_entrada && !ficha_salida && !ficha_noches_texto && d.date_from && d.date_to) {
+      ficha_entrada = this.formatIsoDateDm(d.date_from);
+      ficha_salida = this.formatIsoDateDm(this.isoAddDays(d.date_to, 1));
+      const nd = Number(d.days);
+      ficha_noches_texto = Number.isFinite(nd) && nd > 0 ? String(nd) : '';
+    }
+    return { room_quantity, ficha_entrada, ficha_salida, ficha_noches_texto, notes };
   }
 
   ensureHotelFichaObsDraft(d: FileAADetailRow): FileAADetailRoomObsState {
@@ -1687,11 +1791,30 @@ export class QuotationDetail implements OnInit {
       room_quantity = Number.isFinite(n) ? n : null;
     }
     row.room_quantity = room_quantity;
-    const observation_extras = { room_quantity };
+    const prev =
+      d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+        ? { ...(d.observation_extras as Record<string, unknown>) }
+        : {};
+    const ficha_entrada = (row.ficha_entrada ?? '').trim();
+    const ficha_salida = (row.ficha_salida ?? '').trim();
+    const ficha_noches_texto = (row.ficha_noches_texto ?? '').trim();
+    const datesLines: string[] = [];
+    if (ficha_entrada) datesLines.push(`Entrada: ${ficha_entrada}`);
+    if (ficha_salida) datesLines.push(`Salida: ${ficha_salida}`);
+    if (ficha_noches_texto) datesLines.push(`Noches: ${ficha_noches_texto}`);
+    const datesCell = datesLines.join('\n');
+    const observation_extras = {
+      ...prev,
+      room_quantity,
+      ficha_entrada,
+      ficha_salida,
+      ficha_noches_texto,
+    };
     const notesTrim = row.notes.trim();
     this.patchFileDetail(d.id, {
       observation_extras,
       observations: notesTrim ? notesTrim : null,
+      dates: datesCell,
     });
   }
 
@@ -1731,6 +1854,14 @@ export class QuotationDetail implements OnInit {
     if (!Number.isFinite(system) || !Number.isFinite(provider)) return false;
     if (provider <= 0) return false;
     return Math.abs(system - provider) >= 50;
+  }
+
+  /** Fila creada desde "Añadir línea" (nueva o reemplazo): se resalta en verde. */
+  fichaIsAddedDetail(detail: FileAADetailRow): boolean {
+    const raw = detail.observation_extras;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+    const anchorId = String((raw as Record<string, unknown>)['sort_after_detail_id'] ?? '').trim();
+    return anchorId.length > 0;
   }
 
   openFichaAddDetailDialog(anchor: FileAADetailRow): void {
@@ -1928,6 +2059,32 @@ export class QuotationDetail implements OnInit {
     return null;
   }
 
+  /** Gama del hotel para tarjetas de habitación en la agenda (API: hotel_category). */
+  agendaRoomGamaClass(room: QuotationLine['rooms'][number]): string {
+    const g = this.normalizeHotelCategory(room.hotel_category);
+    if (g === 'high') return 'agenda-gama-high';
+    if (g === 'medium') return 'agenda-gama-medium';
+    if (g === 'low') return 'agenda-gama-low';
+    return '';
+  }
+
+  /** Gama hotel en filas habitación de la Ficha AA (respuesta o observation_extras). */
+  fichaRoomHotelGama(d: FileAADetailRow): 'high' | 'medium' | 'low' | null {
+    const fromRow = this.normalizeHotelCategory(d.hotel_category);
+    if (fromRow) return fromRow;
+    const raw = d.observation_extras?.['hotel_category'];
+    return this.normalizeHotelCategory(typeof raw === 'string' ? raw : undefined);
+  }
+
+  /** Hotel elegido en el diálogo «Agregar habitación» (para color de gama en habitación). */
+  addRoomFormHotel(): HotelOption | null {
+    const v = this.roomForm.get('hotel')?.value;
+    if (v && typeof v === 'object' && 'id' in v) {
+      return v as HotelOption;
+    }
+    return null;
+  }
+
   fichaFlightArrivalOk(q: QuotationFull): boolean {
     return !!(
       q.arrival_time &&
@@ -2008,6 +2165,119 @@ export class QuotationDetail implements OnInit {
         quantity: Math.min(50, Math.max(1, Math.floor(Number(r.quantity) || 1))),
       })),
     };
+  }
+
+  private stripChecklistBlock(obs: string): string {
+    const src = (obs || '').trim();
+    if (!src) return '';
+    const checklistPrefixes = [
+      'Cama para bebés',
+      'Fecha Especial',
+      'Aire acondicionado',
+      'Persona con discapacidad',
+      'Habitaciones communicante',
+      'Sillas para bebés',
+    ];
+    const cleaned = src
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((line) => {
+        if (!line) return false;
+        if (line === '--- Checklist Ficha AA ---' || line === '--- Fin Checklist Ficha AA ---') return false;
+        return !checklistPrefixes.some((p) => line.startsWith(p));
+      });
+    return cleaned.join('\n').trim();
+  }
+
+  private checklistLinesForCategory(cat: string): string[] {
+    const lines: string[] = [];
+    const disability = this.fichaDisabilityInfo().trim();
+    if (cat === 'room') {
+      if (this.fichaNeedBabyBed()) lines.push('Cama para bebés');
+      if (this.fichaHasSpecialDate()) {
+        const special = this.fichaSpecialDate().trim();
+        lines.push(special ? `Fecha Especial: ${special}` : 'Fecha Especial');
+      }
+      if (this.fichaNeedAC()) lines.push('Aire acondicionado');
+      if (this.fichaNeedConnectingRooms()) lines.push('Habitaciones communicante');
+      if (this.fichaHasDisability()) {
+        lines.push(disability ? `Persona con discapacidad: ${disability}` : 'Persona con discapacidad');
+      }
+    } else if (cat === 'activity') {
+      if (this.fichaHasDisability()) {
+        lines.push(disability ? `Persona con discapacidad: ${disability}` : 'Persona con discapacidad');
+      }
+    } else if (cat === 'vehicle') {
+      if (this.fichaNeedBabyChairs()) lines.push('Sillas para bebés');
+      if (this.fichaHasDisability()) {
+        lines.push(disability ? `Persona con discapacidad: ${disability}` : 'Persona con discapacidad');
+      }
+    }
+    return lines;
+  }
+
+  private mergedObservationWithChecklist(base: string | null, lines: string[]): string | null {
+    const clean = this.stripChecklistBlock(base ?? '');
+    if (!lines.length) return clean || null;
+    return [clean, ...lines].filter(Boolean).join('\n').trim();
+  }
+
+  private applyChecklistToFichaDetails(ficha: FileAAWithDetails): void {
+    for (const d of ficha.details) {
+      if (d.row_status === 'red') continue;
+      const lines = this.checklistLinesForCategory(d.category);
+      const merged = this.mergedObservationWithChecklist(d.observations ?? null, lines);
+      if ((d.observations ?? null) === merged) continue;
+      this.patchFileDetail(d.id, { observations: merged });
+    }
+  }
+
+  private resetChecklistDraft(): void {
+    this.fichaNeedBabyBed.set(false);
+    this.fichaHasSpecialDate.set(false);
+    this.fichaSpecialDate.set('');
+    this.fichaNeedAC.set(false);
+    this.fichaHasDisability.set(false);
+    this.fichaDisabilityInfo.set('');
+    this.fichaNeedConnectingRooms.set(false);
+    this.fichaNeedBabyChairs.set(false);
+  }
+
+  private hydrateChecklistFromFichaDetails(ficha: FileAAWithDetails | null): void {
+    this.resetChecklistDraft();
+    if (!ficha) return;
+    const active = (ficha.details || []).filter((d) => d.row_status !== 'red');
+    const findLine = (prefix: string, cats: Array<'room' | 'activity' | 'vehicle'>): string => {
+      for (const d of active) {
+        if (!cats.includes(d.category as 'room' | 'activity' | 'vehicle')) continue;
+        const lines = String(d.observations ?? '')
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const match = lines.find((l) => l.startsWith(prefix));
+        if (match) return match;
+      }
+      return '';
+    };
+
+    this.fichaNeedBabyBed.set(!!findLine('Cama para bebés', ['room']));
+    this.fichaNeedAC.set(!!findLine('Aire acondicionado', ['room']));
+    this.fichaNeedConnectingRooms.set(!!findLine('Habitaciones communicante', ['room']));
+    this.fichaNeedBabyChairs.set(!!findLine('Sillas para bebés', ['vehicle']));
+
+    const special = findLine('Fecha Especial', ['room']);
+    if (special) {
+      this.fichaHasSpecialDate.set(true);
+      const i = special.indexOf(':');
+      this.fichaSpecialDate.set(i >= 0 ? special.slice(i + 1).trim() : '');
+    }
+
+    const disability = findLine('Persona con discapacidad', ['room', 'activity', 'vehicle']);
+    if (disability) {
+      this.fichaHasDisability.set(true);
+      const i = disability.indexOf(':');
+      this.fichaDisabilityInfo.set(i >= 0 ? disability.slice(i + 1).trim() : '');
+    }
   }
 
   validateFichaClient(q: QuotationFull): string[] {
@@ -2192,10 +2462,13 @@ export class QuotationDetail implements OnInit {
       next: (ficha) => {
         this.saving.set(false);
         this.clearAllVehicleFichaObsDrafts();
-        this.fichaFileAA.set({
+        const generated = {
           ...ficha,
           header_color: ficha.header_color || '#2563EB',
-        });
+        };
+        this.fichaFileAA.set(generated);
+        this.applyChecklistToFichaDetails(generated);
+        this.fichaAATab.set('ficha');
         this.messageService.add({
           severity: 'success',
           summary: 'Ficha AA generada',

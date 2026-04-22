@@ -13,7 +13,13 @@ export const routes: Routes = [
       import('./layout/layout').then(m => m.Layout),
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'cotizaciones', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./pages/dashboard/admin-dashboard/admin-dashboard')
+            .then(m => m.AdminDashboard)
+      },
       {
         path: 'cotizaciones',
         loadComponent: () =>

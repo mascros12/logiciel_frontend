@@ -225,7 +225,10 @@
                         @if (visibleRooms(line).length > 0) {
                           @for (room of visibleRooms(line); track room.id) {
                             @let rparts = parseQuotationRoomDisplay(room);
-                            <div class="agenda-service-card" [ngClass]="getChipClass(room)">
+                            <div
+                              class="agenda-service-card"
+                              [ngClass]="[getChipClass(room), agendaRoomGamaClass(room)]"
+                            >
                               <div class="agenda-service-card__top">
                                 <div class="agenda-service-card__left">
                                   @if (rparts.useFullRichName) {
@@ -557,7 +560,16 @@
         <!-- Tab Ficha AA -->
         <p-tabpanel value="fileaa">
           <div class="fileaa-container" [class.fileaa-compact]="!!fichaFileAA()">
-            @if (!fichaFileAA()) {
+            @if (fichaFileAA()) {
+              <p-tabs [value]="fichaAATab()" (valueChange)="setFichaAATab($event)" class="ficha-aa-subtabs">
+                <p-tablist>
+                  <p-tab value="ficha">Ficha AA</p-tab>
+                  <p-tab value="config">Configurar / Regenerar</p-tab>
+                </p-tablist>
+              </p-tabs>
+            }
+
+            @if (!fichaFileAA() || fichaAATab() === 'config') {
             <div class="ficha-aa-intro">
               <p>
                 La Ficha AA sustituye la tabla en Word: encabezado con nombre del viaje, fechas y noches, y los datos
@@ -745,6 +757,55 @@
                 (onClick)="addFichaRoomRow()"
               />
             </div>
+
+            <div class="ficha-aa-section">
+              <h4 class="ficha-aa-section-title">Checklist operativo adicional</h4>
+              <p class="ficha-aa-hint">Se agregará automáticamente a observaciones según tipo de servicio.</p>
+              <div class="ficha-aa-checklist-extra">
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyBed()" (ngModelChange)="fichaNeedBabyBed.set(!!$event)" />
+                  <span>Cama para bebés <em>[Hoteles]</em></span>
+                </label>
+                <div class="ficha-check-row ficha-check-row--with-input">
+                  <label class="ficha-check-inline">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="fichaHasSpecialDate()"
+                      (ngModelChange)="onFichaSpecialDateToggle(!!$event)"
+                    />
+                    <span>Fecha Especial <em>[Hoteles]</em></span>
+                  </label>
+                  @if (fichaHasSpecialDate()) {
+                    <input pInputText class="ficha-check-input" [ngModel]="fichaSpecialDate()" (ngModelChange)="fichaSpecialDate.set($event ?? '')" placeholder="Detalle (si aplica)" />
+                  }
+                </div>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedAC()" (ngModelChange)="fichaNeedAC.set(!!$event)" />
+                  <span>Aire acondicionado <em>[Hoteles]</em></span>
+                </label>
+                <div class="ficha-check-row ficha-check-row--with-input">
+                  <label class="ficha-check-inline">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="fichaHasDisability()"
+                      (ngModelChange)="onFichaDisabilityToggle(!!$event)"
+                    />
+                    <span>Persona con discapacidad <em>[Todos]</em></span>
+                  </label>
+                  @if (fichaHasDisability()) {
+                    <input pInputText class="ficha-check-input" [ngModel]="fichaDisabilityInfo()" (ngModelChange)="fichaDisabilityInfo.set($event ?? '')" placeholder="Tipo de discapacidad (si se conoce)" />
+                  }
+                </div>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedConnectingRooms()" (ngModelChange)="fichaNeedConnectingRooms.set(!!$event)" />
+                  <span>Habitaciones communicante <em>[Hoteles]</em></span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyChairs()" (ngModelChange)="fichaNeedBabyChairs.set(!!$event)" />
+                  <span>Sillas para bebés <em>[Vehículo]</em></span>
+                </label>
+              </div>
+            </div>
             }
 
             @if (!fichaAABlockedForComercial()) {
@@ -787,7 +848,8 @@
               </div>
             }
 
-            @if (!fichaAABlockedForComercial() && fichaFileAA(); as ficha) {
+            @if (fichaFileAA(); as ficha) {
+            @if (!fichaAABlockedForComercial() && fichaAATab() === 'ficha') {
               <div class="ficha-aa-generated ficha-aa-generated--minimal">
                 <div class="ficha-aa-generated-table-wrap">
                   <table class="ficha-aa-generated-table">
@@ -879,7 +941,10 @@
                     </thead>
                     <tbody>
                       @for (d of ficha.details; track d.id) {
-                        <tr [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)">
+                        <tr
+                          [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)"
+                          [class.ficha-aa-row-new]="fichaIsAddedDetail(d)"
+                        >
                           <td class="col-cb">
                             <p-checkbox
                               [binary]="true"
@@ -910,16 +975,101 @@
                             </div>
                           </td>
                           <td [class.ficha-servicio-reemplazada]="d.row_status === 'red'">
+                            @let fichaRoomDisp = fichaDetailRoomDisplay(d);
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
-                            <span class="ficha-name">{{ d.name }}</span>
+                            @if (d.category === 'room' && fichaRoomDisp.twoLines) {
+                              <span
+                                class="ficha-name ficha-name-room-two"
+                                [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
+                                [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
+                                [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
+                              >
+                                <span class="ficha-room-hotel">{{ fichaRoomDisp.hotel }}</span>
+                                <span class="ficha-room-type">{{ fichaRoomDisp.roomLabel }}</span>
+                              </span>
+                            } @else {
+                              <span
+                                class="ficha-name"
+                                [class.pick-gama-high]="d.category === 'room' && fichaRoomHotelGama(d) === 'high'"
+                                [class.pick-gama-medium]="d.category === 'room' && fichaRoomHotelGama(d) === 'medium'"
+                                [class.pick-gama-low]="d.category === 'room' && fichaRoomHotelGama(d) === 'low'"
+                              >{{ d.name }}</span>
+                            }
                           </td>
                           <td>
-                            <input
-                              pInputText
-                              class="ficha-cell-input"
-                              [ngModel]="d.dates"
-                              (blur)="onFichaDetailDatesBlur(d, $event.target)"
-                            />
+                            @if (d.category === 'room') {
+                              <div class="ficha-room-dates-blocks">
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-hent-' + d.id">Entrada</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-hent-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_entrada"
+                                    (blur)="commitHotelFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-hsal-' + d.id">Salida</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-hsal-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_salida"
+                                    (blur)="commitHotelFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-hnoc-' + d.id">Noches</label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-hnoc-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_noches_texto"
+                                    (blur)="commitHotelFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                              </div>
+                            } @else if (d.category === 'vehicle') {
+                              <div class="ficha-vehicle-dates-blocks">
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-vpu-' + d.id">
+                                    Fecha, hora y lugar de Recibo del Auto (hotel o vuelo)
+                                  </label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-vpu-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).pickup_detail"
+                                    (blur)="commitVehicleFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-vdo-' + d.id">
+                                    Fecha, hora y lugar de Devolución del Auto (hotel o vuelo)
+                                  </label>
+                                  <textarea
+                                    pInputTextarea
+                                    [id]="'aa-vdo-' + d.id"
+                                    class="ficha-cell-input ficha-obs-textarea"
+                                    rows="2"
+                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).dropoff_detail"
+                                    (blur)="commitVehicleFichaObs(d)"
+                                  ></textarea>
+                                </div>
+                              </div>
+                            } @else {
+                              <input
+                                pInputText
+                                class="ficha-cell-input"
+                                [ngModel]="d.dates"
+                                (blur)="onFichaDetailDatesBlur(d, $event.target)"
+                              />
+                            }
                           </td>
                           <td class="ficha-col-obs">
                             @if (d.category === 'vehicle') {
@@ -933,28 +1083,6 @@
                                     [inputId]="'aa-vlug-' + d.id"
                                     [attr.aria-labelledby]="'aa-vlug-l-' + d.id"
                                   />
-                                </div>
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-vpu-' + d.id">Fecha, hora y lugar de Recibo del Auto (hotel o vuelo)</label>
-                                  <textarea
-                                    pInputTextarea
-                                    [id]="'aa-vpu-' + d.id"
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).pickup_detail"
-                                    (blur)="commitVehicleFichaObs(d)"
-                                  ></textarea>
-                                </div>
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-vdo-' + d.id">Fecha, hora y lugar de Devolución del Auto (hotel o vuelo)</label>
-                                  <textarea
-                                    pInputTextarea
-                                    [id]="'aa-vdo-' + d.id"
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).dropoff_detail"
-                                    (blur)="commitVehicleFichaObs(d)"
-                                  ></textarea>
                                 </div>
                                 <div class="ficha-obs-block">
                                   <label class="ficha-obs-label" [attr.for]="'aa-vno-' + d.id">Observaciones</label>
@@ -1121,6 +1249,7 @@
                   </table>
                 </div>
               </div>
+            }
             }
           </div>
         </p-tabpanel>
@@ -1373,10 +1502,20 @@
         appendTo="body"
       >
         <ng-template let-r pTemplate="selectedItem">
-          <span [innerHTML]="r.name | richText"></span>
+          <span
+            [class.pick-gama-high]="addRoomFormHotel()?.category === 'high'"
+            [class.pick-gama-medium]="addRoomFormHotel()?.category === 'medium'"
+            [class.pick-gama-low]="addRoomFormHotel()?.category === 'low'"
+            [innerHTML]="r.name | richText"
+          ></span>
         </ng-template>
         <ng-template let-r pTemplate="item">
-          <span [innerHTML]="r.name | richText"></span>
+          <span
+            [class.pick-gama-high]="addRoomFormHotel()?.category === 'high'"
+            [class.pick-gama-medium]="addRoomFormHotel()?.category === 'medium'"
+            [class.pick-gama-low]="addRoomFormHotel()?.category === 'low'"
+            [innerHTML]="r.name | richText"
+          ></span>
         </ng-template>
       </p-select>
     </div>

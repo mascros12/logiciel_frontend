@@ -381,6 +381,18 @@
         color: #5a4a00;
       }
 
+      &.agenda-gama-high {
+        box-shadow: inset 4px 0 0 #d67b7b;
+      }
+
+      &.agenda-gama-medium {
+        box-shadow: inset 4px 0 0 #d4b24a;
+      }
+
+      &.agenda-gama-low {
+        box-shadow: inset 4px 0 0 #6bab7d;
+      }
+
       &__top {
         display: flex;
         align-items: flex-start;
@@ -664,6 +676,40 @@
     background: var(--p-surface-card);
   }
 
+  .ficha-aa-subtabs {
+    margin: 0 0 0.85rem;
+  }
+
+  .ficha-aa-checklist-extra {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.25rem 0;
+  }
+
+  .ficha-check-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    line-height: 1.35;
+  }
+
+  .ficha-check-row--with-input {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .ficha-check-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .ficha-check-input {
+    width: min(100%, 30rem);
+  }
+
   .ficha-aa-hint {
     margin: 0 0 0.75rem;
     font-size: 0.875rem;
@@ -901,6 +947,20 @@
       gap: 0.65rem;
     }
 
+    .ficha-room-dates-blocks,
+    .ficha-vehicle-dates-blocks {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      min-width: 10.5rem;
+      vertical-align: top;
+    }
+
+    .ficha-vehicle-dates-blocks {
+      min-width: 12rem;
+      max-width: 18rem;
+    }
+
     .ficha-obs-block {
       display: flex;
       flex-direction: column;
@@ -939,6 +999,24 @@
     .ficha-name {
       font-weight: 600;
       color: #111827;
+    }
+
+    .ficha-name-room-two {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.12rem;
+      line-height: 1.25;
+    }
+
+    .ficha-room-hotel {
+      font-weight: 600;
+    }
+
+    .ficha-room-type {
+      font-size: 0.86em;
+      font-weight: 600;
+      color: #374151;
     }
 
     .ficha-cell-input {
@@ -1092,6 +1170,10 @@
 
     .ficha-aa-row-warning td {
       background: #fcca09 !important;
+    }
+
+    .ficha-aa-row-new td {
+      background: #dcfce7;
     }
 
     .totals-label {
