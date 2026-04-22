@@ -57,14 +57,32 @@ interface FichaAddSourcePickItem {
   hotelCategory?: 'high' | 'medium' | 'low' | null;
 }
 
-const FICHA_HEADER_COLORS = [
-  '#DC2626', // rojo
-  '#EAB308', // amarillo
-  '#2563EB', // azul
-  '#16A34A', // verde
-  '#F97316', // naranja
-  '#9333EA', // morado
+/**
+ * Pares (intenso, claro) cabecera Ficha AA. Debe coincidir con
+ * _FICHA_HEADER_COLOR_PAIRS en logiciel-crv/app/crud/quotation.py.
+ */
+const FICHA_HEADER_COLOR_PAIRS = [
+  ['#DC2626', '#FECACA'], // rojo
+  ['#EAB308', '#FEF9C3'], // amarillo
+  ['#2563EB', '#BFDBFE'], // azul
+  ['#16A34A', '#BBF7D0'], // verde
+  ['#F97316', '#FED7AA'], // naranja
+  ['#9333EA', '#E9D5FF'], // morado
+  ['#DB2777', '#FBCFE8'], // rosa
+  ['#0891B2', '#A5F3FC'], // cian
+  ['#4F46E5', '#C7D2FE'], // índigo
+  ['#0D9488', '#99F6E4'], // turquesa
+  ['#65A30D', '#D9F99D'], // lima
+  ['#C026D3', '#F5D0FE'], // fucsia
+  ['#0284C7', '#BAE6FD'], // cielo
+  ['#475569', '#E2E8F0'], // pizarra
+  ['#BE123C', '#FECDD3'], // rosa oscuro
+  ['#059669', '#A7F3D0'], // esmeralda
+  ['#92400E', '#FDE68A'], // ámbar / marrón
+  ['#3730A3', '#DDD6FE'], // índigo profundo
 ] as const;
+
+const FICHA_HEADER_COLORS = FICHA_HEADER_COLOR_PAIRS.flat() as readonly string[];
 
 
 @Component({
@@ -83,6 +101,9 @@ const FICHA_HEADER_COLORS = [
   styleUrl: './quotation-detail.scss',
 })
 export class QuotationDetail implements OnInit {
+  /** Opciones del selector de color (misma lista que valida el API). */
+  readonly fichaHeaderPalette: readonly string[] = [...FICHA_HEADER_COLORS];
+
   quotation = signal<QuotationFull | null>(null);
   loading = signal(true);
   summary = signal<QuotationSummary | null>(null);
@@ -1421,7 +1442,7 @@ export class QuotationDetail implements OnInit {
     const f = this.fichaFileAA();
     if (!f) return;
     const color = String(next || '').toUpperCase();
-    if (!FICHA_HEADER_COLORS.includes(color as (typeof FICHA_HEADER_COLORS)[number])) {
+    if (!FICHA_HEADER_COLORS.includes(color)) {
       return;
     }
     if ((f.header_color || '').toUpperCase() === color) {
@@ -2359,11 +2380,22 @@ export class QuotationDetail implements OnInit {
       });
   }
 
+  /** Línea « Généré le … » en hora local del navegador (fuseau de l’utilisateur). */
+  private fichaExportGeneratedDisplayFr(): string {
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `Généré le ${dd}/${mm}/${yy}, à ${hh}H${mi}`;
+  }
+
   downloadFichaAAWord(): void {
     const f = this.fichaFileAA();
     if (!f?.id) return;
     this.downloadingFichaWord.set(true);
-    this.quotationService.downloadFichaAAWord(f.id).subscribe({
+    this.quotationService.downloadFichaAAWord(f.id, this.fichaExportGeneratedDisplayFr()).subscribe({
       next: (blob) => {
         this.downloadingFichaWord.set(false);
         if (blob.type === 'application/json' || blob.size < 32) {
@@ -2406,7 +2438,7 @@ export class QuotationDetail implements OnInit {
     const f = this.fichaFileAA();
     if (!f?.id) return;
     this.downloadingFichaPdf.set(true);
-    this.quotationService.downloadFichaAAPdf(f.id).subscribe({
+    this.quotationService.downloadFichaAAPdf(f.id, this.fichaExportGeneratedDisplayFr()).subscribe({
       next: (blob) => {
         this.downloadingFichaPdf.set(false);
         if (blob.type === 'application/json' || blob.size < 32) {

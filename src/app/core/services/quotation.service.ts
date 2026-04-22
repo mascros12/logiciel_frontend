@@ -180,17 +180,21 @@ export class QuotationService {
   }
 
   /** Documento Word con resumen y tabla de la Ficha AA (blob). */
-  downloadFichaAAWord(fileId: string) {
-    return this.http.get(`${this.url}/file-aa/${fileId}/word`, {
-      responseType: 'blob',
-    });
+  downloadFichaAAWord(fileId: string, generatedDisplay?: string) {
+    const opts: { responseType: 'blob'; params?: HttpParams } = { responseType: 'blob' };
+    if (generatedDisplay) {
+      opts.params = new HttpParams().set('generated_display', generatedDisplay);
+    }
+    return this.http.get(`${this.url}/file-aa/${fileId}/word`, opts);
   }
 
   /** PDF con resumen y tabla de la Ficha AA (blob). */
-  downloadFichaAAPdf(fileId: string) {
-    return this.http.get(`${this.url}/file-aa/${fileId}/pdf`, {
-      responseType: 'blob',
-    });
+  downloadFichaAAPdf(fileId: string, generatedDisplay?: string) {
+    const opts: { responseType: 'blob'; params?: HttpParams } = { responseType: 'blob' };
+    if (generatedDisplay) {
+      opts.params = new HttpParams().set('generated_display', generatedDisplay);
+    }
+    return this.http.get(`${this.url}/file-aa/${fileId}/pdf`, opts);
   }
 
   /** Envía correo de solicitud al proveedor para una fila de la Ficha AA (vehículo: adjuntos + plantilla corta). */

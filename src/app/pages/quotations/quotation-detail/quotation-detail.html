@@ -868,7 +868,7 @@
                         ></button>
                         @if (showFichaColorPicker()) {
                           <div class="ficha-aa-color-picker" role="listbox" aria-label="Selector de color">
-                            @for (c of ['#DC2626', '#EAB308', '#2563EB', '#16A34A', '#F97316', '#9333EA']; track c) {
+                            @for (c of fichaHeaderPalette; track c) {
                               <button
                                 type="button"
                                 class="ficha-aa-color-dot"
