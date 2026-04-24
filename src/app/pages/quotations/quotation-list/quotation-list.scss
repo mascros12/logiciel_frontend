@@ -3,6 +3,12 @@
     font-weight: 600;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .quotation-table-tools {
     display: flex;
     justify-content: flex-end;

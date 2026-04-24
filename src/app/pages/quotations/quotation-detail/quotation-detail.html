@@ -112,6 +112,19 @@
               tooltipPosition="bottom"
               (onClick)="showNewVersion.set(true)"
             />
+            @if (canDeleteVersions()) {
+              <p-button
+                label="Eliminar versión"
+                icon="pi pi-trash"
+                size="small"
+                severity="danger"
+                [outlined]="true"
+                [disabled]="(quotation()?.versions?.length ?? 0) <= 1 || saving()"
+                pTooltip="Elimina la versión seleccionada"
+                tooltipPosition="bottom"
+                (onClick)="confirmDeleteSelectedVersion()"
+              />
+            }
             <p-button
               label="Itinerario"
               icon="pi pi-angle-down"
@@ -855,7 +868,7 @@
                   <table class="ficha-aa-generated-table">
                     <thead>
                       <tr>
-                      <th colspan="11">
+                      <th colspan="11" [style.background-color]="fichaHeaderColor()">
                         <button
                         style="width: 100% !important;"
                           type="button"

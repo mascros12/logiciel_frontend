@@ -4,11 +4,20 @@
 <div class="page-container">
   <div class="flex justify-between items-center mb-4">
     <h2 class="page-title">Cotizaciones</h2>
-    <p-button
-      label="Nueva cotización"
-      icon="pi pi-plus"
-      (onClick)="openCreate()"
-    />
+    <div class="header-actions">
+      <p-button
+        [label]="showingArchived() ? 'Ver activas' : 'Ver archivadas/eliminadas'"
+        [icon]="showingArchived() ? 'pi pi-eye' : 'pi pi-archive'"
+        [outlined]="!showingArchived()"
+        severity="secondary"
+        (onClick)="toggleArchivedView()"
+      />
+      <p-button
+        label="Nueva cotización"
+        icon="pi pi-plus"
+        (onClick)="openCreate()"
+      />
+    </div>
   </div>
 
   <p-table
@@ -19,7 +28,7 @@
     [totalRecords]="total()"
     dataKey="id"
     [expandedRowKeys]="expandedRows"
-    [globalFilterFields]="['name', 'created_by_id']"
+    [globalFilterFields]="['name', 'created_by_name', 'created_by_id']"
     (onRowExpand)="onRowExpand($event)"
     styleClass="p-datatable-gridlines"
     >
@@ -58,32 +67,49 @@
           />
         </td>
         <td>
-          <span class="quotation-name" (click)="router.navigate(['/cotizaciones', q.id])">
-            {{ q.name }}
-          </span>
+          @if (!showingArchived()) {
+            <span class="quotation-name" (click)="router.navigate(['/cotizaciones', q.id])">
+              {{ q.name }}
+            </span>
+          } @else {
+            <span>{{ q.name }}</span>
+          }
         </td>
         <td>
           @if (getCurrentVersion(q.versions); as v) {
             <p-tag [value]="'v' + v.version_number" severity="info" />
           }
         </td>
-        <td>{{ q.created_by_id ?? '—' }}</td>
+        <td>{{ q.created_by_name ?? '—' }}</td>
         <td>{{ q.created_at | date: 'dd/MM/yyyy' }}</td>
         <td>
           <div class="flex gap-2">
-            <p-button
-              icon="pi pi-pencil"
-              [text]="true"
-              size="small"
-              (onClick)="router.navigate(['/cotizaciones', q.id])"
-            />
-            <p-button
-              icon="pi pi-trash"
-              [text]="true"
-              severity="danger"
-              size="small"
-              (onClick)="confirmDelete($event, q.id)"
-            />
+            @if (!showingArchived()) {
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                size="small"
+                (onClick)="router.navigate(['/cotizaciones', q.id])"
+              />
+            }
+            @if (canDeleteQuotations() && !showingArchived()) {
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                severity="danger"
+                size="small"
+                (onClick)="confirmDelete($event, q.id)"
+              />
+            }
+            @if (canRestoreQuotations() && showingArchived()) {
+              <p-button
+                icon="pi pi-undo"
+                [text]="true"
+                severity="success"
+                size="small"
+                (onClick)="confirmRestore($event, q.id)"
+              />
+            }
           </div>
         </td>
       </tr>

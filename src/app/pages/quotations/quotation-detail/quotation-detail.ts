@@ -115,6 +115,10 @@ export class QuotationDetail implements OnInit {
     return role === 'admin' || role === 'admin_proveedores';
   });
   isComercial = computed(() => this.auth.currentUser()?.role === 'comercial');
+  canDeleteVersions = computed(() => {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'operaciones' || role === 'comercial';
+  });
   activeTab = signal<'agenda' | 'cotizacion' | 'fileaa'>('agenda');
 
   // Versión seleccionada para ver
@@ -698,6 +702,52 @@ export class QuotationDetail implements OnInit {
         this.saving.set(false);
         this.messageService.add({ severity: 'error', summary: 'Error al crear versión' });
       }
+    });
+  }
+
+  confirmDeleteSelectedVersion(): void {
+    const q = this.quotation();
+    const version = this.selectedVersion();
+    if (!q || !version) return;
+    if ((q.versions?.length ?? 0) <= 1) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'No se puede eliminar la única versión',
+      });
+      return;
+    }
+    this.confirmationService.confirm({
+      message: `¿Eliminar la versión V${version.version_number}? Esta acción no se puede deshacer.`,
+      header: 'Eliminar versión',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.deleteSelectedVersion(),
+    });
+  }
+
+  private deleteSelectedVersion(): void {
+    const q = this.quotation();
+    const version = this.selectedVersion();
+    if (!q || !version) return;
+    this.saving.set(true);
+    this.quotationService.deleteVersion(q.id, version.id).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: `Versión V${version.version_number} eliminada`,
+        });
+        this.load(q.id);
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'No se pudo eliminar la versión',
+        });
+      },
     });
   }
 

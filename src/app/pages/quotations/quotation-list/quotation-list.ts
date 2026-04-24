@@ -19,6 +19,7 @@ import { Quotation, QuotationVersion } from '../../../core/models/quotation.mode
 import { ContactService } from '../../../core/services/contact.service';
 import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import { SelectModule } from 'primeng/select';
+import { AuthService } from '../../../core/auth/auth.service';
 
 
 @Component({
@@ -40,6 +41,7 @@ export class QuotationList implements OnInit {
   loading = signal(false);
   showCreateDialog = signal(false);
   creating = signal(false);
+  showingArchived = signal(false);
   versionsCache = signal<Record<string, QuotationVersion[]>>({});
   expandedRows: { [key: string]: boolean } = {};
 
@@ -78,6 +80,7 @@ export class QuotationList implements OnInit {
     public router: Router,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
+    private authService: AuthService,
   ) {
     this.createForm = this.fb.group({
       name: ['', Validators.required],
@@ -110,7 +113,9 @@ export class QuotationList implements OnInit {
 
   load() {
     this.loading.set(true);
-    this.quotationService.getAll(this.page, this.pageSize).subscribe({
+    this.quotationService.getAll(this.page, this.pageSize, {
+      onlyDeleted: this.showingArchived(),
+    }).subscribe({
       next: res => {
         this.quotations.set(res.items);
         this.total.set(res.total);
@@ -175,6 +180,8 @@ export class QuotationList implements OnInit {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
       message: '¿Eliminar esta cotización?',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
       icon: 'pi pi-exclamation-triangle',
       accept: () => {
         this.quotationService.delete(id).subscribe({
@@ -185,6 +192,39 @@ export class QuotationList implements OnInit {
         });
       }
     });
+  }
+
+  confirmRestore(event: Event, id: string) {
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      message: '¿Restaurar esta cotización archivada?',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      icon: 'pi pi-history',
+      accept: () => {
+        this.quotationService.restore(id).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Cotización restaurada' });
+            this.load();
+          }
+        });
+      }
+    });
+  }
+
+  toggleArchivedView() {
+    this.showingArchived.update(v => !v);
+    this.expandedRows = {};
+    this.load();
+  }
+
+  canDeleteQuotations(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'admin' || role === 'operaciones' || role === 'comercial';
+  }
+
+  canRestoreQuotations(): boolean {
+    return this.canDeleteQuotations();
   }
 
   getCurrentVersion(versions: QuotationVersion[]): QuotationVersion | null {

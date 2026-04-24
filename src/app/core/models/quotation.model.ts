@@ -244,6 +244,7 @@ export interface Quotation {
   shared: boolean;
   contact_id: string | null;
   created_by_id: string | null;
+  created_by_name?: string | null;
   created_at: string;
   updated_at: string;
   versions: QuotationVersion[];

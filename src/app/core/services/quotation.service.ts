@@ -23,10 +23,11 @@ export class QuotationService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(page = 1, pageSize = 20) {
+  getAll(page = 1, pageSize = 20, options?: { onlyDeleted?: boolean }) {
     const params = new HttpParams()
       .set('page', page)
-      .set('page_size', pageSize);
+      .set('page_size', pageSize)
+      .set('only_deleted', options?.onlyDeleted ? 'true' : 'false');
     return this.http.get<QuotationListResponse>(this.url, { params });
   }
 
@@ -102,10 +103,18 @@ export class QuotationService {
     return this.http.delete(`${this.url}/${id}`);
   }
 
+  restore(id: string) {
+    return this.http.post(`${this.url}/${id}/restore`, {});
+  }
+
   createVersion(quotationId: string, notes?: string) {
     return this.http.post<QuotationVersion>(
       `${this.url}/${quotationId}/versions`, { notes }
     );
+  }
+
+  deleteVersion(quotationId: string, versionId: string) {
+    return this.http.delete<void>(`${this.url}/${quotationId}/versions/${versionId}`);
   }
 
   recalculate(quotationId: string, versionId: string) {
