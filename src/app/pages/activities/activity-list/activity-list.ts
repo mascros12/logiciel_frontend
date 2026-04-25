@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -15,7 +15,6 @@ import { ActivityService } from '../../../core/services/activity.service';
 import { Activity } from '../../../core/models/activity.model';
 import { FormsModule } from '@angular/forms';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
-import { ActivityFilterPipe } from './activity-filter.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
@@ -26,7 +25,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TagModule, SelectModule,
-    RichTextPipe, ActivityFilterPipe,
+    RichTextPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './activity-list.html',
@@ -38,6 +37,11 @@ export class ActivityList implements OnInit {
   loading = signal(false);
   saving = signal(false);
   searchTerm = '';
+  readonly rowsPerPage = 25;
+  readonly rowsPerPageOptions = [25, 50, 100];
+  readonly filteredActivities = computed(() =>
+    this.filterBySearch(this.activities(), this.searchTerm),
+  );
 
   showDialog = signal(false);
   editingId = signal<string | null>(null);
@@ -189,6 +193,8 @@ export class ActivityList implements OnInit {
       target: event.target as EventTarget,
       message: '¿Eliminar esta actividad?',
       icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
       accept: () => {
         this.activityService.delete(id).subscribe({
           next: () => {
@@ -207,5 +213,18 @@ export class ActivityList implements OnInit {
   canManageActivities(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  private filterBySearch<T>(items: T[], term: string): T[] {
+    const normalizedTerm = term.trim().toLowerCase();
+    if (!normalizedTerm) return items;
+    return items.filter((item) => this.stringifyForSearch(item).includes(normalizedTerm));
+  }
+
+  private stringifyForSearch(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) return value.map((v) => this.stringifyForSearch(v)).join(' ');
+    if (typeof value === 'object') return Object.values(value).map((v) => this.stringifyForSearch(v)).join(' ');
+    return String(value).toLowerCase();
   }
 }

@@ -8,7 +8,7 @@
       <span class="subtitle">Listado de hoteles registrados</span>
     </div>
     <div class="flex items-center gap-3">
-      <span class="search-wrapper">
+      <span class="p-input-icon-left quotation-search">
         <i class="pi pi-search"></i>
         <input
           pInputText
@@ -24,10 +24,13 @@
   </div>
 
   <p-table
-    [value]="hotels() | hotelFilter: searchTerm"
+    [value]="filteredHotels()"
     [loading]="loading()"
     styleClass="p-datatable-gridlines"
     [rowHover]="true"
+    [paginator]="true"
+    [rows]="rowsPerPage"
+    [rowsPerPageOptions]="rowsPerPageOptions"
   >
     <ng-template pTemplate="header">
       <tr>

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -45,6 +45,9 @@ export class UserList implements OnInit {
 
   form: FormGroup;
   searchTerm = '';
+  readonly rowsPerPage = 25;
+  readonly rowsPerPageOptions = [25, 50, 100];
+  readonly filteredUsers = computed(() => this.filterBySearch(this.users(), this.searchTerm));
 
   readonly roleOptions: { label: string; value: UserRole }[] = [
     { label: 'Administrador', value: 'admin' },
@@ -199,5 +202,18 @@ export class UserList implements OnInit {
 
   roleLabel(role: UserRole): string {
     return this.roleOptions.find((r) => r.value === role)?.label ?? role;
+  }
+
+  private filterBySearch<T>(items: T[], term: string): T[] {
+    const normalizedTerm = term.trim().toLowerCase();
+    if (!normalizedTerm) return items;
+    return items.filter((item) => this.stringifyForSearch(item).includes(normalizedTerm));
+  }
+
+  private stringifyForSearch(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) return value.map((v) => this.stringifyForSearch(v)).join(' ');
+    if (typeof value === 'object') return Object.values(value).map((v) => this.stringifyForSearch(v)).join(' ');
+    return String(value).toLowerCase();
   }
 }

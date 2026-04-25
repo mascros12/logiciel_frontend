@@ -18,7 +18,6 @@ import { VehicleService } from '../../../core/services/vehicle.service';
 import { Vehicle, VehicleSeason } from '../../../core/models/vehicle.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { FormsModule } from '@angular/forms';
-import { VehicleFilterPipe } from './vehicle-filter.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
@@ -29,7 +28,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
-    DatePickerModule, TagModule, RichTextPipe, VehicleFilterPipe,
+    DatePickerModule, TagModule, RichTextPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './vehicle-list.html',
@@ -40,6 +39,9 @@ export class VehicleList implements OnInit {
   loading = signal(false);
   saving = signal(false);
   searchTerm = '';
+  readonly rowsPerPage = 25;
+  readonly rowsPerPageOptions = [25, 50, 100];
+  readonly filteredVehicles = computed(() => this.filterBySearch(this.vehicles(), this.searchTerm));
 
   showDialog = signal(false);
   editingVehicle = signal<Vehicle | null>(null);
@@ -245,6 +247,8 @@ export class VehicleList implements OnInit {
       target: event.target as EventTarget,
       message: '¿Eliminar este vehículo?',
       icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
       accept: () => {
         this.vehicleService.delete(id).subscribe({
           next: () => {
@@ -321,5 +325,18 @@ export class VehicleList implements OnInit {
   canManageVehicles(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  private filterBySearch<T>(items: T[], term: string): T[] {
+    const normalizedTerm = term.trim().toLowerCase();
+    if (!normalizedTerm) return items;
+    return items.filter((item) => this.stringifyForSearch(item).includes(normalizedTerm));
+  }
+
+  private stringifyForSearch(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) return value.map((v) => this.stringifyForSearch(v)).join(' ');
+    if (typeof value === 'object') return Object.values(value).map((v) => this.stringifyForSearch(v)).join(' ');
+    return String(value).toLowerCase();
   }
 }

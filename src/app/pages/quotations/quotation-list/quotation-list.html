@@ -21,14 +21,13 @@
   </div>
 
   <p-table
-    #dt
-    [value]="quotations()"
+    [value]="filteredQuotations()"
     [loading]="loading()"
-    [rows]="pageSize"
-    [totalRecords]="total()"
+    [paginator]="true"
+    [rows]="rowsPerPage"
+    [rowsPerPageOptions]="rowsPerPageOptions"
     dataKey="id"
     [expandedRowKeys]="expandedRows"
-    [globalFilterFields]="['name', 'created_by_name', 'created_by_id']"
     (onRowExpand)="onRowExpand($event)"
     styleClass="p-datatable-gridlines"
     >
@@ -40,7 +39,7 @@
             pInputText
             type="text"
             placeholder="Buscar cotización..."
-            (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+            [(ngModel)]="searchTerm"
           />
         </span>
       </div>

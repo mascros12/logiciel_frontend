@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { DatePipe, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
@@ -9,6 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -27,7 +28,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   standalone: true,
   imports: [
     TableModule, ButtonModule, TagModule, DialogModule,
-    InputTextModule, TextareaModule, DatePickerModule, ReactiveFormsModule,
+    InputTextModule, TextareaModule, DatePickerModule, ReactiveFormsModule, FormsModule,
     ToastModule, ConfirmDialogModule, DatePipe, CurrencyPipe,
     SelectModule,
   ],
@@ -44,6 +45,13 @@ export class QuotationList implements OnInit {
   showingArchived = signal(false);
   versionsCache = signal<Record<string, QuotationVersion[]>>({});
   expandedRows: { [key: string]: boolean } = {};
+  searchTerm = '';
+  readonly rowsPerPage = 25;
+  readonly rowsPerPageOptions = [25, 50, 100];
+  readonly fetchPageSize = 5000;
+  readonly filteredQuotations = computed(() =>
+    this.filterBySearch(this.quotations(), this.searchTerm),
+  );
 
   // Agrega las opciones de los selects
   sources: { label: string, value: ContactSource }[] = [
@@ -67,9 +75,6 @@ export class QuotationList implements OnInit {
     { label: '1 noche por etapa', value: '1 noche por etapa' },
     { label: 'Otro', value: 'Otro' },
   ];
-
-  page = 1;
-  pageSize = 20;
 
   createForm: FormGroup;
 
@@ -113,12 +118,12 @@ export class QuotationList implements OnInit {
 
   load() {
     this.loading.set(true);
-    this.quotationService.getAll(this.page, this.pageSize, {
+    this.quotationService.getAll(1, this.fetchPageSize, {
       onlyDeleted: this.showingArchived(),
     }).subscribe({
       next: res => {
         this.quotations.set(res.items);
-        this.total.set(res.total);
+        this.total.set(res.items.length);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -247,5 +252,18 @@ export class QuotationList implements OnInit {
         }));
       }
     });
+  }
+
+  private filterBySearch<T>(items: T[], term: string): T[] {
+    const normalizedTerm = term.trim().toLowerCase();
+    if (!normalizedTerm) return items;
+    return items.filter((item) => this.stringifyForSearch(item).includes(normalizedTerm));
+  }
+
+  private stringifyForSearch(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) return value.map((v) => this.stringifyForSearch(v)).join(' ');
+    if (typeof value === 'object') return Object.values(value).map((v) => this.stringifyForSearch(v)).join(' ');
+    return String(value).toLowerCase();
   }
 }

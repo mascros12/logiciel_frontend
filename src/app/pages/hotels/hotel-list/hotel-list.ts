@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -14,7 +14,6 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
 import { Hotel, HotelCategory } from '../../../core/models/hotel.model';
 import { FormsModule } from '@angular/forms';
-import { HotelFilterPipe } from './hotel-filter.pipe';
 import { DecimalPipe } from '@angular/common';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -27,7 +26,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, SelectModule, TagModule,
-    HotelFilterPipe, DecimalPipe, RichTextPipe,
+    DecimalPipe, RichTextPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-list.html',
@@ -40,6 +39,9 @@ export class HotelList implements OnInit {
   saving = signal(false);
   showDialog = signal(false);
   editingHotel = signal<Hotel | null>(null);
+  readonly rowsPerPage = 25;
+  readonly rowsPerPageOptions = [25, 50, 100];
+  readonly filteredHotels = computed(() => this.filterBySearch(this.hotels(), this.searchTerm));
 
   form: FormGroup;
 
@@ -141,6 +143,8 @@ export class HotelList implements OnInit {
       target: event.target as EventTarget,
       message: '¿Eliminar este hotel?',
       icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
       accept: () => {
         this.hotelService.delete(id).subscribe({
           next: () => {
@@ -163,5 +167,18 @@ export class HotelList implements OnInit {
   canManageHotels(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  private filterBySearch<T>(items: T[], term: string): T[] {
+    const normalizedTerm = term.trim().toLowerCase();
+    if (!normalizedTerm) return items;
+    return items.filter((item) => this.stringifyForSearch(item).includes(normalizedTerm));
+  }
+
+  private stringifyForSearch(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) return value.map((v) => this.stringifyForSearch(v)).join(' ');
+    if (typeof value === 'object') return Object.values(value).map((v) => this.stringifyForSearch(v)).join(' ');
+    return String(value).toLowerCase();
   }
 }

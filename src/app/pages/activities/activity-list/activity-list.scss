@@ -4,6 +4,29 @@
   color: var(--p-text-muted-color);
 }
 
+.quotation-search {
+  width: min(100%, 360px);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  input {
+    width: 100%;
+    min-height: 2.35rem;
+    padding-left: 2.35rem;
+  }
+
+  .pi-search {
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--p-text-muted-color);
+    pointer-events: none;
+    line-height: 1;
+  }
+}
+
 .activity-form {
   display: flex;
   flex-direction: column;

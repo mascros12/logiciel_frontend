@@ -259,6 +259,8 @@ export class HotelDetail implements OnInit {
       target: event.target as EventTarget,
       message: '¿Eliminar esta habitación?',
       icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
       accept: () => {
         this.hotelService.deleteRoom(this.hotel()!.id, roomId).subscribe({
           next: () => {
