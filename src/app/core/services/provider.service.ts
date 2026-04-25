@@ -11,14 +11,14 @@ export class ProviderService {
   constructor(private http: HttpClient) {}
 
   getVehicles(search = '') {
-    const params = new HttpParams().set('page_size', 100);
+    const params = new HttpParams().set('page_size', 1000);
     return this.http.get<ProviderListResponse<VehicleOption>>(
       apiUrl('/vehicles'), { params }
     );
   }
 
   getHotels(search = '') {
-    const params = new HttpParams().set('page_size', 100);
+    const params = new HttpParams().set('page_size', 1000);
     return this.http.get<ProviderListResponse<HotelOption>>(
       apiUrl('/hotels'), { params }
     );
@@ -34,7 +34,7 @@ export class ProviderService {
   }
 
   getActivities(search = '') {
-    const params = new HttpParams().set('page_size', 100);
+    const params = new HttpParams().set('page_size', 1000);
     return this.http.get<ProviderListResponse<ActivityOption>>(
       apiUrl('/activities'), { params }
     );
