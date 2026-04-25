@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -41,7 +41,6 @@ export class HotelList implements OnInit {
   editingHotel = signal<Hotel | null>(null);
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
-  readonly filteredHotels = computed(() => this.filterBySearch(this.hotels(), this.searchTerm));
 
   form: FormGroup;
 
@@ -167,6 +166,10 @@ export class HotelList implements OnInit {
   canManageHotels(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  filteredHotels(): Hotel[] {
+    return this.filterBySearch(this.hotels(), this.searchTerm);
   }
 
   private filterBySearch<T>(items: T[], term: string): T[] {

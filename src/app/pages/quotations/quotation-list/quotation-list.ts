@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { DatePipe, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
@@ -49,9 +49,6 @@ export class QuotationList implements OnInit {
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
   readonly fetchPageSize = 5000;
-  readonly filteredQuotations = computed(() =>
-    this.filterBySearch(this.quotations(), this.searchTerm),
-  );
 
   // Agrega las opciones de los selects
   sources: { label: string, value: ContactSource }[] = [
@@ -252,6 +249,10 @@ export class QuotationList implements OnInit {
         }));
       }
     });
+  }
+
+  filteredQuotations(): Quotation[] {
+    return this.filterBySearch(this.quotations(), this.searchTerm);
   }
 
   private filterBySearch<T>(items: T[], term: string): T[] {

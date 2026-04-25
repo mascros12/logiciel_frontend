@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -41,7 +41,6 @@ export class VehicleList implements OnInit {
   searchTerm = '';
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
-  readonly filteredVehicles = computed(() => this.filterBySearch(this.vehicles(), this.searchTerm));
 
   showDialog = signal(false);
   editingVehicle = signal<Vehicle | null>(null);
@@ -325,6 +324,10 @@ export class VehicleList implements OnInit {
   canManageVehicles(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  filteredVehicles(): Vehicle[] {
+    return this.filterBySearch(this.vehicles(), this.searchTerm);
   }
 
   private filterBySearch<T>(items: T[], term: string): T[] {

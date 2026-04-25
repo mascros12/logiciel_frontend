@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -39,9 +39,6 @@ export class ActivityList implements OnInit {
   searchTerm = '';
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
-  readonly filteredActivities = computed(() =>
-    this.filterBySearch(this.activities(), this.searchTerm),
-  );
 
   showDialog = signal(false);
   editingId = signal<string | null>(null);
@@ -213,6 +210,10 @@ export class ActivityList implements OnInit {
   canManageActivities(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  filteredActivities(): Activity[] {
+    return this.filterBySearch(this.activities(), this.searchTerm);
   }
 
   private filterBySearch<T>(items: T[], term: string): T[] {

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -47,7 +47,6 @@ export class UserList implements OnInit {
   searchTerm = '';
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
-  readonly filteredUsers = computed(() => this.filterBySearch(this.users(), this.searchTerm));
 
   readonly roleOptions: { label: string; value: UserRole }[] = [
     { label: 'Administrador', value: 'admin' },
@@ -202,6 +201,10 @@ export class UserList implements OnInit {
 
   roleLabel(role: UserRole): string {
     return this.roleOptions.find((r) => r.value === role)?.label ?? role;
+  }
+
+  filteredUsers(): User[] {
+    return this.filterBySearch(this.users(), this.searchTerm);
   }
 
   private filterBySearch<T>(items: T[], term: string): T[] {
