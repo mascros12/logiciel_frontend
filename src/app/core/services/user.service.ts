@@ -9,7 +9,7 @@ export class UserService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(page = 1, pageSize = 50) {
+  getAll(page = 1, pageSize = 1000) {
     const params = new HttpParams()
       .set('page', page)
       .set('page_size', pageSize);

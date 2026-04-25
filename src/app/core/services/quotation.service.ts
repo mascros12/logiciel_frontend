@@ -23,7 +23,7 @@ export class QuotationService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(page = 1, pageSize = 20, options?: { onlyDeleted?: boolean }) {
+  getAll(page = 1, pageSize = 1000, options?: { onlyDeleted?: boolean }) {
     const params = new HttpParams()
       .set('page', page)
       .set('page_size', pageSize)

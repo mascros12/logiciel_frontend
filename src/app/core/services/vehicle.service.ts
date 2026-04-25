@@ -11,7 +11,7 @@ export class VehicleService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(page = 1, pageSize = 100, search = '') {
+  getAll(page = 1, pageSize = 1000, search = '') {
     let params = new HttpParams().set('page', page).set('page_size', pageSize);
     if (search) params = params.set('search', search);
     return this.http.get<VehicleListResponse>(this.url, { params });

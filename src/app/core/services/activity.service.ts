@@ -9,7 +9,7 @@ export class ActivityService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(page = 1, pageSize = 50, search = '') {
+  getAll(page = 1, pageSize = 1000, search = '') {
     let params = new HttpParams()
       .set('page', page)
       .set('page_size', pageSize);
