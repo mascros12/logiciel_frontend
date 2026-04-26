@@ -141,7 +141,7 @@
                   </ng-template>
                   <ng-template pTemplate="body" let-s>
                     <tr>
-                      <td>{{ s.start_date }} → {{ s.end_date }}</td>
+                      <td>{{ s.start_date | date:'dd/MM/yyyy' }} → {{ s.end_date | date:'dd/MM/yyyy' }}</td>
                       <td>${{ s.net_daily_price }}</td>
                       <td>${{ s.net_weekly_price }}</td>
                       <td>

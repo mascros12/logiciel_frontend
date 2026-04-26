@@ -27,7 +27,7 @@ import {
   RoomSeasonCreate,
   HotelSeason,
 } from '../../../core/models/hotel.model';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 @Component({
   selector: 'app-hotel-detail',
   standalone: true,
@@ -36,7 +36,7 @@ import { DecimalPipe } from '@angular/common';
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
     DatePickerModule, TagModule, SkeletonModule, TooltipModule,
-    DecimalPipe, RichTextPipe,
+    DatePipe, DecimalPipe, RichTextPipe,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-detail.html',

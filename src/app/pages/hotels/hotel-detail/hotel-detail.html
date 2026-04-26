@@ -155,7 +155,7 @@
                   </ng-template>
                   <ng-template pTemplate="body" let-s>
                     <tr>
-                      <td>{{ s.start_date }} → {{ s.end_date }}</td>
+                      <td>{{ s.start_date | date:'dd/MM/yyyy' }} → {{ s.end_date | date:'dd/MM/yyyy' }}</td>
                       <td>
                         <p-button
                           icon="pi pi-trash"

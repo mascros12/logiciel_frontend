@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 
 import { ButtonModule } from 'primeng/button';
 import { TabsModule } from 'primeng/tabs';
@@ -27,7 +27,7 @@ import { Vehicle, VehicleCreate, VehicleSeason, VehicleSeasonCreate } from '../.
   templateUrl: './vehicle-detail.html',
   styleUrl: './vehicle-detail.scss',
   imports: [
-    DecimalPipe, RichTextPipe,
+    DatePipe, DecimalPipe, RichTextPipe,
     ReactiveFormsModule,
     ButtonModule, TabsModule, TagModule, TableModule,
     DialogModule, ToastModule, InputTextModule, InputNumberModule,
