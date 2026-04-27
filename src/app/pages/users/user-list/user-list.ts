@@ -9,6 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -29,6 +30,7 @@ import { UserService } from '../../../core/services/user.service';
     PasswordModule,
     SelectModule,
     TagModule,
+    TooltipModule,
     ToastModule,
     ConfirmDialogModule,
   ],
@@ -41,9 +43,12 @@ export class UserList implements OnInit {
   loading = signal(false);
   saving = signal(false);
   showDialog = signal(false);
+  showPasswordDialog = signal(false);
   editing = signal<User | null>(null);
+  passwordTarget = signal<User | null>(null);
 
   form: FormGroup;
+  passwordForm: FormGroup;
   searchTerm = '';
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
@@ -67,6 +72,10 @@ export class UserList implements OnInit {
       role: ['comercial', Validators.required],
       password: [''],
       is_active: [true],
+    });
+
+    this.passwordForm = this.fb.group({
+      new_password: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
@@ -196,6 +205,52 @@ export class UserList implements OnInit {
           },
         });
       },
+    });
+  }
+
+  openChangePassword(user: User): void {
+    this.passwordTarget.set(user);
+    this.passwordForm.reset({
+      new_password: '',
+    });
+    this.showPasswordDialog.set(true);
+  }
+
+  submitPassword(): void {
+    if (this.passwordForm.invalid) return;
+    const target = this.passwordTarget();
+    if (!target) return;
+    this.saving.set(true);
+    this.userService.updatePassword(target.id, this.passwordForm.value.new_password).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.showPasswordDialog.set(false);
+        this.passwordTarget.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Contraseña actualizada' });
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary:
+            typeof err.error?.detail === 'string'
+              ? err.error.detail
+              : 'No se pudo actualizar la contraseña',
+        });
+      },
+    });
+  }
+
+  confirmSubmitPassword(): void {
+    const target = this.passwordTarget();
+    if (!target) return;
+    this.confirmationService.confirm({
+      message: `¿Seguro que deseas cambiar la contraseña de ${target.full_name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, cambiar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.submitPassword(),
     });
   }
 

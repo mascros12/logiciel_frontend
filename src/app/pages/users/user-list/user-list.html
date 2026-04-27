@@ -55,6 +55,13 @@
         <td>
           <div class="flex gap-2">
             <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="openEdit(u)" />
+            <p-button
+              icon="pi pi-key"
+              [text]="true"
+              size="small"
+              pTooltip="Cambiar contraseña"
+              (onClick)="openChangePassword(u)"
+            />
             @if (u.is_active) {
               <p-button
                 icon="pi pi-user-minus"
@@ -127,6 +134,43 @@
       icon="pi pi-check"
       [loading]="saving()"
       (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Cambiar contraseña"
+  [visible]="showPasswordDialog()"
+  (visibleChange)="showPasswordDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(440px, 96vw)' }"
+>
+  <form [formGroup]="passwordForm" class="user-form">
+    <div class="field">
+      <label>Usuario</label>
+      <input pInputText type="text" [value]="passwordTarget()?.email ?? ''" class="w-full" readonly />
+    </div>
+
+    <div class="field">
+      <label>Nueva contraseña *</label>
+      <p-password
+        formControlName="new_password"
+        [feedback]="false"
+        [toggleMask]="true"
+        styleClass="w-full"
+        inputStyleClass="w-full"
+        placeholder="Mínimo 8 caracteres"
+      />
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showPasswordDialog.set(false)" />
+    <p-button
+      label="Guardar contraseña"
+      icon="pi pi-check"
+      [loading]="saving()"
+      (onClick)="confirmSubmitPassword()"
     />
   </ng-template>
 </p-dialog>

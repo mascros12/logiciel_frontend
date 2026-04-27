@@ -247,9 +247,11 @@
                                   @if (rparts.useFullRichName) {
                                     <div class="agenda-service-card__title" [innerHTML]="room.name | richText"></div>
                                   } @else {
-                                    <div class="agenda-service-card__title">{{ rparts.roomLabel }}</div>
                                     @if (rparts.hotel) {
-                                      <div class="agenda-service-card__hotel" [innerHTML]="rparts.hotel | richText"></div>
+                                      <div class="agenda-service-card__title" [innerHTML]="rparts.hotel | richText"></div>
+                                      <div class="agenda-service-card__hotel">{{ rparts.roomLabel }}</div>
+                                    } @else {
+                                      <div class="agenda-service-card__title">{{ rparts.roomLabel }}</div>
                                     }
                                   }
                                 </div>
@@ -997,7 +999,7 @@
                                 [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
                                 [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
                               >
-                                <span class="ficha-room-hotel">{{ fichaRoomDisp.hotel }}</span>
+                                <span class="ficha-room-hotel" [innerHTML]="fichaRoomDisp.hotel | richText"></span>
                                 <span class="ficha-room-type">{{ fichaRoomDisp.roomLabel }}</span>
                               </span>
                             } @else {

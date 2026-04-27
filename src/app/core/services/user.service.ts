@@ -27,4 +27,8 @@ export class UserService {
   deactivate(id: string) {
     return this.http.delete<void>(`${this.url}/${id}`);
   }
+
+  updatePassword(id: string, new_password: string) {
+    return this.http.patch<User>(`${this.url}/${id}/password`, { new_password });
+  }
 }
