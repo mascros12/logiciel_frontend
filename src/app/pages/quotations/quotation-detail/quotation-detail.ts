@@ -544,7 +544,7 @@ export class QuotationDetail implements OnInit {
     const dates: string[] = [];
     const current = new Date(startDate);
     while (current <= endDate) {
-      dates.push(current.toISOString().split('T')[0]);
+      dates.push(this.toLocalIsoDate(current));
       current.setDate(current.getDate() + 1);
     }
   
@@ -597,7 +597,7 @@ export class QuotationDetail implements OnInit {
     const dates: string[] = [];
     const current = new Date(startDate);
     while (current < endDate) {
-      dates.push(current.toISOString().split('T')[0]);
+      dates.push(this.toLocalIsoDate(current));
       current.setDate(current.getDate() + 1);
     }
 
@@ -866,10 +866,10 @@ export class QuotationDetail implements OnInit {
     const body: Record<string, unknown> = {
       name: raw.name,
       notes: raw.notes || null,
-      from_date: raw.from_date ? (raw.from_date instanceof Date ? raw.from_date.toISOString().split('T')[0] : raw.from_date) : null,
-      to_date: raw.to_date ? (raw.to_date instanceof Date ? raw.to_date.toISOString().split('T')[0] : raw.to_date) : null,
-      arrival_date: raw.arrival_date ? (raw.arrival_date instanceof Date ? raw.arrival_date.toISOString().split('T')[0] : raw.arrival_date) : null,
-      departure_date: raw.departure_date ? (raw.departure_date instanceof Date ? raw.departure_date.toISOString().split('T')[0] : raw.departure_date) : null,
+      from_date: raw.from_date ? (raw.from_date instanceof Date ? this.toLocalIsoDate(raw.from_date) : raw.from_date) : null,
+      to_date: raw.to_date ? (raw.to_date instanceof Date ? this.toLocalIsoDate(raw.to_date) : raw.to_date) : null,
+      arrival_date: raw.arrival_date ? (raw.arrival_date instanceof Date ? this.toLocalIsoDate(raw.arrival_date) : raw.arrival_date) : null,
+      departure_date: raw.departure_date ? (raw.departure_date instanceof Date ? this.toLocalIsoDate(raw.departure_date) : raw.departure_date) : null,
       arrival_time: raw.arrival_time ? (raw.arrival_time.length === 5 ? raw.arrival_time + ':00' : raw.arrival_time) : null,
       departure_time: raw.departure_time ? (raw.departure_time.length === 5 ? raw.departure_time + ':00' : raw.departure_time) : null,
       flight_number_arrival: raw.flight_number_arrival || null,
@@ -1307,8 +1307,8 @@ export class QuotationDetail implements OnInit {
       });
       return;
     }
-    const from_date = fromD.toISOString().split('T')[0];
-    const to_date = toD.toISOString().split('T')[0];
+    const from_date = this.toLocalIsoDate(fromD);
+    const to_date = this.toLocalIsoDate(toD);
     this.saving.set(true);
     this.quotationService.syncCalendar(q.id, version.id, { from_date, to_date }).subscribe({
       next: () => {
