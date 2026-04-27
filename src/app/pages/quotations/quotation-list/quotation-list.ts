@@ -1,4 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { DatePipe, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
@@ -40,6 +42,8 @@ export class QuotationList implements OnInit {
   quotations = signal<Quotation[]>([]);
   total = signal(0);
   loading = signal(false);
+  bulkDeleting = signal(false);
+  selectedQuotations: Quotation[] = [];
   showCreateDialog = signal(false);
   creating = signal(false);
   showingArchived = signal(false);
@@ -189,10 +193,57 @@ export class QuotationList implements OnInit {
         this.quotationService.delete(id).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Cotización eliminada' });
+            this.selectedQuotations = [];
             this.load();
           }
         });
       }
+    });
+  }
+
+  confirmBulkDelete(event?: Event) {
+    const rows = this.selectedQuotations.filter((q) => !!q?.id);
+    if (!rows.length) {
+      this.messageService.add({ severity: 'warn', summary: 'Seleccione al menos una cotización' });
+      return;
+    }
+    this.confirmationService.confirm({
+      target: (event?.target as EventTarget) ?? undefined,
+      message: `¿Eliminar ${rows.length} cotización(es)?`,
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.bulkDeleting.set(true);
+        forkJoin(
+          rows.map((q) =>
+            this.quotationService.delete(q.id).pipe(
+              map(() => true),
+              catchError(() => of(false)),
+            ),
+          ),
+        ).subscribe({
+          next: (results) => {
+            this.bulkDeleting.set(false);
+            const ok = results.filter(Boolean).length;
+            this.selectedQuotations = [];
+            this.load();
+            if (ok === rows.length) {
+              this.messageService.add({ severity: 'success', summary: `${ok} cotización(es) eliminada(s)` });
+            } else {
+              this.messageService.add({
+                severity: 'warn',
+                summary: `Eliminadas: ${ok} de ${rows.length}`,
+              });
+            }
+          },
+          error: () => {
+            this.bulkDeleting.set(false);
+            this.messageService.add({ severity: 'error', summary: 'Error al eliminar en lote' });
+          },
+        });
+      },
     });
   }
 
@@ -207,6 +258,7 @@ export class QuotationList implements OnInit {
         this.quotationService.restore(id).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Cotización restaurada' });
+            this.selectedQuotations = [];
             this.load();
           }
         });
@@ -214,9 +266,55 @@ export class QuotationList implements OnInit {
     });
   }
 
+  confirmBulkRestore(event?: Event) {
+    const rows = this.selectedQuotations.filter((q) => !!q?.id);
+    if (!rows.length) {
+      this.messageService.add({ severity: 'warn', summary: 'Seleccione al menos una cotización' });
+      return;
+    }
+    this.confirmationService.confirm({
+      target: (event?.target as EventTarget) ?? undefined,
+      message: `¿Restaurar ${rows.length} cotización(es) archivada(s)?`,
+      acceptLabel: 'Restaurar',
+      rejectLabel: 'Cancelar',
+      icon: 'pi pi-history',
+      accept: () => {
+        this.bulkDeleting.set(true);
+        forkJoin(
+          rows.map((q) =>
+            this.quotationService.restore(q.id).pipe(
+              map(() => true),
+              catchError(() => of(false)),
+            ),
+          ),
+        ).subscribe({
+          next: (results) => {
+            this.bulkDeleting.set(false);
+            const ok = results.filter(Boolean).length;
+            this.selectedQuotations = [];
+            this.load();
+            if (ok === rows.length) {
+              this.messageService.add({ severity: 'success', summary: `${ok} cotización(es) restaurada(s)` });
+            } else {
+              this.messageService.add({
+                severity: 'warn',
+                summary: `Restauradas: ${ok} de ${rows.length}`,
+              });
+            }
+          },
+          error: () => {
+            this.bulkDeleting.set(false);
+            this.messageService.add({ severity: 'error', summary: 'Error al restaurar en lote' });
+          },
+        });
+      },
+    });
+  }
+
   toggleArchivedView() {
     this.showingArchived.update(v => !v);
     this.expandedRows = {};
+    this.selectedQuotations = [];
     this.load();
   }
 

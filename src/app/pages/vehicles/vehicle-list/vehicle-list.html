@@ -18,6 +18,15 @@
         />
       </span>
       @if (canManageVehicles()) {
+        <p-button
+          label="Eliminar seleccionados"
+          icon="pi pi-trash"
+          severity="danger"
+          [outlined]="true"
+          [disabled]="!selectedVehicles.length"
+          [loading]="bulkDeleting()"
+          (onClick)="confirmBulkDelete($event)"
+        />
         <p-button label="Nuevo vehículo" icon="pi pi-plus" (onClick)="openCreate()" />
       }
     </div>
@@ -31,9 +40,17 @@
     [paginator]="true"
     [rows]="rowsPerPage"
     [rowsPerPageOptions]="rowsPerPageOptions"
+    dataKey="id"
+    [(selection)]="selectedVehicles"
+    selectionMode="multiple"
   >
     <ng-template pTemplate="header">
       <tr>
+        @if (canManageVehicles()) {
+          <th style="width: 3rem">
+            <p-tableHeaderCheckbox />
+          </th>
+        }
         <th>Vehículo</th>
         <th style="width:80px">Asientos</th>
         <th style="width:80px">M. Bodega</th>
@@ -52,6 +69,9 @@
         @for (year of getSeasonYears(); track year) {
           <tr>
             @if (year === getSeasonYears()[0]) {
+              <td [attr.rowspan]="getSeasonYears().length" (click)="$event.stopPropagation()">
+                <p-tableCheckbox [value]="v" />
+              </td>
               <td [attr.rowspan]="getSeasonYears().length" (click)="goToDetail(v)">
                 <div [innerHTML]="v.name | richText"></div>
                 @if (v.brand) {
@@ -117,7 +137,7 @@
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td [attr.colspan]="canManageVehicles() ? 8 : 4" class="text-center">No hay vehículos registrados</td></tr>
+      <tr><td [attr.colspan]="canManageVehicles() ? 9 : 4" class="text-center">No hay vehículos registrados</td></tr>
     </ng-template>
   </p-table>
 </div>

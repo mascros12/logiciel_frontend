@@ -1,4 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -38,6 +40,8 @@ export class VehicleList implements OnInit {
   vehicles = signal<Vehicle[]>([]);
   loading = signal(false);
   saving = signal(false);
+  bulkDeleting = signal(false);
+  selectedVehicles: Vehicle[] = [];
   searchTerm = '';
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
@@ -252,7 +256,54 @@ export class VehicleList implements OnInit {
         this.vehicleService.delete(id).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Vehículo eliminado' });
+            this.selectedVehicles = [];
             this.load();
+          },
+        });
+      },
+    });
+  }
+
+  confirmBulkDelete(event?: Event) {
+    const rows = this.selectedVehicles.filter((v) => !!v?.id);
+    if (!rows.length) {
+      this.messageService.add({ severity: 'warn', summary: 'Seleccione al menos un vehículo' });
+      return;
+    }
+    this.confirmationService.confirm({
+      target: (event?.target as EventTarget) ?? undefined,
+      message: `¿Eliminar ${rows.length} vehículo(s)?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.bulkDeleting.set(true);
+        forkJoin(
+          rows.map((v) =>
+            this.vehicleService.delete(v.id).pipe(
+              map(() => true),
+              catchError(() => of(false)),
+            ),
+          ),
+        ).subscribe({
+          next: (results) => {
+            this.bulkDeleting.set(false);
+            const ok = results.filter(Boolean).length;
+            this.selectedVehicles = [];
+            this.load();
+            if (ok === rows.length) {
+              this.messageService.add({ severity: 'success', summary: `${ok} vehículo(s) eliminado(s)` });
+            } else {
+              this.messageService.add({
+                severity: 'warn',
+                summary: `Eliminados: ${ok} de ${rows.length}`,
+              });
+            }
+          },
+          error: () => {
+            this.bulkDeleting.set(false);
+            this.messageService.add({ severity: 'error', summary: 'Error al eliminar en lote' });
           },
         });
       },

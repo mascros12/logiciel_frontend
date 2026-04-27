@@ -18,6 +18,15 @@
         />
       </span>
       @if (canManageActivities()) {
+        <p-button
+          label="Eliminar seleccionados"
+          icon="pi pi-trash"
+          severity="danger"
+          [outlined]="true"
+          [disabled]="!selectedActivities.length"
+          [loading]="bulkDeleting()"
+          (onClick)="confirmBulkDelete($event)"
+        />
         <p-button label="Nueva actividad" icon="pi pi-plus" (onClick)="openCreate()" />
       }
     </div>
@@ -31,9 +40,17 @@
     [paginator]="true"
     [rows]="rowsPerPage"
     [rowsPerPageOptions]="rowsPerPageOptions"
+    dataKey="id"
+    [(selection)]="selectedActivities"
+    selectionMode="multiple"
   >
   <ng-template pTemplate="header">
     <tr>
+      @if (canManageActivities()) {
+        <th style="width: 3rem">
+          <p-tableHeaderCheckbox />
+        </th>
+      }
       <th>Actividad</th>
       @if (canManageActivities()) {
         <th style="width: 110px;">Precio Adulto</th>
@@ -46,6 +63,11 @@
 
   <ng-template pTemplate="body" let-a>
     <tr>
+      @if (canManageActivities()) {
+        <td (click)="$event.stopPropagation()">
+          <p-tableCheckbox [value]="a" />
+        </td>
+      }
       <td>
         <div class="activity-name" [innerHTML]="a.name | richText"></div>
         @if (a.name_es) {
@@ -75,7 +97,7 @@
 
   <ng-template pTemplate="emptymessage">
     <tr>
-      <td [attr.colspan]="canManageActivities() ? 5 : 1" class="text-center">No hay actividades registradas</td>
+      <td [attr.colspan]="canManageActivities() ? 6 : 1" class="text-center">No hay actividades registradas</td>
     </tr>
   </ng-template>
 </p-table>

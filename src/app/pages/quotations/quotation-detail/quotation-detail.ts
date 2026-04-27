@@ -397,31 +397,62 @@ export class QuotationDetail implements OnInit {
         this.initFichaFromQuotation(q);
         this.loadLatestFileAA(q.id);
         const currentId = q.current_version?.id ? String(q.current_version.id) : null;
+        const v1Version =
+          q.versions?.find(
+            (v) =>
+              v.version_number === 1 &&
+              !(v as QuotationVersion & { deleted?: boolean }).deleted,
+          ) ?? null;
+        const v1Id = v1Version?.id ? String(v1Version.id) : null;
+
         const versionStillExists = q.versions?.some(
           (v) => String(v.id) === String(prevVersionId)
         );
         const keepViewingOther =
           prevVersionId && String(prevVersionId) !== currentId && versionStillExists;
 
+        const finishWithLines = (lines: QuotationLine[]) => {
+          this.lines.set(this.sortLinesByDate(lines));
+          this.loading.set(false);
+          this.loadSummary();
+        };
+
         if (keepViewingOther) {
           this.selectedVersionId.set(prevVersionId);
           this.quotationService.getVersionLines(q.id, prevVersionId).subscribe({
             next: (lines) => {
-              this.lines.set(this.sortLinesByDate(lines));
-              this.loading.set(false);
-              this.loadSummary();
+              const arr = Array.isArray(lines) ? lines : (lines as { lines?: QuotationLine[] })?.lines ?? [];
+              finishWithLines(arr);
             },
             error: () => {
               this.lines.set(this.sortLinesByDate(q.lines ?? []));
               this.selectedVersionId.set(currentId);
               this.loading.set(false);
+              this.loadSummary();
             },
           });
         } else {
-          this.selectedVersionId.set(currentId);
-          this.lines.set(this.sortLinesByDate(q.lines ?? []));
-          this.loading.set(false);
-          this.loadSummary();
+          // Primera apertura del detalle: siempre versión 1 (si existe); tras recargas en la misma vista se mantiene la selección.
+          const targetVersionId = !prevVersionId && v1Id ? v1Id : currentId;
+          this.selectedVersionId.set(targetVersionId);
+          if (targetVersionId && String(targetVersionId) === String(currentId)) {
+            finishWithLines(q.lines ?? []);
+          } else if (targetVersionId) {
+            this.quotationService.getVersionLines(q.id, targetVersionId).subscribe({
+              next: (resp) => {
+                const arr = Array.isArray(resp) ? resp : (resp as { lines?: QuotationLine[] })?.lines ?? [];
+                finishWithLines(arr);
+              },
+              error: () => {
+                this.lines.set(this.sortLinesByDate(q.lines ?? []));
+                this.selectedVersionId.set(currentId);
+                this.loading.set(false);
+                this.loadSummary();
+              },
+            });
+          } else {
+            finishWithLines([]);
+          }
         }
       },
       error: () => this.loading.set(false),

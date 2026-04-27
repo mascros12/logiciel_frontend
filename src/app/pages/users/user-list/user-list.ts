@@ -1,4 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -42,6 +44,8 @@ export class UserList implements OnInit {
   users = signal<User[]>([]);
   loading = signal(false);
   saving = signal(false);
+  bulkDeactivating = signal(false);
+  selectedUsers: User[] = [];
   showDialog = signal(false);
   showPasswordDialog = signal(false);
   editing = signal<User | null>(null);
@@ -192,6 +196,7 @@ export class UserList implements OnInit {
         this.userService.deactivate(user.id).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Usuario desactivado' });
+            this.selectedUsers = [];
             this.load();
           },
           error: (err) => {
@@ -202,6 +207,55 @@ export class UserList implements OnInit {
                   ? err.error.detail
                   : 'No se pudo desactivar el usuario',
             });
+          },
+        });
+      },
+    });
+  }
+
+  confirmBulkDeactivate(event?: Event): void {
+    const active = this.selectedUsers.filter((u) => u?.is_active && u?.id);
+    if (!active.length) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Seleccione al menos un usuario activo para desactivar',
+      });
+      return;
+    }
+    this.confirmationService.confirm({
+      target: (event?.target as EventTarget) ?? undefined,
+      message: `¿Desactivar ${active.length} usuario(s)?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Desactivar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.bulkDeactivating.set(true);
+        forkJoin(
+          active.map((u) =>
+            this.userService.deactivate(u.id).pipe(
+              map(() => true),
+              catchError(() => of(false)),
+            ),
+          ),
+        ).subscribe({
+          next: (results) => {
+            this.bulkDeactivating.set(false);
+            const ok = results.filter(Boolean).length;
+            this.selectedUsers = [];
+            this.load();
+            if (ok === active.length) {
+              this.messageService.add({ severity: 'success', summary: `${ok} usuario(s) desactivado(s)` });
+            } else {
+              this.messageService.add({
+                severity: 'warn',
+                summary: `Desactivados: ${ok} de ${active.length}`,
+              });
+            }
+          },
+          error: () => {
+            this.bulkDeactivating.set(false);
+            this.messageService.add({ severity: 'error', summary: 'Error al desactivar en lote' });
           },
         });
       },

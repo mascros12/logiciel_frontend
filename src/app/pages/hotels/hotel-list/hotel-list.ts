@@ -1,4 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -37,6 +39,9 @@ export class HotelList implements OnInit {
   searchTerm = '';
   loading = signal(false);
   saving = signal(false);
+  bulkDeleting = signal(false);
+  /** Selección múltiple (p-table) */
+  selectedHotels: Hotel[] = [];
   showDialog = signal(false);
   editingHotel = signal<Hotel | null>(null);
   readonly rowsPerPage = 25;
@@ -148,7 +153,54 @@ export class HotelList implements OnInit {
         this.hotelService.delete(id).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Hotel eliminado' });
+            this.selectedHotels = [];
             this.load();
+          },
+        });
+      },
+    });
+  }
+
+  confirmBulkDelete(event?: Event) {
+    const rows = this.selectedHotels.filter((h) => !!h?.id);
+    if (!rows.length) {
+      this.messageService.add({ severity: 'warn', summary: 'Seleccione al menos un hotel' });
+      return;
+    }
+    this.confirmationService.confirm({
+      target: (event?.target as EventTarget) ?? undefined,
+      message: `¿Eliminar ${rows.length} hotel(es)? Esta acción no se puede deshacer.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.bulkDeleting.set(true);
+        forkJoin(
+          rows.map((h) =>
+            this.hotelService.delete(h.id).pipe(
+              map(() => true),
+              catchError(() => of(false)),
+            ),
+          ),
+        ).subscribe({
+          next: (results) => {
+            this.bulkDeleting.set(false);
+            const ok = results.filter(Boolean).length;
+            this.selectedHotels = [];
+            this.load();
+            if (ok === rows.length) {
+              this.messageService.add({ severity: 'success', summary: `${ok} hotel(es) eliminado(s)` });
+            } else {
+              this.messageService.add({
+                severity: 'warn',
+                summary: `Eliminados: ${ok} de ${rows.length}. Revise los que fallaron.`,
+              });
+            }
+          },
+          error: () => {
+            this.bulkDeleting.set(false);
+            this.messageService.add({ severity: 'error', summary: 'Error al eliminar en lote' });
           },
         });
       },

@@ -1,4 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -36,6 +38,8 @@ export class ActivityList implements OnInit {
   total = signal(0);
   loading = signal(false);
   saving = signal(false);
+  bulkDeleting = signal(false);
+  selectedActivities: Activity[] = [];
   searchTerm = '';
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
@@ -196,7 +200,54 @@ export class ActivityList implements OnInit {
         this.activityService.delete(id).subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Actividad eliminada' });
+            this.selectedActivities = [];
             this.load();
+          },
+        });
+      },
+    });
+  }
+
+  confirmBulkDelete(event?: Event) {
+    const rows = this.selectedActivities.filter((a) => !!a?.id);
+    if (!rows.length) {
+      this.messageService.add({ severity: 'warn', summary: 'Seleccione al menos una actividad' });
+      return;
+    }
+    this.confirmationService.confirm({
+      target: (event?.target as EventTarget) ?? undefined,
+      message: `¿Eliminar ${rows.length} actividad(es)?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.bulkDeleting.set(true);
+        forkJoin(
+          rows.map((a) =>
+            this.activityService.delete(a.id).pipe(
+              map(() => true),
+              catchError(() => of(false)),
+            ),
+          ),
+        ).subscribe({
+          next: (results) => {
+            this.bulkDeleting.set(false);
+            const ok = results.filter(Boolean).length;
+            this.selectedActivities = [];
+            this.load();
+            if (ok === rows.length) {
+              this.messageService.add({ severity: 'success', summary: `${ok} actividad(es) eliminada(s)` });
+            } else {
+              this.messageService.add({
+                severity: 'warn',
+                summary: `Eliminadas: ${ok} de ${rows.length}`,
+              });
+            }
+          },
+          error: () => {
+            this.bulkDeleting.set(false);
+            this.messageService.add({ severity: 'error', summary: 'Error al eliminar en lote' });
           },
         });
       },

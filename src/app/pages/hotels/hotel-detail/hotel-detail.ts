@@ -101,7 +101,7 @@ export class HotelDetail implements OnInit {
     { label: 'Temporada Baja', value: 'low' },
   ];
 
-  gradeLabels: Record<string, string> = { high: 'Pico', medium: 'Alta', low: 'Promocional' };
+  gradeLabels: Record<string, string> = { high: 'Pico', medium: 'Alta', low: 'Baja' };
   gradeSeverity: Record<string, 'danger' | 'warn' | 'success'> = {
     high: 'danger', medium: 'warn', low: 'success'
   };

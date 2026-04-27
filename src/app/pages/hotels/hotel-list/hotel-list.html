@@ -18,6 +18,15 @@
         />
       </span>
       @if (canManageHotels()) {
+        <p-button
+          label="Eliminar seleccionados"
+          icon="pi pi-trash"
+          severity="danger"
+          [outlined]="true"
+          [disabled]="!selectedHotels.length"
+          [loading]="bulkDeleting()"
+          (onClick)="confirmBulkDelete($event)"
+        />
         <p-button label="Nuevo hotel" icon="pi pi-plus" (onClick)="openCreate()" />
       }
     </div>
@@ -31,9 +40,17 @@
     [paginator]="true"
     [rows]="rowsPerPage"
     [rowsPerPageOptions]="rowsPerPageOptions"
+    dataKey="id"
+    [(selection)]="selectedHotels"
+    selectionMode="multiple"
   >
     <ng-template pTemplate="header">
       <tr>
+        @if (canManageHotels()) {
+          <th style="width: 3rem">
+            <p-tableHeaderCheckbox />
+          </th>
+        }
         <th>Hotel</th>
         <th style="width:120px">Provincia</th>
         @if (canManageHotels()) {
@@ -51,6 +68,11 @@
         [class.row-gama-low]="h.category === 'low'"
         (click)="goToDetail(h.id)"
       >
+        @if (canManageHotels()) {
+          <td (click)="$event.stopPropagation()">
+            <p-tableCheckbox [value]="h" />
+          </td>
+        }
         <td>
           <span class="hotel-name" [innerHTML]="h.name | richText"></span>
           @if (h.address) {
@@ -73,7 +95,7 @@
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td [attr.colspan]="canManageHotels() ? 4 : 2" class="text-center">No hay hoteles registrados</td></tr>
+      <tr><td [attr.colspan]="canManageHotels() ? 5 : 2" class="text-center">No hay hoteles registrados</td></tr>
     </ng-template>
   </p-table>
 </div>
