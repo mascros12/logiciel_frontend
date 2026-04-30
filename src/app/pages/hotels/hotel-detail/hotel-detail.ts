@@ -322,6 +322,12 @@ export class HotelDetail implements OnInit {
           if (updatedRoom) this.seasonRoom.set(updatedRoom);
         });
       },
+      error: (err) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'No se pudo eliminar la temporada',
+        });
+      },
     });
   }
 
