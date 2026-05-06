@@ -1077,6 +1077,29 @@
                                   ></textarea>
                                 </div>
                               </div>
+                            } @else if (d.category === 'activity') {
+                              <div class="ficha-activity-dates-blocks">
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-adt-' + d.id">Fechas</label>
+                                  <input
+                                    pInputText
+                                    [id]="'aa-adt-' + d.id"
+                                    class="ficha-cell-input"
+                                    [ngModel]="d.dates"
+                                    (blur)="onFichaDetailDatesBlur(d, $event.target)"
+                                  />
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label" [attr.for]="'aa-ath-' + d.id">Hora</label>
+                                  <input
+                                    type="time"
+                                    [id]="'aa-ath-' + d.id"
+                                    class="ficha-cell-input"
+                                    [(ngModel)]="ensureActivityFichaObsDraft(d).ficha_horario"
+                                    (blur)="commitActivityFichaObs(d)"
+                                  />
+                                </div>
+                              </div>
                             } @else {
                               <input
                                 pInputText

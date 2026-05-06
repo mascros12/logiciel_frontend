@@ -1772,12 +1772,14 @@ export class QuotationDetail implements OnInit {
     const notes = typeof d.observations === 'string' ? d.observations : '';
     const def: FileAADetailActivityObsState = {
       pickup_detail: '',
+      ficha_horario: '',
       notes,
     };
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       const o = raw as Record<string, unknown>;
       return {
         pickup_detail: String(o['pickup_detail'] ?? ''),
+        ficha_horario: String(o['ficha_horario'] ?? ''),
         notes: String(o['notes'] ?? notes),
       };
     }
@@ -1795,6 +1797,7 @@ export class QuotationDetail implements OnInit {
     const row = this.ensureActivityFichaObsDraft(d);
     const observation_extras = {
       pickup_detail: row.pickup_detail,
+      ficha_horario: (row.ficha_horario ?? '').trim(),
       notes: row.notes,
     };
     const notesTrim = row.notes.trim();

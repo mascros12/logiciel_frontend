@@ -95,6 +95,8 @@ export interface FileAADetailVehicleObsState {
 /** Observaciones estructuradas en Ficha AA — filas categoría actividad */
 export interface FileAADetailActivityObsState {
   pickup_detail: string;
+  /** Hora para export Word/PDF (columna fecha), p. ej. desde input type=time HH:MM */
+  ficha_horario: string;
   notes: string;
 }
 
