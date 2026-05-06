@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, computed, inject, DestroyRef } from '@angular/core';
+import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
@@ -2472,13 +2473,35 @@ export class QuotationDetail implements OnInit {
     return `Généré le ${dd}/${mm}/${yy}, à ${hh}H${mi}`;
   }
 
+  private fileNameFromContentDisposition(cd: string | null, fallback: string): string {
+    if (!cd) return fallback;
+    const star = /filename\*=(?:UTF-8''|utf-8'')([^;\n]+)/i.exec(cd);
+    if (star?.[1]) {
+      try {
+        return decodeURIComponent(star[1].trim().replace(/^"(.*)"$/, '$1'));
+      } catch {
+        /* ignore */
+      }
+    }
+    const quoted = /filename="([^"]+)"/i.exec(cd);
+    if (quoted?.[1]) return quoted[1];
+    const unquoted = /filename=([^;\n]+)/i.exec(cd);
+    if (unquoted?.[1]) return unquoted[1].trim().replace(/^"(.*)"$/, '$1');
+    return fallback;
+  }
+
   downloadFichaAAWord(): void {
     const f = this.fichaFileAA();
     if (!f?.id) return;
     this.downloadingFichaWord.set(true);
     this.quotationService.downloadFichaAAWord(f.id, this.fichaExportGeneratedDisplayFr()).subscribe({
-      next: (blob) => {
+      next: (res: HttpResponse<Blob>) => {
         this.downloadingFichaWord.set(false);
+        const blob = res.body;
+        if (!blob) {
+          this.messageService.add({ severity: 'error', summary: 'Error al generar Word' });
+          return;
+        }
         if (blob.type === 'application/json' || blob.size < 32) {
           blob.text().then((t) => {
             try {
@@ -2496,7 +2519,10 @@ export class QuotationDetail implements OnInit {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'Ficha_AA.docx';
+        a.download = this.fileNameFromContentDisposition(
+          res.headers.get('Content-Disposition'),
+          'Ficha_AA.docx',
+        );
         a.click();
         URL.revokeObjectURL(url);
         this.messageService.add({
@@ -2520,8 +2546,13 @@ export class QuotationDetail implements OnInit {
     if (!f?.id) return;
     this.downloadingFichaPdf.set(true);
     this.quotationService.downloadFichaAAPdf(f.id, this.fichaExportGeneratedDisplayFr()).subscribe({
-      next: (blob) => {
+      next: (res: HttpResponse<Blob>) => {
         this.downloadingFichaPdf.set(false);
+        const blob = res.body;
+        if (!blob) {
+          this.messageService.add({ severity: 'error', summary: 'Error al generar PDF' });
+          return;
+        }
         if (blob.type === 'application/json' || blob.size < 32) {
           blob.text().then((t) => {
             try {
@@ -2539,7 +2570,10 @@ export class QuotationDetail implements OnInit {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'Ficha_AA.pdf';
+        a.download = this.fileNameFromContentDisposition(
+          res.headers.get('Content-Disposition'),
+          'Ficha_AA.pdf',
+        );
         a.click();
         URL.revokeObjectURL(url);
         this.messageService.add({
