@@ -354,4 +354,6 @@ export interface QuotationSummary {
   new_activities: ServiceSummaryLine[];
   new_vehicles: ServiceSummaryLine[];
   new_subtotal: number;
+  /** v2+: diferencia entre (base − elim + nuevos) y el total real (agenda × comisión); suele ~redondeos. */
+  legacy_breakdown_gap?: number | null;
 }

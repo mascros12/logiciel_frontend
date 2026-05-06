@@ -555,6 +555,16 @@
                     <td colspan="2">SubTotal Nuevos</td>
                     <td>+{{ s.new_subtotal | currency:'USD' }}</td>
                     </tr>
+                    @if (
+                      s.legacy_breakdown_gap != null &&
+                      s.legacy_breakdown_gap !== undefined &&
+                      (s.legacy_breakdown_gap > 0.01 || s.legacy_breakdown_gap < -0.01)
+                    ) {
+                    <tr class="subtotal-row">
+                    <td colspan="2">Cuadre (redondeo vs desglose)</td>
+                    <td>{{ s.legacy_breakdown_gap | currency:'USD' }}</td>
+                    </tr>
+                    }
                     <tr class="total-row">
                     <td colspan="2">Total</td>
                     <td>{{ s.total | currency:'USD' }}</td>
