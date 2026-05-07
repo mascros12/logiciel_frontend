@@ -1297,6 +1297,39 @@
                   </table>
                 </div>
               </div>
+
+              <div class="ficha-aa-free-text">
+                <p class="ficha-aa-hint">
+                  Estos textos se imprimen al final del Word/PDF, debajo de las líneas
+                  «Premier/Deuxieme virement reçus evaneos –».
+                </p>
+                <div class="ficha-aa-free-text-field">
+                  <label class="ficha-aa-free-text-label" for="fichaAAObservations">Observaciones</label>
+                  <textarea
+                    id="fichaAAObservations"
+                    pInputTextarea
+                    rows="3"
+                    class="w-full"
+                    [ngModel]="fichaObservationsDraft()"
+                    (ngModelChange)="fichaObservationsDraft.set($event ?? '')"
+                    (blur)="saveFichaObservations()"
+                    placeholder="Texto libre que aparecerá tras los virements"
+                  ></textarea>
+                </div>
+                <div class="ficha-aa-free-text-field">
+                  <label class="ficha-aa-free-text-label" for="fichaAAReminder">Recordatorio</label>
+                  <textarea
+                    id="fichaAAReminder"
+                    pInputTextarea
+                    rows="3"
+                    class="w-full"
+                    [ngModel]="fichaReminderDraft()"
+                    (ngModelChange)="fichaReminderDraft.set($event ?? '')"
+                    (blur)="saveFichaReminder()"
+                    placeholder="Recordatorio que aparecerá al final del documento"
+                  ></textarea>
+                </div>
+              </div>
             }
             }
           </div>

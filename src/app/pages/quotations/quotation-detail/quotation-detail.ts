@@ -202,6 +202,12 @@ export class QuotationDetail implements OnInit {
   /** Última Ficha AA generada con tabla de servicios (se recarga al abrir la cotización). */
   fichaFileAA = signal<FileAAWithDetails | null>(null);
   fichaAATab = signal<'ficha' | 'config'>('ficha');
+  /** Borradores UI de los textos libres que se imprimen al final del Word/PDF
+   * (debajo de los virements). Se persisten en `FileAA.observations` /
+   * `FileAA.reminder` mediante `updateFileAA` al perder el foco. */
+  fichaObservationsDraft = signal('');
+  fichaReminderDraft = signal('');
+  savingFichaFreeText = signal(false);
   fichaNeedBabyBed = signal(false);
   fichaHasSpecialDate = signal(false);
   fichaSpecialDate = signal('');
@@ -1552,6 +1558,64 @@ export class QuotationDetail implements OnInit {
     });
   }
 
+  /** Sincroniza los borradores UI de los textos libres con la Ficha cargada. */
+  private hydrateFichaFreeTextDrafts(ficha: FileAAWithDetails | null): void {
+    this.fichaObservationsDraft.set((ficha?.observations ?? '').toString());
+    this.fichaReminderDraft.set((ficha?.reminder ?? '').toString());
+  }
+
+  /** Persiste «Observaciones» del FileAA cuando el textarea pierde el foco. */
+  saveFichaObservations(): void {
+    const f = this.fichaFileAA();
+    if (!f) return;
+    const next = (this.fichaObservationsDraft() ?? '').trim();
+    const current = (f.observations ?? '').trim();
+    if (next === current) return;
+    this.savingFichaFreeText.set(true);
+    this.quotationService.updateFileAA(f.id, { observations: next }).subscribe({
+      next: (updated) => {
+        this.savingFichaFreeText.set(false);
+        this.fichaFileAA.set({ ...f, ...updated });
+      },
+      error: (err) => {
+        this.savingFichaFreeText.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary:
+            typeof err.error?.detail === 'string'
+              ? err.error.detail
+              : 'No se pudieron guardar las observaciones',
+        });
+      },
+    });
+  }
+
+  /** Persiste «Recordatorio» del FileAA cuando el textarea pierde el foco. */
+  saveFichaReminder(): void {
+    const f = this.fichaFileAA();
+    if (!f) return;
+    const next = (this.fichaReminderDraft() ?? '').trim();
+    const current = (f.reminder ?? '').trim();
+    if (next === current) return;
+    this.savingFichaFreeText.set(true);
+    this.quotationService.updateFileAA(f.id, { reminder: next }).subscribe({
+      next: (updated) => {
+        this.savingFichaFreeText.set(false);
+        this.fichaFileAA.set({ ...f, ...updated });
+      },
+      error: (err) => {
+        this.savingFichaFreeText.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary:
+            typeof err.error?.detail === 'string'
+              ? err.error.detail
+              : 'No se pudo guardar el recordatorio',
+        });
+      },
+    });
+  }
+
   private loadLatestFileAA(quotationId: string): void {
     this.quotationService.getLatestFileAA(quotationId).subscribe({
       next: (f) => {
@@ -1562,6 +1626,7 @@ export class QuotationDetail implements OnInit {
         };
         this.fichaFileAA.set(loaded);
         this.hydrateChecklistFromFichaDetails(loaded);
+        this.hydrateFichaFreeTextDrafts(loaded);
         this.fichaAATab.set('ficha');
         // Para operaciones, al entrar con Ficha AA existente abrir directamente ese tab.
         if (this.isOperaciones() && this.activeTab() === 'agenda') {
@@ -1573,6 +1638,7 @@ export class QuotationDetail implements OnInit {
           this.clearAllVehicleFichaObsDrafts();
           this.fichaFileAA.set(null);
           this.resetChecklistDraft();
+          this.hydrateFichaFreeTextDrafts(null);
           this.fichaAATab.set('config');
         }
       },
@@ -2618,6 +2684,7 @@ export class QuotationDetail implements OnInit {
         };
         this.fichaFileAA.set(generated);
         this.applyChecklistToFichaDetails(generated);
+        this.hydrateFichaFreeTextDrafts(generated);
         this.fichaAATab.set('ficha');
         this.messageService.add({
           severity: 'success',

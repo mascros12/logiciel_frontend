@@ -717,6 +717,25 @@
     line-height: 1.4;
   }
 
+  .ficha-aa-free-text {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .ficha-aa-free-text-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .ficha-aa-free-text-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
   .ficha-aa-table-wrap {
     overflow-x: auto;
     border-radius: var(--p-border-radius);

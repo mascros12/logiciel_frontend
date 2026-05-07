@@ -150,6 +150,10 @@ export interface FileAAWithDetails {
   name: string;
   notes: string | null;
   family_description: string | null;
+  /** Texto libre que se imprime al final del Word/PDF (debajo de los virements). */
+  observations: string | null;
+  /** Texto libre que se imprime al final del Word/PDF (sección «Recordatorios»). */
+  reminder: string | null;
   from_date: string | null;
   to_date: string | null;
   quantity_adults: number;

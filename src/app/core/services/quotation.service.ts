@@ -184,7 +184,10 @@ export class QuotationService {
     return this.http.delete<void>(`${this.url}/details/${detailId}`);
   }
 
-  updateFileAA(fileId: string, body: { header_color?: string }) {
+  updateFileAA(
+    fileId: string,
+    body: { header_color?: string; observations?: string; reminder?: string },
+  ) {
     return this.http.patch<FileAAWithDetails>(`${this.url}/file-aa/${fileId}`, body);
   }
 
