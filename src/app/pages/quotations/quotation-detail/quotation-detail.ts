@@ -809,7 +809,9 @@ export class QuotationDetail implements OnInit {
       onError?: () => void;
     }
   ) {
-    this.quotationService.recalculate(quotationId, versionId).subscribe({
+    this.quotationService
+      .recalculate(quotationId, versionId, { reprice_inherited: true })
+      .subscribe({
       next: () => {
         if (options?.successMessage) {
           this.messageService.add({ severity: 'success', summary: options.successMessage });
@@ -819,7 +821,7 @@ export class QuotationDetail implements OnInit {
       error: () => {
         options?.onError?.();
       },
-    });
+      });
   }
 
   // ─── Helpers ───────────────────────────────────────────────

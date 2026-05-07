@@ -117,9 +117,14 @@ export class QuotationService {
     return this.http.delete<void>(`${this.url}/${quotationId}/versions/${versionId}`);
   }
 
-  recalculate(quotationId: string, versionId: string) {
+  recalculate(
+    quotationId: string,
+    versionId: string,
+    body: { reprice_inherited?: boolean } = { reprice_inherited: true }
+  ) {
     return this.http.post<Quotation>(
-      `${this.url}/${quotationId}/versions/${versionId}/recalculate`, {}
+      `${this.url}/${quotationId}/versions/${versionId}/recalculate`,
+      body
     );
   }
 
