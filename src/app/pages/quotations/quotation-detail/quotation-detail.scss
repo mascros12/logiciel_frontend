@@ -1120,70 +1120,69 @@
     }
 
     .ficha-aa-summary-title {
-      margin: 0;
-      font-size: 1.25rem;
+      margin: 0 0 0.35rem;
+      font-size: 1.4rem;
       font-weight: 800;
+      letter-spacing: 0.01em;
       color: #0f172a;
     }
 
-    .ficha-aa-summary-dates {
-      margin: 0;
-      font-size: 1.02rem;
-      font-weight: 600;
-      color: #0369a1;
-    }
-
-    .ficha-aa-summary-family {
-      margin: 0.25rem 0 0;
-      font-size: 0.95rem;
-      line-height: 1.45;
-      color: #334155;
-    }
-
-    .ficha-aa-summary-rooms {
-      margin: 0;
-      font-size: 0.9rem;
-      color: #475569;
-    }
-
-    .ficha-aa-summary-label {
-      font-weight: 700;
-      color: #64748b;
-      margin-right: 0.35rem;
-    }
-
-    .ficha-aa-summary-flights {
-      list-style: none;
-      margin: 0.35rem 0 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
+    // Línea «Du DD/MM/AAAA au DD/MM/AAAA» con la fecha límite (-30d) a la derecha
+    .ficha-aa-summary-dates-fr {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      gap: 0.3rem;
-      font-size: 0.88rem;
-      color: #334155;
+      width: 100%;
+      column-gap: 1rem;
+      margin: 0;
 
-      li {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.35rem;
+      &-spacer {
+        // ocupa la primera columna para que el texto principal quede centrado
       }
 
-      .ficha-ok i {
-        color: #4ade80;
+      &-main {
+        grid-column: 2;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
       }
 
-      .ficha-miss i {
-        color: #f87171;
+      &-deadline {
+        grid-column: 3;
+        justify-self: end;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #991B1B; // rojo oscuro (idéntico al export Word/PDF)
       }
     }
 
-    .ficha-aa-summary-meta {
-      margin: 0.5rem 0 0;
-      font-size: 0.82rem;
-      color: #64748b;
+    .ficha-aa-summary-nights-fr {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #991B1B;
+    }
+
+    .ficha-aa-summary-family-fr {
+      margin: 0.15rem 0 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      line-height: 1.4;
+      color: #0f172a;
+    }
+
+    .ficha-aa-summary-flight-fr {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #991B1B;
+    }
+
+    .ficha-aa-summary-voiture-fr {
+      margin: 0.35rem 0 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #166534; // verde oscuro (idéntico al export Word/PDF)
     }
 
     .ficha-aa-totals-row td {

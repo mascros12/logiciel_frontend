@@ -912,41 +912,36 @@
                           <div class="ficha-aa-table-summary-inner">
                             <br><br>
 
-                            <p class="ficha-aa-summary-title">{{ ficha.name }}</p>
-                            <p class="ficha-aa-summary-dates">{{ fichaGeneratedDatesLine(ficha) }}</p>
-                            @let famSummary = fichaCompositionSummary(ficha);
-                            @if (famSummary) {
-                              <p class="ficha-aa-summary-family">{{ famSummary }}</p>
+                            <p class="ficha-aa-summary-title">{{ fichaExportDisplayNameFr(ficha.name) }}</p>
+
+                            @if (fichaSummaryDatesLineFr(ficha)) {
+                              <div class="ficha-aa-summary-dates-fr">
+                                <span class="ficha-aa-summary-dates-fr-spacer"></span>
+                                <span class="ficha-aa-summary-dates-fr-main">
+                                  {{ fichaSummaryDatesLineFr(ficha) }}
+                                </span>
+                                <span class="ficha-aa-summary-dates-fr-deadline">
+                                  {{ fichaArrivalMinus30DaysFr(ficha) }}
+                                </span>
+                              </div>
+                              @let nightsFr = fichaSummaryNightsLineFr(ficha);
+                              @if (nightsFr) {
+                                <p class="ficha-aa-summary-nights-fr">{{ nightsFr }}</p>
+                              }
                             }
-                            @if (fichaRoomsSummaryLine()) {
-                              <p class="ficha-aa-summary-rooms">
-                                <span class="ficha-aa-summary-label">Habitaciones:</span>
-                                {{ fichaRoomsSummaryLine() }}
-                              </p>
+
+                            @let compChambresFr = fichaCompositionAndChambresLineFr(ficha);
+                            @if (compChambresFr) {
+                              <p class="ficha-aa-summary-family-fr">{{ compChambresFr }}</p>
                             }
-                            <ul class="ficha-aa-summary-flights">
-                              <li [class.ficha-ok]="fichaFlightArrivalOk(q)" [class.ficha-miss]="!fichaFlightArrivalOk(q)">
-                                <i class="pi" [ngClass]="fichaFlightArrivalOk(q) ? 'pi-check-circle' : 'pi-times-circle'"></i>
-                                Llegada:
-                                @if (q.arrival_time) {
-                                  <strong>{{ formatTime(q.arrival_time) }}</strong>
-                                }
-                                @if (q.flight_number_arrival) {
-                                  · vuelo <strong>{{ q.flight_number_arrival }}</strong>
-                                }
-                              </li>
-                              <li [class.ficha-ok]="fichaFlightDepartureOk(q)" [class.ficha-miss]="!fichaFlightDepartureOk(q)">
-                                <i class="pi" [ngClass]="fichaFlightDepartureOk(q) ? 'pi-check-circle' : 'pi-times-circle'"></i>
-                                Salida:
-                                @if (q.departure_time) {
-                                  <strong>{{ formatTime(q.departure_time) }}</strong>
-                                }
-                                @if (q.flight_number_departure) {
-                                  · vuelo <strong>{{ q.flight_number_departure }}</strong>
-                                }
-                              </li>
-                            </ul>
-                            <p class="ficha-aa-summary-meta">Generada el {{ ficha.created_at | date: 'short' }}</p>
+
+                            <p class="ficha-aa-summary-flight-fr">{{ fichaArrivalLineFr(q) }}</p>
+                            <p class="ficha-aa-summary-flight-fr">{{ fichaDepartureLineFr(q) }}</p>
+
+                            @let voitureLocFr = fichaVoitureLocationLineFr(ficha);
+                            @if (voitureLocFr) {
+                              <p class="ficha-aa-summary-voiture-fr">{{ voitureLocFr }}</p>
+                            }
                           </div>
                         </td>
                       </tr>

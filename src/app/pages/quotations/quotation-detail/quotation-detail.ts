@@ -1507,6 +1507,145 @@ export class QuotationDetail implements OnInit {
     return `${adultPart} + ${minorPart}${agesSegment}`;
   }
 
+  // ─── Resumen estilo «header del Word/PDF» (en francés) ──────────────
+  // Estos helpers replican la lógica del header del documento exportado
+  // (Word y PDF) para mostrar la misma información en la celda
+  // `ficha-aa-table-summary-cell` del frontend, con colores que imitan los
+  // del export: rojo para vuelos/noches/fecha límite y verde oscuro para
+  // «Voiture de Location».
+
+  /** Nombre exportado: corta todo lo que va después del primer `/`. */
+  fichaExportDisplayNameFr(name: string | null | undefined): string {
+    const raw = (name ?? '').trim();
+    if (!raw) return '';
+    const idx = raw.indexOf('/');
+    return idx >= 0 ? raw.slice(0, idx).trim() : raw;
+  }
+
+  private formatIsoDateFr(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const d = new Date(iso + 'T12:00:00');
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  }
+
+  private formatTimeFr(t: string | null | undefined): string {
+    if (!t) return '';
+    const m = /^(\d{2}):(\d{2})/.exec(t);
+    if (!m) return t;
+    return `${m[1]}h${m[2]}`;
+  }
+
+  /** «Du DD/MM/AAAA au DD/MM/AAAA» o cadena vacía si faltan fechas. */
+  fichaSummaryDatesLineFr(ficha: FileAAWithDetails): string {
+    if (!ficha.from_date || !ficha.to_date) return '';
+    return `Du ${this.formatIsoDateFr(ficha.from_date)} au ${this.formatIsoDateFr(ficha.to_date)}`;
+  }
+
+  /** «N nuit/nuits» a partir del rango de la ficha. */
+  fichaSummaryNightsLineFr(ficha: FileAAWithDetails): string {
+    const n = this.fichaNightsFromIsoRange(ficha.from_date, ficha.to_date);
+    if (n === null) return '';
+    return n === 1 ? '1 nuit' : `${n} nuits`;
+  }
+
+  /** Fecha de llegada − 30 días (DD/MM/AAAA), para alinear a la derecha. */
+  fichaArrivalMinus30DaysFr(ficha: FileAAWithDetails): string {
+    if (!ficha.from_date) return '';
+    const d = new Date(ficha.from_date + 'T12:00:00');
+    if (isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() - 30);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  }
+
+  /** Composición de pasajeros en francés: «3 Adultes + 1 Mineur (10 ans)». */
+  fichaCompositionFr(ficha: FileAAWithDetails): string {
+    const na = Number(ficha.quantity_adults) || 0;
+    const nc = Number(ficha.quantity_children) || 0;
+    if (na === 0 && nc === 0) return '';
+    const adultPart = na === 1 ? '1 Adulte' : `${na} Adultes`;
+    if (nc === 0) return adultPart;
+    const minorPart = nc === 1 ? '1 Mineur' : `${nc} Mineurs`;
+    const ages = (ficha.children_ages || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const agesSegment = ages.length > 0 ? ` (${ages.join(', ')} ans)` : '';
+    return `${adultPart} + ${minorPart}${agesSegment}`;
+  }
+
+  /** Habitaciones formateadas en francés con plural según cantidad. */
+  fichaRoomsPhrasesFr(): string[] {
+    const rows = this.fichaRoomRows();
+    if (!rows.length) return [];
+    const labels: Record<FichaRoomType, string> = {
+      double: 'double',
+      triple: 'triple',
+      quadruple: 'quadruple',
+      quintuple: 'quintuple',
+      mixed: 'mixte',
+    };
+    const out: string[] = [];
+    for (const r of rows) {
+      const qty = Number(r.quantity) || 0;
+      if (qty <= 0) continue;
+      const lbl = labels[r.room_type] ?? r.room_type;
+      out.push(qty === 1 ? `chambre ${lbl}` : `${qty} chambres ${lbl}s`);
+    }
+    return out;
+  }
+
+  /** «3 Adultes en chambre triple et 2 chambres doubles» (línea unificada). */
+  fichaCompositionAndChambresLineFr(ficha: FileAAWithDetails): string {
+    const comp = this.fichaCompositionFr(ficha);
+    const phrases = this.fichaRoomsPhrasesFr();
+    if (comp && phrases.length) {
+      return `${comp} en ${phrases.join(' et ')}`;
+    }
+    if (comp) return comp;
+    if (phrases.length) {
+      const s = phrases.join(' et ');
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    return '';
+  }
+
+  /** «Arrivée: HHhMM · Vol XX1234» (em-dash si falta dato). */
+  fichaArrivalLineFr(q: QuotationFull): string {
+    const arr = this.formatTimeFr(q.arrival_time) || '—';
+    const far = (q.flight_number_arrival || '').trim() || '—';
+    return `Arrivée: ${arr} · Vol ${far}`;
+  }
+
+  /** «Départ: HHhMM · Vol XX1234». */
+  fichaDepartureLineFr(q: QuotationFull): string {
+    const dep = this.formatTimeFr(q.departure_time) || '—';
+    const fdep = (q.flight_number_departure || '').trim() || '—';
+    return `Départ: ${dep} · Vol ${fdep}`;
+  }
+
+  /** «Voiture de Location: NOMBRE» — vehículos no-Transfert con trim de paréntesis. */
+  fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {
+    if (!ficha.details?.length) return '';
+    const names: string[] = [];
+    const seen = new Set<string>();
+    for (const d of ficha.details) {
+      if (d.category !== 'vehicle') continue;
+      if ((d.name || '').toLowerCase().includes('transfert')) continue;
+      let n = (d.name || '').trim();
+      const idx = n.indexOf('(');
+      if (idx >= 0) n = n.slice(0, idx).trim();
+      if (!n || seen.has(n)) continue;
+      seen.add(n);
+      names.push(n);
+    }
+    return names.length ? `Voiture de Location: ${names.join(', ')}` : '';
+  }
+
   fichaCategoryLabel(cat: string): string {
     switch (cat) {
       case 'vehicle':
