@@ -249,6 +249,7 @@ export interface Quotation {
   total: number;
   shared: boolean;
   contact_id: string | null;
+  contact_source?: string | null;
   created_by_id: string | null;
   created_by_name?: string | null;
   created_at: string;

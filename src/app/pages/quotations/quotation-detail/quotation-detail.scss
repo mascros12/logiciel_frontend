@@ -910,11 +910,18 @@
       gap: 0.1rem;
     }
 
+    // Línea «reemplazada» (`d.row_status === 'red'`): fondo blanco, sin
+    // barra lateral. El feedback visual se conserva con el texto en rojo.
     .ficha-servicio-reemplazada {
-      background: #fdecec;
-      box-shadow: inset 3px 0 0 0 #dc3545;
+      background: transparent;
+      box-shadow: none;
+      color: #991b1b;
 
-      .ficha-name {
+      .ficha-cat,
+      .ficha-name,
+      .ficha-room-hotel,
+      .ficha-room-sep,
+      .ficha-room-type {
         color: #991b1b;
       }
     }
@@ -1021,24 +1028,32 @@
       color: #111827;
     }
 
+    // Estilo «misma línea» (espejo del export Word/PDF):
+    //   HOTEL
+    //   Nombre Hotel, Nombre Habitación
+    //   ^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^
+    //   negro         rojo (#991B1B)
     .ficha-name-room-two {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.12rem;
-      line-height: 1.25;
+      display: inline;
+      line-height: 1.3;
     }
 
     .ficha-room-hotel {
-      font-size: 1.02em;
+      font-size: 1em;
       font-weight: 500;
       color: #111827;
     }
 
+    .ficha-room-sep {
+      font-size: 1em;
+      font-weight: 500;
+      color: #111827; // la coma queda en el mismo negro que el hotel
+    }
+
     .ficha-room-type {
-      font-size: 0.86em;
-      font-weight: 400;
-      color: #374151;
+      font-size: 1em;
+      font-weight: 500;
+      color: #991b1b; // rojo bordeaux igual que en el PDF/Word
     }
 
     .ficha-cell-input {
@@ -1075,6 +1090,20 @@
       align-items: center;
       text-align: center;
       gap: 0.35rem;
+      position: relative; // ancla para el origen del contacto (esquina sup izq)
+    }
+
+    // «Evaneos» / «Directo» — esquina superior izquierda, negro y negrita.
+    // Colocado en posición absoluta para no interferir con el centrado del
+    // resto del bloque (igual que en el header del Word/PDF).
+    .ficha-aa-summary-source-fr {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #000;
+      letter-spacing: 0.01em;
     }
 
     .ficha-aa-color-line {
@@ -1195,8 +1224,19 @@
       background: #fcca09 !important;
     }
 
+    // Línea «recién añadida» (`fichaIsAddedDetail(d)`): fondo blanco, texto
+    // en verde para indicar visualmente la novedad sin tintar la fila.
     .ficha-aa-row-new td {
-      background: #dcfce7;
+      background: transparent;
+      color: #15803d;
+
+      .ficha-cat,
+      .ficha-name,
+      .ficha-room-hotel,
+      .ficha-room-sep,
+      .ficha-room-type {
+        color: #15803d;
+      }
     }
 
     .totals-label {

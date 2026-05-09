@@ -1637,8 +1637,10 @@ export class QuotationDetail implements OnInit {
       if (d.category !== 'vehicle') continue;
       if ((d.name || '').toLowerCase().includes('transfert')) continue;
       let n = (d.name || '').trim();
-      const idx = n.indexOf('(');
-      if (idx >= 0) n = n.slice(0, idx).trim();
+      const cuts = [n.indexOf('('), n.indexOf('/')].filter((i) => i >= 0);
+      if (cuts.length > 0) {
+        n = n.slice(0, Math.min(...cuts)).trim();
+      }
       if (!n || seen.has(n)) continue;
       seen.add(n);
       names.push(n);
