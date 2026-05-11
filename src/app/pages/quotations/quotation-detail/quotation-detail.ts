@@ -2001,7 +2001,16 @@ export class QuotationDetail implements OnInit {
 
   commitVehicleFichaObs(d: FileAADetailRow): void {
     const row = this.ensureVehicleFichaObsDraft(d);
+    // Preservamos el resto de `observation_extras` (p. ej.
+    // `sort_after_detail_id` para resaltar en verde las filas añadidas
+    // como reemplazo, `vehicle_brand` persistido, `vehicle_dates_iso`,
+    // etc.) y solo sobrescribimos los campos que edita esta sección.
+    const prev =
+      d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+        ? { ...(d.observation_extras as Record<string, unknown>) }
+        : {};
     const observation_extras = {
+      ...prev,
       luggage_cover: row.luggage_cover,
       pickup_detail: row.pickup_detail,
       dropoff_detail: row.dropoff_detail,
@@ -2042,7 +2051,16 @@ export class QuotationDetail implements OnInit {
 
   commitActivityFichaObs(d: FileAADetailRow): void {
     const row = this.ensureActivityFichaObsDraft(d);
+    // Preservamos el resto de `observation_extras` (p. ej.
+    // `sort_after_detail_id` para resaltar en verde las filas añadidas
+    // como reemplazo) y solo sobrescribimos los campos editables de
+    // esta sección.
+    const prev =
+      d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+        ? { ...(d.observation_extras as Record<string, unknown>) }
+        : {};
     const observation_extras = {
+      ...prev,
       pickup_detail: row.pickup_detail,
       ficha_horario: (row.ficha_horario ?? '').trim(),
       notes: row.notes,
