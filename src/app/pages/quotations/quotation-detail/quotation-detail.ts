@@ -2098,10 +2098,37 @@ export class QuotationDetail implements OnInit {
       notes: row.notes,
     };
     const notesTrim = row.notes.trim();
-    this.patchFileDetail(d.id, {
+    // Recálculo local del «Precio sistema» para feedback instantáneo.
+    //
+    // Usa el snapshot de tarifas rack que el backend persiste en
+    // `observation_extras` (`activity_rack_adult` / `activity_rack_child`).
+    // Si están presentes, replicamos exactamente la fórmula del catálogo
+    // y mandamos `total_price` en el PATCH; si no, dejamos que el backend
+    // las backfillee y recompute (y la próxima edición ya será dinámica).
+    const patch: FileAADetailPatch = {
       observation_extras,
       observations: notesTrim ? notesTrim : null,
-    });
+    };
+    const rackAdult = this.coerceDecimalLike(prev['activity_rack_adult']);
+    const rackChild = this.coerceDecimalLike(prev['activity_rack_child']);
+    if (rackAdult !== null && rackChild !== null) {
+      const a = adults ?? 0;
+      const c = children ?? 0;
+      const days = Math.max(1, Number(d.days) || 1);
+      const daily = rackAdult * a + rackChild * c;
+      const total = daily * days;
+      // Normalizamos a dos decimales para evitar arrastrar ruido de coma
+      // flotante (p. ej. 0.1 + 0.2) en lo que se persiste.
+      patch.total_price = Number(total.toFixed(2));
+    }
+    this.patchFileDetail(d.id, patch);
+  }
+
+  /** Decimal-like → number, tolerando string/number/null/undefined. */
+  private coerceDecimalLike(v: unknown): number | null {
+    if (v === null || v === undefined || v === '') return null;
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
   }
 
   /** día/mes desde ISO YYYY-MM-DD (sin año), p. ej. 20/3 */
