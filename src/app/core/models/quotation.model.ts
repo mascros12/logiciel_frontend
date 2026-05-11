@@ -155,6 +155,7 @@ export interface FileAADetailRow {
 export interface FileAAWithDetails {
   id: string;
   quotation_id: string;
+  version_id?: string | null;
   name: string;
   notes: string | null;
   family_description: string | null;

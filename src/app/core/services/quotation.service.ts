@@ -155,6 +155,11 @@ export class QuotationService {
     return this.http.get<FileAAWithDetails>(`${this.url}/${quotationId}/file-aa/latest`);
   }
 
+  /** Ficha AA asociada a una versión específica (404 si no fue generada aún). */
+  getFileAAByVersion(quotationId: string, versionId: string) {
+    return this.http.get<FileAAWithDetails>(`${this.url}/${quotationId}/file-aa/version/${versionId}`);
+  }
+
   patchFileAADetail(detailId: string, body: FileAADetailPatch) {
     return this.http.patch<FileAADetailRow>(`${this.url}/details/${detailId}`, body);
   }
