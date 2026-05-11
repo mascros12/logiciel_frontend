@@ -1661,14 +1661,19 @@ export class QuotationDetail implements OnInit {
     return `Départ: ${dep} · Vol ${fdep}`;
   }
 
-  /** «Voiture de Location: NOMBRE» — vehículos no-Transfert con trim de paréntesis. */
+  /**
+   * «Voiture de Location: NOMBRE» — vehículos no-Transfert y no-Retour
+   * (trim al primer `(` o `/`). Espejo de
+   * `_vehicle_excluded_from_voiture_location` en el backend.
+   */
   fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
     const names: string[] = [];
     const seen = new Set<string>();
     for (const d of ficha.details) {
       if (d.category !== 'vehicle') continue;
-      if ((d.name || '').toLowerCase().includes('transfert')) continue;
+      const lname = (d.name || '').toLowerCase();
+      if (lname.includes('transfert') || lname.includes('retour')) continue;
       let n = (d.name || '').trim();
       const cuts = [n.indexOf('('), n.indexOf('/')].filter((i) => i >= 0);
       if (cuts.length > 0) {
