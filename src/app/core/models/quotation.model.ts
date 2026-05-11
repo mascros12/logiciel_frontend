@@ -124,6 +124,14 @@ export interface FileAADetailRow {
   observation_extras?: Record<string, unknown> | null;
   /** Gama del hotel en filas habitación (también en observation_extras.hotel_category) */
   hotel_category?: string | null;
+  /**
+   * Líneas «Service» ya formateadas por el backend con las mismas reglas
+   * que el export Word/PDF (hotel limitado al segmento entre el primer y
+   * segundo `/`, tipo de habitación en minúsculas con abreviaciones,
+   * vehículos con sufijo `(N jours)`, etc.). Calculado como
+   * `computed_field` en `FileAADetailResponse`.
+   */
+  display_service_lines?: string[];
   dates: string;
   date_from: string;
   date_to: string;

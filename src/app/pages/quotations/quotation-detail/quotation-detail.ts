@@ -1075,6 +1075,39 @@ export class QuotationDetail implements OnInit {
     return { hotel, roomLabel, twoLines: true };
   }
 
+  /**
+   * Líneas de la columna «Service» ya formateadas con las MISMAS reglas
+   * que aplican al export Word/PDF. Las calcula el backend en el
+   * `computed_field` `display_service_lines` de `FileAADetailResponse`
+   * (ver `app.services.ficha_aa_word.ficha_detail_service_lines`).
+   *
+   * Convenciones:
+   *   - room    → `[hotelLine, roomLine]` (o solo `[hotelLine]` si no
+   *               aplica el split en dos partes).
+   *   - vehicle → `[svcLine]` con sufijo `(N jour[s])`.
+   *   - activity / otro → `[svcLine]`.
+   *
+   * Fallback razonable cuando el backend no devolvió el campo (p. ej.
+   * cliente o cache antiguos): se usa `d.name` tal cual.
+   */
+  fichaDetailServiceLines(d: FileAADetailRow): string[] {
+    const lines = (d.display_service_lines ?? []).filter(
+      (s): s is string => typeof s === 'string' && s.trim().length > 0,
+    );
+    return lines.length > 0 ? lines : [(d.name ?? '').trim()];
+  }
+
+  /**
+   * Divide la línea de servicio de un vehículo en `{ main, suffix }`,
+   * donde `suffix` es el bloque ` (N jour[s])` que en el export Word/PDF
+   * va en negrita. Si no hay sufijo, `suffix` queda vacío.
+   */
+  fichaSplitVehicleJoursSuffix(line: string): { main: string; suffix: string } {
+    const m = /^(.*?)(\s*\(\s*\d+\s+jours?\s*\))\s*$/i.exec(line ?? '');
+    if (!m) return { main: (line ?? '').trim(), suffix: '' };
+    return { main: m[1].trim(), suffix: m[2].trim() };
+  }
+
   parseQuotationRoomDisplay(room: QuotationLine['rooms'][number]): {
     hotel: string;
     roomLabel: string;
