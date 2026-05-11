@@ -1008,13 +1008,42 @@
     .ficha-activity-pax-row {
       display: flex;
       flex-direction: row;
-      gap: 0.5rem;
-      align-items: flex-end;
+      gap: 0.3rem;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+
+    .ficha-activity-pax-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .ficha-activity-pax-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #475569;
+      line-height: 1;
+      cursor: help;
     }
 
     .ficha-activity-pax-input {
-      width: 4.5rem;
-      text-align: right;
+      width: 2.6rem;
+      padding-left: 0.3rem;
+      padding-right: 0.3rem;
+      text-align: center;
+
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        // Ocultamos los spinners nativos: a 2 dígitos no aportan y comen ancho.
+        appearance: none;
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      // Firefox.
+      appearance: textfield;
+      -moz-appearance: textfield;
     }
 
     .ficha-obs-label {

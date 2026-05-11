@@ -1172,8 +1172,13 @@
                             } @else if (d.category === 'activity') {
                               <div class="ficha-vehicle-obs">
                                 <div class="ficha-activity-pax-row">
-                                  <div class="ficha-obs-block ficha-obs-block--narrow">
-                                    <label class="ficha-obs-label" [attr.for]="'aa-aad-' + d.id">Adultos</label>
+                                  <div class="ficha-activity-pax-cell">
+                                    <label
+                                      class="ficha-activity-pax-label"
+                                      [attr.for]="'aa-aad-' + d.id"
+                                      pTooltip="Adultos"
+                                      tooltipPosition="top"
+                                    >A</label>
                                     <input
                                       pInputText
                                       type="number"
@@ -1185,8 +1190,13 @@
                                       (blur)="commitActivityFichaObs(d)"
                                     />
                                   </div>
-                                  <div class="ficha-obs-block ficha-obs-block--narrow">
-                                    <label class="ficha-obs-label" [attr.for]="'aa-ach-' + d.id">Niños</label>
+                                  <div class="ficha-activity-pax-cell">
+                                    <label
+                                      class="ficha-activity-pax-label"
+                                      [attr.for]="'aa-ach-' + d.id"
+                                      pTooltip="Niños"
+                                      tooltipPosition="top"
+                                    >N</label>
                                     <input
                                       pInputText
                                       type="number"
@@ -1198,8 +1208,13 @@
                                       (blur)="commitActivityFichaObs(d)"
                                     />
                                   </div>
-                                  <div class="ficha-obs-block ficha-obs-block--narrow">
-                                    <label class="ficha-obs-label" [attr.for]="'aa-afr-' + d.id">Gratuitos</label>
+                                  <div class="ficha-activity-pax-cell">
+                                    <label
+                                      class="ficha-activity-pax-label"
+                                      [attr.for]="'aa-afr-' + d.id"
+                                      pTooltip="Gratuitos"
+                                      tooltipPosition="top"
+                                    >G</label>
                                     <input
                                       pInputText
                                       type="number"
