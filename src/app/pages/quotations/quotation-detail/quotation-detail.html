@@ -658,7 +658,6 @@
                 <table class="ficha-aa-table">
                   <thead>
                     <tr>
-                      <th>#</th>
                       <th>Tipo</th>
                       <th>Edad (niño/a)</th>
                       <th></th>
@@ -667,7 +666,6 @@
                   <tbody>
                     @for (m of fichaFamilyRows(); track $index) {
                       <tr>
-                        <td>{{ $index + 1 }}</td>
                         <td>
                           <p-select
                             [options]="fichaRoleOptions"
@@ -726,7 +724,6 @@
                 <table class="ficha-aa-table">
                   <thead>
                     <tr>
-                      <th>#</th>
                       <th>Tipo</th>
                       <th>Cantidad</th>
                       <th></th>
@@ -735,7 +732,6 @@
                   <tbody>
                     @for (r of fichaRoomRows(); track $index) {
                       <tr>
-                        <td>{{ $index + 1 }}</td>
                         <td>
                           <p-select
                             [options]="fichaRoomTypeOptions"
@@ -852,11 +848,11 @@
                 />
                 @if (fichaFileAA()) {
                   <p-button
-                    label="Descargar Word"
+                    label="Descargar ODT"
                     icon="pi pi-download"
                     [outlined]="true"
                     [loading]="downloadingFichaWord()"
-                    (onClick)="downloadFichaAAWord()"
+                    (onClick)="downloadFichaAAOdt()"
                   />
                   <p-button
                     label="Descargar PDF"

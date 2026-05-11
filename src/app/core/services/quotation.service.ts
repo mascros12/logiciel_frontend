@@ -201,8 +201,8 @@ export class QuotationService {
     return this.http.patch<FileAAWithDetails>(`${this.url}/file-aa/${fileId}`, body);
   }
 
-  /** Documento Word con resumen y tabla de la Ficha AA (blob + cabecera para nombre de archivo). */
-  downloadFichaAAWord(fileId: string, generatedDisplay?: string) {
+  /** Documento LibreOffice ODT con resumen y tabla de la Ficha AA (blob + cabecera para nombre de archivo). */
+  downloadFichaAAOdt(fileId: string, generatedDisplay?: string) {
     const opts: { responseType: 'blob'; observe: 'response'; params?: HttpParams } = {
       responseType: 'blob',
       observe: 'response',
@@ -210,7 +210,7 @@ export class QuotationService {
     if (generatedDisplay) {
       opts.params = new HttpParams().set('generated_display', generatedDisplay);
     }
-    return this.http.get(`${this.url}/file-aa/${fileId}/word`, opts);
+    return this.http.get(`${this.url}/file-aa/${fileId}/odt`, opts);
   }
 
   /** PDF con resumen y tabla de la Ficha AA (blob + cabecera para nombre de archivo). */

@@ -2817,16 +2817,16 @@ export class QuotationDetail implements OnInit {
     return fallback;
   }
 
-  downloadFichaAAWord(): void {
+  downloadFichaAAOdt(): void {
     const f = this.fichaFileAA();
     if (!f?.id) return;
     this.downloadingFichaWord.set(true);
-    this.quotationService.downloadFichaAAWord(f.id, this.fichaExportGeneratedDisplayFr()).subscribe({
+    this.quotationService.downloadFichaAAOdt(f.id, this.fichaExportGeneratedDisplayFr()).subscribe({
       next: (res: HttpResponse<Blob>) => {
         this.downloadingFichaWord.set(false);
         const blob = res.body;
         if (!blob) {
-          this.messageService.add({ severity: 'error', summary: 'Error al generar Word' });
+          this.messageService.add({ severity: 'error', summary: 'Error al generar ODT' });
           return;
         }
         if (blob.type === 'application/json' || blob.size < 32) {
@@ -2835,10 +2835,10 @@ export class QuotationDetail implements OnInit {
               const j = JSON.parse(t) as { detail?: string };
               this.messageService.add({
                 severity: 'error',
-                summary: typeof j.detail === 'string' ? j.detail : 'Error al generar Word',
+                summary: typeof j.detail === 'string' ? j.detail : 'Error al generar ODT',
               });
             } catch {
-              this.messageService.add({ severity: 'error', summary: 'Error al generar Word' });
+              this.messageService.add({ severity: 'error', summary: 'Error al generar ODT' });
             }
           });
           return;
@@ -2848,7 +2848,7 @@ export class QuotationDetail implements OnInit {
         a.href = url;
         a.download = this.fileNameFromContentDisposition(
           res.headers.get('Content-Disposition'),
-          'Ficha_AA.docx',
+          'Ficha_AA.odt',
         );
         a.click();
         URL.revokeObjectURL(url);
@@ -2862,7 +2862,7 @@ export class QuotationDetail implements OnInit {
         this.downloadingFichaWord.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: 'No se pudo descargar el Word',
+          summary: 'No se pudo descargar el ODT',
         });
       },
     });
