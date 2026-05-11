@@ -1171,6 +1171,47 @@
                               </div>
                             } @else if (d.category === 'activity') {
                               <div class="ficha-vehicle-obs">
+                                <div class="ficha-activity-pax-row">
+                                  <div class="ficha-obs-block ficha-obs-block--narrow">
+                                    <label class="ficha-obs-label" [attr.for]="'aa-aad-' + d.id">Adultos</label>
+                                    <input
+                                      pInputText
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      [id]="'aa-aad-' + d.id"
+                                      class="ficha-cell-input ficha-activity-pax-input"
+                                      [(ngModel)]="ensureActivityFichaObsDraft(d).activity_adults"
+                                      (blur)="commitActivityFichaObs(d)"
+                                    />
+                                  </div>
+                                  <div class="ficha-obs-block ficha-obs-block--narrow">
+                                    <label class="ficha-obs-label" [attr.for]="'aa-ach-' + d.id">Niños</label>
+                                    <input
+                                      pInputText
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      [id]="'aa-ach-' + d.id"
+                                      class="ficha-cell-input ficha-activity-pax-input"
+                                      [(ngModel)]="ensureActivityFichaObsDraft(d).activity_children"
+                                      (blur)="commitActivityFichaObs(d)"
+                                    />
+                                  </div>
+                                  <div class="ficha-obs-block ficha-obs-block--narrow">
+                                    <label class="ficha-obs-label" [attr.for]="'aa-afr-' + d.id">Gratuitos</label>
+                                    <input
+                                      pInputText
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      [id]="'aa-afr-' + d.id"
+                                      class="ficha-cell-input ficha-activity-pax-input"
+                                      [(ngModel)]="ensureActivityFichaObsDraft(d).activity_free"
+                                      (blur)="commitActivityFichaObs(d)"
+                                    />
+                                  </div>
+                                </div>
                                 <div class="ficha-obs-block">
                                   <label class="ficha-obs-label" [attr.for]="'aa-apu-' + d.id">Pick up</label>
                                   <textarea

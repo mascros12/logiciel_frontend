@@ -2034,13 +2034,24 @@ export class QuotationDetail implements OnInit {
     const def: FileAADetailActivityObsState = {
       pickup_detail: '',
       ficha_horario: '',
+      activity_adults: null,
+      activity_children: null,
+      activity_free: null,
       notes,
+    };
+    const toIntOrNull = (v: unknown): number | null => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : null;
     };
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       const o = raw as Record<string, unknown>;
       return {
         pickup_detail: String(o['pickup_detail'] ?? ''),
         ficha_horario: String(o['ficha_horario'] ?? ''),
+        activity_adults: toIntOrNull(o['activity_adults']),
+        activity_children: toIntOrNull(o['activity_children']),
+        activity_free: toIntOrNull(o['activity_free']),
         notes: String(o['notes'] ?? notes),
       };
     }
@@ -2064,10 +2075,26 @@ export class QuotationDetail implements OnInit {
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
         ? { ...(d.observation_extras as Record<string, unknown>) }
         : {};
+    const toIntOrNull = (v: unknown): number | null => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : null;
+    };
+    const adults = toIntOrNull(row.activity_adults);
+    const children = toIntOrNull(row.activity_children);
+    const free = toIntOrNull(row.activity_free);
+    // Reflejamos en el draft el valor normalizado (entero o null) para
+    // que el input muestre exactamente lo que se persiste.
+    row.activity_adults = adults;
+    row.activity_children = children;
+    row.activity_free = free;
     const observation_extras = {
       ...prev,
       pickup_detail: row.pickup_detail,
       ficha_horario: (row.ficha_horario ?? '').trim(),
+      activity_adults: adults,
+      activity_children: children,
+      activity_free: free,
       notes: row.notes,
     };
     const notesTrim = row.notes.trim();

@@ -1000,6 +1000,23 @@
       gap: 0.5rem;
     }
 
+    .ficha-obs-block--narrow {
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+
+    .ficha-activity-pax-row {
+      display: flex;
+      flex-direction: row;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+
+    .ficha-activity-pax-input {
+      width: 4.5rem;
+      text-align: right;
+    }
+
     .ficha-obs-label {
       font-size: 0.72rem;
       font-weight: 600;

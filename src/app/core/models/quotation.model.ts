@@ -97,6 +97,12 @@ export interface FileAADetailActivityObsState {
   pickup_detail: string;
   /** Hora para export Word/PDF (columna fecha), p. ej. desde input type=time HH:MM */
   ficha_horario: string;
+  /** Adultos para el documento al proveedor de actividad (override por fila). */
+  activity_adults: number | null;
+  /** Menores para el documento al proveedor de actividad (override por fila). */
+  activity_children: number | null;
+  /** Gratuitos para el documento al proveedor de actividad (override por fila). */
+  activity_free: number | null;
   notes: string;
 }
 
