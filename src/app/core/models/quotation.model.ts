@@ -95,7 +95,7 @@ export interface FileAADetailVehicleObsState {
 /** Observaciones estructuradas en Ficha AA — filas categoría actividad */
 export interface FileAADetailActivityObsState {
   pickup_detail: string;
-  /** Hora para export Word/PDF (columna fecha), p. ej. desde input type=time HH:MM */
+  /** Hora para export Word/PDF (columna Service), texto libre p. ej. «9h30» o «14h00». */
   ficha_horario: string;
   /** Adultos para el documento al proveedor de actividad (override por fila). */
   activity_adults: number | null;

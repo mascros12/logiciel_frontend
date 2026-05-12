@@ -1102,6 +1102,13 @@
       color: #991b1b; // rojo bordeaux igual que en el PDF/Word
     }
 
+    // Fragmento `, XhMM` al final del nombre de las actividades: mismo
+    // rojo bordeaux que el tipo de habitación / la columna Net, para
+    // que la coma + hora resalten visualmente en HTML / PDF / Word.
+    .ficha-activity-time {
+      color: #991b1b;
+    }
+
     .ficha-cell-input {
       width: 100%;
       min-width: 4rem;
@@ -1127,6 +1134,13 @@
       padding: 0;
     }
 
+    .ficha-aa-table-summary-cell {
+      // Ancla del «Evaneos» / «Directo» absolute: la celda completa,
+      // para que el span se pegue al borde izquierdo real (y no al del
+      // bloque centrado interno con `max-width`).
+      position: relative;
+    }
+
     .ficha-aa-table-summary-inner {
       max-width: 48rem;
       margin: 0 auto;
@@ -1136,12 +1150,11 @@
       align-items: center;
       text-align: center;
       gap: 0.35rem;
-      position: relative; // ancla para el origen del contacto (esquina sup izq)
     }
 
     // «Evaneos» / «Directo» — esquina superior izquierda, negro y negrita.
-    // Colocado en posición absoluta para no interferir con el centrado del
-    // resto del bloque (igual que en el header del Word/PDF).
+    // Renderizado como hijo directo de la celda (no del bloque centrado),
+    // así queda completamente alineado al borde izquierdo de la columna.
     .ficha-aa-summary-source-fr {
       position: absolute;
       top: 0.5rem;

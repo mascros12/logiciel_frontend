@@ -1110,6 +1110,20 @@ export class QuotationDetail implements OnInit {
     return { main: m[1].trim(), suffix: m[2].trim() };
   }
 
+  /**
+   * Divide la línea de servicio de una actividad en `{ main, time }`,
+   * donde `time` es el sufijo ``", XhMM"`` (formato producido por el
+   * backend desde `observation_extras.ficha_horario`). En el HTML, el
+   * fragmento de hora se renderiza en rojo oscuro para que coincida
+   * con el render Word/PDF. Si no hay hora, `time` queda vacío y la
+   * línea se imprime tal cual.
+   */
+  fichaSplitActivityTimeSuffix(line: string): { main: string; time: string } {
+    const m = /^(.*?),\s*(\d{1,2}h\d{2})\s*$/i.exec(line ?? '');
+    if (!m) return { main: (line ?? '').trim(), time: '' };
+    return { main: m[1].trim(), time: m[2].trim() };
+  }
+
   parseQuotationRoomDisplay(room: QuotationLine['rooms'][number]): {
     hotel: string;
     roomLabel: string;
@@ -1555,6 +1569,20 @@ export class QuotationDetail implements OnInit {
     if (!raw) return '';
     const idx = raw.indexOf('/');
     return idx >= 0 ? raw.slice(0, idx).trim() : raw;
+  }
+
+  /**
+   * Nombre para el **título** de la Ficha AA en el header (replica
+   * `ficha_aa_export_title_name` del backend): aplica primero el
+   * recorte por `/` y, si el resultado tiene exactamente dos palabras
+   * separadas por espacios (típico `Apellido Nombre`), las invierte
+   * (`Nombre Apellido`). Cualquier otro caso se devuelve sin tocar.
+   */
+  fichaExportTitleNameFr(name: string | null | undefined): string {
+    const base = this.fichaExportDisplayNameFr(name);
+    const parts = base.split(/\s+/).filter((p) => p.length > 0);
+    if (parts.length === 2) return `${parts[1]} ${parts[0]}`;
+    return base;
   }
 
   private formatIsoDateFr(iso: string | null | undefined): string {
@@ -2048,7 +2076,7 @@ export class QuotationDetail implements OnInit {
       const o = raw as Record<string, unknown>;
       return {
         pickup_detail: String(o['pickup_detail'] ?? ''),
-        ficha_horario: String(o['ficha_horario'] ?? ''),
+        ficha_horario: this.normalizeFichaHorarioDisplay(String(o['ficha_horario'] ?? '')),
         activity_adults: toIntOrNull(o['activity_adults']),
         activity_children: toIntOrNull(o['activity_children']),
         activity_free: toIntOrNull(o['activity_free']),
@@ -2063,6 +2091,23 @@ export class QuotationDetail implements OnInit {
       this.activityFichaObsDraft[d.id] = { ...this.activityFichaObsFromServer(d) };
     }
     return this.activityFichaObsDraft[d.id];
+  }
+
+  /**
+   * Convierte valores legacy `HH:MM` (input type=time antiguo) al formato
+   * con «h» que prefieren en operaciones (`9h30`). El resto se deja tal
+   * cual (p. ej. «8h», «14h15», texto libre).
+   */
+  normalizeFichaHorarioDisplay(raw: string | null | undefined): string {
+    const s = String(raw ?? '').trim();
+    if (!s) return '';
+    const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+    if (m) {
+      const h = parseInt(m[1], 10);
+      const min = m[2];
+      return `${h}h${min}`;
+    }
+    return s;
   }
 
   commitActivityFichaObs(d: FileAADetailRow): void {
@@ -2088,10 +2133,12 @@ export class QuotationDetail implements OnInit {
     row.activity_adults = adults;
     row.activity_children = children;
     row.activity_free = free;
+    const horarioNorm = this.normalizeFichaHorarioDisplay(String(row.ficha_horario ?? ''));
+    row.ficha_horario = horarioNorm;
     const observation_extras = {
       ...prev,
       pickup_detail: row.pickup_detail,
-      ficha_horario: (row.ficha_horario ?? '').trim(),
+      ficha_horario: horarioNorm,
       activity_adults: adults,
       activity_children: children,
       activity_free: free,

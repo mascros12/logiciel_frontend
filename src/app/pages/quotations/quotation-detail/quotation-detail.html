@@ -905,13 +905,13 @@
                       </tr>
                       <tr class="ficha-aa-table-summary-row">
                         <td colspan="11" class="ficha-aa-table-summary-cell">
+                          @if (q.contact_source) {
+                            <span class="ficha-aa-summary-source-fr">{{ q.contact_source }}</span>
+                          }
                           <div class="ficha-aa-table-summary-inner">
-                            @if (q.contact_source) {
-                              <span class="ficha-aa-summary-source-fr">{{ q.contact_source }}</span>
-                            }
                             <br><br>
 
-                            <p class="ficha-aa-summary-title">{{ fichaExportDisplayNameFr(ficha.name) }}</p>
+                            <p class="ficha-aa-summary-title">{{ fichaExportTitleNameFr(ficha.name) }}</p>
 
                             @if (fichaSummaryDatesLineFr(ficha)) {
                               <div class="ficha-aa-summary-dates-fr">
@@ -1006,6 +1006,9 @@
                             } @else if (d.category === 'vehicle') {
                               @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
                               <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                            } @else if (d.category === 'activity') {
+                              @let actParts = fichaSplitActivityTimeSuffix(svcLines[0]);
+                              <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
                             } @else {
                               <span
                                 class="ficha-name"
@@ -1096,9 +1099,11 @@
                                 <div class="ficha-obs-block">
                                   <label class="ficha-obs-label" [attr.for]="'aa-ath-' + d.id">Hora</label>
                                   <input
-                                    type="time"
+                                    pInputText
+                                    type="text"
                                     [id]="'aa-ath-' + d.id"
                                     class="ficha-cell-input"
+                                    placeholder="Ej. 9h30"
                                     [(ngModel)]="ensureActivityFichaObsDraft(d).ficha_horario"
                                     (blur)="commitActivityFichaObs(d)"
                                   />
