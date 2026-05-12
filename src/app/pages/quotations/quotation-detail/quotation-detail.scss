@@ -1151,6 +1151,18 @@
       flex-shrink: 0;
     }
 
+    .ficha-name-edit-input--room {
+      border-color: #c0392b;
+      color: #c0392b;
+    }
+
+    .ficha-name-edit-days {
+      font-size: 0.85rem;
+      color: #374151;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
     .ficha-cell-input {
       width: 100%;
       min-width: 4rem;

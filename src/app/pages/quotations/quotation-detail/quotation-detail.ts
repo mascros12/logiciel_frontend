@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed, inject, DestroyRef } from '@angular/core';
 import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, of } from 'rxjs';
+import { Observable, of, forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -276,6 +276,7 @@ export class QuotationDetail implements OnInit {
   /** Edición inline del nombre en Ficha AA (file_aa_name del catálogo). */
   fichaNameEditDetailId = signal<string | null>(null);
   fichaNameEditValue = signal<string>('');
+  fichaNameEditValue2 = signal<string>('');
   savingFichaName = signal(false);
 
   constructor(
@@ -2048,7 +2049,34 @@ export class QuotationDetail implements OnInit {
 
   startFichaNameEdit(d: FileAADetailRow): void {
     this.fichaNameEditDetailId.set(d.id);
-    this.fichaNameEditValue.set(this._fichaNameEditInitial(d));
+    const extras = d.observation_extras as Record<string, unknown> | null | undefined;
+    if (d.category === 'room') {
+      // value = hotel name, value2 = room type
+      this.fichaNameEditValue.set(
+        (extras?.['hotel_file_aa_name'] as string) ||
+        (d.display_service_lines?.[0] ?? '')
+      );
+      this.fichaNameEditValue2.set(
+        (extras?.['room_file_aa_name'] as string) ||
+        (d.display_service_lines?.[1] ?? '')
+      );
+    } else if (d.category === 'vehicle') {
+      // Strip computed days suffix so the user only edits the name
+      const preComputed = (extras?.['vehicle_file_aa_name'] as string) || '';
+      if (preComputed) {
+        this.fichaNameEditValue.set(preComputed);
+      } else {
+        const line = d.display_service_lines?.[0] ?? '';
+        this.fichaNameEditValue.set(line.replace(/\s*\(\d+\s+jours?\)\s*$/i, '').trim());
+      }
+      this.fichaNameEditValue2.set('');
+    } else {
+      this.fichaNameEditValue.set(
+        (extras?.['activity_file_aa_name'] as string) ||
+        (d.display_service_lines?.[0] ?? '')
+      );
+      this.fichaNameEditValue2.set('');
+    }
   }
 
   cancelFichaNameEdit(): void {
@@ -2057,70 +2085,81 @@ export class QuotationDetail implements OnInit {
 
   confirmFichaNameEdit(d: FileAADetailRow, ficha: FileAAWithDetails): void {
     const newName = this.fichaNameEditValue().trim();
-    const current = this._fichaNameEditInitial(d);
-    if (!newName || newName === current) {
+    const newName2 = this.fichaNameEditValue2().trim();
+
+    if (!newName && !newName2) {
       this.cancelFichaNameEdit();
       return;
     }
+
     this.savingFichaName.set(true);
+    const prev =
+      d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+        ? { ...(d.observation_extras as Record<string, unknown>) }
+        : {};
 
-    const updateCatalogue$ = this._fichaNameCatalogueUpdate(d, newName);
-
-    updateCatalogue$.subscribe({
-      next: () => {
-        // Actualizar observation_extras en el FileAADetail para que el HTML
-        // refleje inmediatamente el nuevo nombre limpio.
-        const prev =
-          d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
-            ? { ...(d.observation_extras as Record<string, unknown>) }
-            : {};
-        const obsKey =
-          d.category === 'room' ? 'room_file_aa_name' :
-          d.category === 'activity' ? 'activity_file_aa_name' :
-          d.category === 'vehicle' ? 'vehicle_file_aa_name' : null;
-        if (!obsKey) {
-          this.savingFichaName.set(false);
-          this.fichaNameEditDetailId.set(null);
-          return;
-        }
-        const updated_extras = { ...prev, [obsKey]: newName };
-        this.quotationService.patchFileAADetail(d.id, { observation_extras: updated_extras }).subscribe({
-          next: (updated) => {
-            const idx = ficha.details.findIndex(r => r.id === d.id);
-            if (idx !== -1) {
-              ficha.details[idx] = { ...ficha.details[idx], ...updated };
-            }
-            this.savingFichaName.set(false);
-            this.fichaNameEditDetailId.set(null);
-          },
-          error: () => {
-            this.savingFichaName.set(false);
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el nombre en la ficha' });
-          },
-        });
-      },
-      error: () => {
-        this.savingFichaName.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el nombre en el catálogo' });
-      },
-    });
-  }
-
-  private _fichaNameEditInitial(d: FileAADetailRow): string {
-    const extras = d.observation_extras as Record<string, unknown> | null | undefined;
     if (d.category === 'room') {
-      return (extras?.['room_file_aa_name'] as string) ||
-        (d.display_service_lines?.[1] ?? d.display_service_lines?.[0] ?? '');
+      // Update hotel and room names independently, then patch obs_extras once
+      const hotelUpdate$: Observable<unknown> = (newName && d.catalogue_hotel_id)
+        ? this.hotelService.update(d.catalogue_hotel_id, { file_aa_name: newName })
+        : of(null);
+      const roomUpdate$: Observable<unknown> = (newName2 && d.catalogue_hotel_id && d.catalogue_room_id)
+        ? this.hotelService.updateRoom(d.catalogue_hotel_id, d.catalogue_room_id, { file_aa_name: newName2 })
+        : of(null);
+      forkJoin([hotelUpdate$, roomUpdate$]).subscribe({
+        next: () => {
+          const updated_extras = {
+            ...prev,
+            ...(newName ? { hotel_file_aa_name: newName } : {}),
+            ...(newName2 ? { room_file_aa_name: newName2 } : {}),
+          };
+          this.quotationService.patchFileAADetail(d.id, { observation_extras: updated_extras }).subscribe({
+            next: (updated) => {
+              const idx = ficha.details.findIndex(r => r.id === d.id);
+              if (idx !== -1) ficha.details[idx] = { ...ficha.details[idx], ...updated };
+              this.savingFichaName.set(false);
+              this.fichaNameEditDetailId.set(null);
+            },
+            error: () => {
+              this.savingFichaName.set(false);
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el nombre en la ficha' });
+            },
+          });
+        },
+        error: () => {
+          this.savingFichaName.set(false);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el nombre en el catálogo' });
+        },
+      });
+    } else {
+      // Activity or vehicle: single field
+      const obsKey =
+        d.category === 'activity' ? 'activity_file_aa_name' :
+        d.category === 'vehicle' ? 'vehicle_file_aa_name' : null;
+      const catalogueUpdate$ = this._fichaNameCatalogueUpdate(d, newName);
+      catalogueUpdate$.subscribe({
+        next: () => {
+          if (!obsKey) { this.savingFichaName.set(false); this.fichaNameEditDetailId.set(null); return; }
+          const updated_extras = { ...prev, [obsKey]: newName };
+          this.quotationService.patchFileAADetail(d.id, { observation_extras: updated_extras }).subscribe({
+            next: (updated) => {
+              const idx = ficha.details.findIndex(r => r.id === d.id);
+              if (idx !== -1) ficha.details[idx] = { ...ficha.details[idx], ...updated };
+              this.savingFichaName.set(false);
+              this.fichaNameEditDetailId.set(null);
+            },
+            error: () => {
+              this.savingFichaName.set(false);
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el nombre en la ficha' });
+            },
+          });
+        },
+        error: () => {
+          this.savingFichaName.set(false);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el nombre en el catálogo' });
+        },
+      });
     }
-    if (d.category === 'activity') {
-      return (extras?.['activity_file_aa_name'] as string) ||
-        (d.display_service_lines?.[0] ?? '');
-    }
-    if (d.category === 'vehicle') {
-      return (extras?.['vehicle_file_aa_name'] as string) ||
-        (d.display_service_lines?.[0] ?? '');
-    }
-    return d.display_service_lines?.[0] ?? d.name;
   }
 
   private _fichaNameCatalogueUpdate(d: FileAADetailRow, newName: string): Observable<unknown> {
@@ -2130,10 +2169,7 @@ export class QuotationDetail implements OnInit {
     if (d.category === 'activity' && d.catalogue_activity_id) {
       return this.activityService.update(d.catalogue_activity_id, { file_aa_name: newName });
     }
-    if (d.category === 'room' && d.catalogue_room_id && d.catalogue_hotel_id) {
-      return this.hotelService.updateRoom(d.catalogue_hotel_id, d.catalogue_room_id, { file_aa_name: newName });
-    }
-    // Sin ID de catálogo disponible: no-op observable
+    // Rooms are handled directly in confirmFichaNameEdit (hotel + room separately)
     return of(null);
   }
 

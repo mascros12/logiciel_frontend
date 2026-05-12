@@ -998,15 +998,51 @@
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
                             @if (fichaNameEditDetailId() === d.id) {
                               <div class="ficha-name-edit-wrap">
-                                <input
-                                  pInputText
-                                  class="ficha-name-edit-input"
-                                  [value]="fichaNameEditValue()"
-                                  (input)="fichaNameEditValue.set($any($event.target).value)"
-                                  (keydown.enter)="confirmFichaNameEdit(d, ficha)"
-                                  (keydown.escape)="cancelFichaNameEdit()"
-                                  autofocus
-                                />
+                                @if (d.category === 'room') {
+                                  <input
+                                    pInputText
+                                    class="ficha-name-edit-input"
+                                    placeholder="Nombre hotel"
+                                    [value]="fichaNameEditValue()"
+                                    (input)="fichaNameEditValue.set($any($event.target).value)"
+                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
+                                    (keydown.escape)="cancelFichaNameEdit()"
+                                    autofocus
+                                  />
+                                  <input
+                                    pInputText
+                                    class="ficha-name-edit-input ficha-name-edit-input--room"
+                                    placeholder="Tipo de habitación"
+                                    [value]="fichaNameEditValue2()"
+                                    (input)="fichaNameEditValue2.set($any($event.target).value)"
+                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
+                                    (keydown.escape)="cancelFichaNameEdit()"
+                                  />
+                                } @else if (d.category === 'vehicle') {
+                                  @let vSuffix = fichaSplitVehicleJoursSuffix(fichaDetailServiceLines(d)[0] ?? '').suffix;
+                                  <input
+                                    pInputText
+                                    class="ficha-name-edit-input"
+                                    [value]="fichaNameEditValue()"
+                                    (input)="fichaNameEditValue.set($any($event.target).value)"
+                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
+                                    (keydown.escape)="cancelFichaNameEdit()"
+                                    autofocus
+                                  />
+                                  @if (vSuffix) {
+                                    <span class="ficha-name-edit-days"><strong>{{ vSuffix }}</strong></span>
+                                  }
+                                } @else {
+                                  <input
+                                    pInputText
+                                    class="ficha-name-edit-input"
+                                    [value]="fichaNameEditValue()"
+                                    (input)="fichaNameEditValue.set($any($event.target).value)"
+                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
+                                    (keydown.escape)="cancelFichaNameEdit()"
+                                    autofocus
+                                  />
+                                }
                                 <button
                                   pButton
                                   icon="pi pi-check"
