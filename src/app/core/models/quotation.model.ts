@@ -130,6 +130,11 @@ export interface FileAADetailRow {
   observation_extras?: Record<string, unknown> | null;
   /** Gama del hotel en filas habitación (también en observation_extras.hotel_category) */
   hotel_category?: string | null;
+  /** IDs del registro de catálogo origen (para actualizar file_aa_name). */
+  catalogue_room_id?: string | null;
+  catalogue_hotel_id?: string | null;
+  catalogue_activity_id?: string | null;
+  catalogue_vehicle_id?: string | null;
   /**
    * Líneas «Service» ya formateadas por el backend con las mismas reglas
    * que el export Word/PDF (hotel limitado al segmento entre el primer y

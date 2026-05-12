@@ -996,26 +996,63 @@
                           <td [class.ficha-servicio-reemplazada]="d.row_status === 'red'">
                             @let svcLines = fichaDetailServiceLines(d);
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
-                            @if (d.category === 'room' && svcLines.length >= 2) {
-                              <span
-                                class="ficha-name ficha-name-room-two"
-                                [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
-                                [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
-                                [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
-                              ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,</span> <span class="ficha-room-type">{{ svcLines[1] }}</span></span>
-                            } @else if (d.category === 'vehicle') {
-                              @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
-                              <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
-                            } @else if (d.category === 'activity') {
-                              @let actParts = fichaSplitActivityTimeSuffix(svcLines[0]);
-                              <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
+                            @if (fichaNameEditDetailId() === d.id) {
+                              <div class="ficha-name-edit-wrap">
+                                <input
+                                  pInputText
+                                  class="ficha-name-edit-input"
+                                  [value]="fichaNameEditValue()"
+                                  (input)="fichaNameEditValue.set($any($event.target).value)"
+                                  (keydown.enter)="confirmFichaNameEdit(d, ficha)"
+                                  (keydown.escape)="cancelFichaNameEdit()"
+                                  autofocus
+                                />
+                                <button
+                                  pButton
+                                  icon="pi pi-check"
+                                  class="p-button-sm p-button-success ficha-name-edit-btn"
+                                  [loading]="savingFichaName()"
+                                  (click)="confirmFichaNameEdit(d, ficha)"
+                                  pTooltip="Guardar nombre"
+                                ></button>
+                                <button
+                                  pButton
+                                  icon="pi pi-times"
+                                  class="p-button-sm p-button-text ficha-name-edit-btn"
+                                  (click)="cancelFichaNameEdit()"
+                                  pTooltip="Cancelar"
+                                ></button>
+                              </div>
                             } @else {
-                              <span
-                                class="ficha-name"
-                                [class.pick-gama-high]="d.category === 'room' && fichaRoomHotelGama(d) === 'high'"
-                                [class.pick-gama-medium]="d.category === 'room' && fichaRoomHotelGama(d) === 'medium'"
-                                [class.pick-gama-low]="d.category === 'room' && fichaRoomHotelGama(d) === 'low'"
-                              >{{ svcLines[0] }}</span>
+                              @if (d.category === 'room' && svcLines.length >= 2) {
+                                <span
+                                  class="ficha-name ficha-name-room-two"
+                                  [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
+                                  [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
+                                  [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
+                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,</span> <span class="ficha-room-type">{{ svcLines[1] }}</span></span>
+                              } @else if (d.category === 'vehicle') {
+                                @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
+                                <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                              } @else if (d.category === 'activity') {
+                                @let actParts = fichaSplitActivityTimeSuffix(svcLines[0]);
+                                <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
+                              } @else {
+                                <span
+                                  class="ficha-name"
+                                  [class.pick-gama-high]="d.category === 'room' && fichaRoomHotelGama(d) === 'high'"
+                                  [class.pick-gama-medium]="d.category === 'room' && fichaRoomHotelGama(d) === 'medium'"
+                                  [class.pick-gama-low]="d.category === 'room' && fichaRoomHotelGama(d) === 'low'"
+                                >{{ svcLines[0] }}</span>
+                              }
+                              <button
+                                pButton
+                                icon="pi pi-pencil"
+                                class="p-button-rounded p-button-text p-button-sm ficha-name-edit-trigger"
+                                (click)="startFichaNameEdit(d)"
+                                pTooltip="Editar nombre para futuras fichas"
+                                tooltipPosition="top"
+                              ></button>
                             }
                           </td>
                           <td>

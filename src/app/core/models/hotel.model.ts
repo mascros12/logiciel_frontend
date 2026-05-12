@@ -10,6 +10,7 @@ export interface RoomSeason {
     id: string;
     hotel_id: string;
     name: string;
+    file_aa_name?: string | null;
     net_high_price: number | null;
     rack_high_price: number | null;
     net_medium_price: number | null;
@@ -29,6 +30,7 @@ export interface RoomSeason {
   export interface Hotel {
     id: string;
     name: string;
+    file_aa_name?: string | null;
     province: string | null;
     address: string | null;
     category: HotelCategory | null;
@@ -48,6 +50,7 @@ export interface RoomSeason {
   
   export interface HotelCreate {
     name: string;
+    file_aa_name?: string | null;
     province?: string;
     address?: string;
     category?: HotelCategory | null;
@@ -57,6 +60,7 @@ export interface RoomSeason {
   
   export interface RoomCreate {
     name: string;
+    file_aa_name?: string | null;
     net_high_price?: number;
     rack_high_price?: number;
     net_medium_price?: number;

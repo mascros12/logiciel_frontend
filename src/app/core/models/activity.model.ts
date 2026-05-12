@@ -12,6 +12,7 @@ export interface Activity {
   id: string;
   name: string;
   name_es: string;
+  file_aa_name?: string | null;
   province: string;
   address: string | null;
   category: string | null;
@@ -35,6 +36,7 @@ export interface ActivityListResponse {
 export interface ActivityCreate {
   name: string;
   name_es: string;
+  file_aa_name?: string | null;
   province: string;
   address?: string;
   category?: string;

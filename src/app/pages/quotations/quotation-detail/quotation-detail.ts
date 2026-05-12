@@ -1,6 +1,7 @@
 import { Component, OnInit, signal, computed, inject, DestroyRef } from '@angular/core';
 import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -28,6 +29,9 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { QuotationService } from '../../../core/services/quotation.service';
 import { ProviderService } from '../../../core/services/provider.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { HotelService } from '../../../core/services/hotel.service';
+import { ActivityService } from '../../../core/services/activity.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
 import {
   QuotationFull, QuotationVersion, QuotationLine,
   AddVehicleRequest, AddRoomRequest, AddActivityRequest,
@@ -269,6 +273,11 @@ export class QuotationDetail implements OnInit {
   savingFichaAddDetail = signal(false);
   showFichaColorPicker = signal(false);
 
+  /** Edición inline del nombre en Ficha AA (file_aa_name del catálogo). */
+  fichaNameEditDetailId = signal<string | null>(null);
+  fichaNameEditValue = signal<string>('');
+  savingFichaName = signal(false);
+
   constructor(
     private route: ActivatedRoute,
     private quotationService: QuotationService,
@@ -277,6 +286,9 @@ export class QuotationDetail implements OnInit {
     private fb: FormBuilder,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
+    private hotelService: HotelService,
+    private activityService: ActivityService,
+    private vehicleService: VehicleService,
   ) {
     this.vehicleForm = this.fb.group({
       vehicle:    [null, Validators.required],
@@ -2030,6 +2042,68 @@ export class QuotationDetail implements OnInit {
       this.vehicleFichaObsDraft[d.id] = { ...this.vehicleFichaObsFromServer(d) };
     }
     return this.vehicleFichaObsDraft[d.id];
+  }
+
+  // ── Edición inline de nombre (file_aa_name) ─────────────────────────────
+
+  startFichaNameEdit(d: FileAADetailRow): void {
+    this.fichaNameEditDetailId.set(d.id);
+    this.fichaNameEditValue.set(d.name);
+  }
+
+  cancelFichaNameEdit(): void {
+    this.fichaNameEditDetailId.set(null);
+  }
+
+  confirmFichaNameEdit(d: FileAADetailRow, ficha: FileAAWithDetails): void {
+    const newName = this.fichaNameEditValue().trim();
+    if (!newName || newName === d.name) {
+      this.cancelFichaNameEdit();
+      return;
+    }
+    this.savingFichaName.set(true);
+
+    const updateCatalogue$ = this._fichaNameCatalogueUpdate(d, newName);
+
+    updateCatalogue$.subscribe({
+      next: () => {
+        // Actualizar FileAADetail.name en el backend y en la UI local
+        this.quotationService.patchFileAADetail(d.id, { name: newName }).subscribe({
+          next: (updated) => {
+            const idx = ficha.details.findIndex(r => r.id === d.id);
+            if (idx !== -1) {
+              ficha.details[idx] = { ...ficha.details[idx], ...updated };
+            }
+            this.savingFichaName.set(false);
+            this.fichaNameEditDetailId.set(null);
+          },
+          error: () => {
+            this.savingFichaName.set(false);
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el nombre en la ficha' });
+          },
+        });
+      },
+      error: () => {
+        this.savingFichaName.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el nombre en el catálogo' });
+      },
+    });
+  }
+
+  private _fichaNameCatalogueUpdate(d: FileAADetailRow, newName: string) {
+    if (d.category === 'vehicle' && d.catalogue_vehicle_id) {
+      return this.vehicleService.update(d.catalogue_vehicle_id, { file_aa_name: newName });
+    }
+    if (d.category === 'activity' && d.catalogue_activity_id) {
+      // Para actividades, el file_aa_name almacena solo la parte base (sin el sufijo [A:x N:y])
+      const base = newName.split(' [A:')[0];
+      return this.activityService.update(d.catalogue_activity_id, { file_aa_name: base });
+    }
+    if (d.category === 'room' && d.catalogue_room_id && d.catalogue_hotel_id) {
+      return this.hotelService.updateRoom(d.catalogue_hotel_id, d.catalogue_room_id, { file_aa_name: newName });
+    }
+    // Sin ID de catálogo disponible: no-op observable
+    return of(null);
   }
 
   commitVehicleFichaObs(d: FileAADetailRow): void {
