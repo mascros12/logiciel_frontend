@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed, inject, DestroyRef } from '@angular/core';
 import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -2090,7 +2090,7 @@ export class QuotationDetail implements OnInit {
     });
   }
 
-  private _fichaNameCatalogueUpdate(d: FileAADetailRow, newName: string) {
+  private _fichaNameCatalogueUpdate(d: FileAADetailRow, newName: string): Observable<unknown> {
     if (d.category === 'vehicle' && d.catalogue_vehicle_id) {
       return this.vehicleService.update(d.catalogue_vehicle_id, { file_aa_name: newName });
     }
