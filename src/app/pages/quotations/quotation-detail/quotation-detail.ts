@@ -2048,7 +2048,7 @@ export class QuotationDetail implements OnInit {
 
   startFichaNameEdit(d: FileAADetailRow): void {
     this.fichaNameEditDetailId.set(d.id);
-    this.fichaNameEditValue.set(d.name);
+    this.fichaNameEditValue.set(this._fichaNameEditInitial(d));
   }
 
   cancelFichaNameEdit(): void {
@@ -2057,7 +2057,8 @@ export class QuotationDetail implements OnInit {
 
   confirmFichaNameEdit(d: FileAADetailRow, ficha: FileAAWithDetails): void {
     const newName = this.fichaNameEditValue().trim();
-    if (!newName || newName === d.name) {
+    const current = this._fichaNameEditInitial(d);
+    if (!newName || newName === current) {
       this.cancelFichaNameEdit();
       return;
     }
@@ -2067,8 +2068,23 @@ export class QuotationDetail implements OnInit {
 
     updateCatalogue$.subscribe({
       next: () => {
-        // Actualizar FileAADetail.name en el backend y en la UI local
-        this.quotationService.patchFileAADetail(d.id, { name: newName }).subscribe({
+        // Actualizar observation_extras en el FileAADetail para que el HTML
+        // refleje inmediatamente el nuevo nombre limpio.
+        const prev =
+          d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+            ? { ...(d.observation_extras as Record<string, unknown>) }
+            : {};
+        const obsKey =
+          d.category === 'room' ? 'room_file_aa_name' :
+          d.category === 'activity' ? 'activity_file_aa_name' :
+          d.category === 'vehicle' ? 'vehicle_file_aa_name' : null;
+        if (!obsKey) {
+          this.savingFichaName.set(false);
+          this.fichaNameEditDetailId.set(null);
+          return;
+        }
+        const updated_extras = { ...prev, [obsKey]: newName };
+        this.quotationService.patchFileAADetail(d.id, { observation_extras: updated_extras }).subscribe({
           next: (updated) => {
             const idx = ficha.details.findIndex(r => r.id === d.id);
             if (idx !== -1) {
@@ -2090,14 +2106,29 @@ export class QuotationDetail implements OnInit {
     });
   }
 
+  private _fichaNameEditInitial(d: FileAADetailRow): string {
+    const extras = d.observation_extras as Record<string, unknown> | null | undefined;
+    if (d.category === 'room') {
+      return (extras?.['room_file_aa_name'] as string) ||
+        (d.display_service_lines?.[1] ?? d.display_service_lines?.[0] ?? '');
+    }
+    if (d.category === 'activity') {
+      return (extras?.['activity_file_aa_name'] as string) ||
+        (d.display_service_lines?.[0] ?? '');
+    }
+    if (d.category === 'vehicle') {
+      return (extras?.['vehicle_file_aa_name'] as string) ||
+        (d.display_service_lines?.[0] ?? '');
+    }
+    return d.display_service_lines?.[0] ?? d.name;
+  }
+
   private _fichaNameCatalogueUpdate(d: FileAADetailRow, newName: string): Observable<unknown> {
     if (d.category === 'vehicle' && d.catalogue_vehicle_id) {
       return this.vehicleService.update(d.catalogue_vehicle_id, { file_aa_name: newName });
     }
     if (d.category === 'activity' && d.catalogue_activity_id) {
-      // Para actividades, el file_aa_name almacena solo la parte base (sin el sufijo [A:x N:y])
-      const base = newName.split(' [A:')[0];
-      return this.activityService.update(d.catalogue_activity_id, { file_aa_name: base });
+      return this.activityService.update(d.catalogue_activity_id, { file_aa_name: newName });
     }
     if (d.category === 'room' && d.catalogue_room_id && d.catalogue_hotel_id) {
       return this.hotelService.updateRoom(d.catalogue_hotel_id, d.catalogue_room_id, { file_aa_name: newName });
