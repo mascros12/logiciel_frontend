@@ -967,10 +967,10 @@ export class QuotationDetail implements OnInit {
     this.saving.set(true);
 
     const contactBody: Record<string, unknown> = {
-      source: raw.source || null,
-      budget: raw.budget || null,
-      traveller_type: raw.traveller_type || null,
-      ritm: raw.ritm || null,
+      source: raw.source ?? null,
+      budget: raw.budget ?? null,
+      traveller_type: raw.traveller_type ?? null,
+      ritm: raw.ritm ?? null,
     };
 
     const finalize = () => {
@@ -980,12 +980,19 @@ export class QuotationDetail implements OnInit {
       this.load(q.id);
     };
 
-    this.quotationService.update(q.id, body).subscribe({
+    this.quotationService.update(q.id, body as any).subscribe({
       next: () => {
         if (q.contact_id) {
           this.contactService.update(q.contact_id, contactBody as any).subscribe({
             next: () => finalize(),
-            error: () => finalize(),
+            error: (err) => {
+              this.saving.set(false);
+              this.messageService.add({
+                severity: 'error',
+                summary: err.error?.detail ?? 'Error al actualizar datos del contacto',
+              });
+              this.load(q.id);
+            },
           });
         } else {
           finalize();
@@ -1663,18 +1670,27 @@ export class QuotationDetail implements OnInit {
 
   fichaHeaderChecklistLine(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
-    const prefixes = ['fecha especial', 'persona con discapacidad', 'alergia', 'allergie', 'allergy'];
+    const matchPrefixes = ['fecha especial', 'persona con discapacidad', 'alergia', 'allergie', 'allergy'];
+    const stripPrefixes = ['fecha especial:', 'fecha especial'];
     const seen = new Set<string>();
     const items: string[] = [];
     for (const d of ficha.details) {
       if (d.row_status === 'red') continue;
       for (const ln of (d.observations || '').split('\n')) {
-        const s = ln.trim();
+        let s = ln.trim();
         if (!s) continue;
         const low = s.toLowerCase();
-        if (!prefixes.some((p) => low.startsWith(p))) continue;
-        if (seen.has(low)) continue;
-        seen.add(low);
+        if (!matchPrefixes.some((p) => low.startsWith(p))) continue;
+        for (const sp of stripPrefixes) {
+          if (low.startsWith(sp)) {
+            const rest = s.slice(sp.length).trim();
+            if (rest) s = rest;
+            break;
+          }
+        }
+        const key = s.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
         items.push(s);
       }
     }

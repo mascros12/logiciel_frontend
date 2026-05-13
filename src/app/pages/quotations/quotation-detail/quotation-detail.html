@@ -928,14 +928,6 @@
                             <br><br>
 
                             <p class="ficha-aa-summary-title">{{ fichaExportTitleNameFr(ficha.name) }}</p>
-                            @let checklistLn = fichaHeaderChecklistLine(ficha);
-                            @if (checklistLn) {
-                              <p class="ficha-aa-summary-checklist-fr">{{ checklistLn }}</p>
-                            }
-                            @let versionLbl = fichaVersionLabel(ficha, q);
-                            @if (versionLbl) {
-                              <p class="ficha-aa-summary-version-fr">{{ versionLbl }}</p>
-                            }
 
                             @if (fichaSummaryDatesLineFr(ficha)) {
                               <div class="ficha-aa-summary-dates-fr">
@@ -956,6 +948,14 @@
                             @let compChambresFr = fichaCompositionAndChambresLineFr(ficha);
                             @if (compChambresFr) {
                               <p class="ficha-aa-summary-family-fr">{{ compChambresFr }}</p>
+                            }
+                            @let checklistLn = fichaHeaderChecklistLine(ficha);
+                            @if (checklistLn) {
+                              <p class="ficha-aa-summary-checklist-fr">{{ checklistLn }}</p>
+                            }
+                            @let versionLbl = fichaVersionLabel(ficha, q);
+                            @if (versionLbl) {
+                              <p class="ficha-aa-summary-version-fr">{{ versionLbl }}</p>
                             }
 
                             <p class="ficha-aa-summary-flight-fr">{{ fichaArrivalLineFr(q) }}</p>
