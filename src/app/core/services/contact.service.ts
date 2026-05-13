@@ -12,4 +12,8 @@ export class ContactService {
   create(body: ContactCreate) {
     return this.http.post<Contact>(this.url, body);
   }
+
+  update(id: string, body: Partial<ContactCreate>) {
+    return this.http.patch<Contact>(`${this.url}/${id}`, body);
+  }
 }

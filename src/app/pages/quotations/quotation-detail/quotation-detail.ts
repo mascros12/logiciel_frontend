@@ -32,6 +32,8 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { HotelService } from '../../../core/services/hotel.service';
 import { ActivityService } from '../../../core/services/activity.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { ContactService } from '../../../core/services/contact.service';
+import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import {
   QuotationFull, QuotationVersion, QuotationLine,
   AddVehicleRequest, AddRoomRequest, AddActivityRequest,
@@ -279,6 +281,25 @@ export class QuotationDetail implements OnInit {
   fichaNameEditValue2 = signal<string>('');
   savingFichaName = signal(false);
 
+  sourceOptions: { label: string; value: ContactSource }[] = [
+    { label: 'Evaneos', value: 'Evaneos' },
+    { label: 'Directo', value: 'Directo' },
+  ];
+  budgetOptions: { label: string; value: ContactBudget }[] = [
+    { label: 'Básico', value: 'Básico' },
+    { label: 'Normal', value: 'Normal' },
+    { label: 'Alto', value: 'Alto' },
+  ];
+  travellerTypeOptions: { label: string; value: TravellerType }[] = [
+    { label: 'Aventurero', value: 'Aventurero' },
+    { label: 'Cauteloso', value: 'Cauteloso' },
+  ];
+  ritmOptions: { label: string; value: Ritm }[] = [
+    { label: '2 noches por etapa', value: '2 noches por etapa' },
+    { label: '1 noche por etapa', value: '1 noche por etapa' },
+    { label: 'Otro', value: 'Otro' },
+  ];
+
   constructor(
     private route: ActivatedRoute,
     private quotationService: QuotationService,
@@ -290,6 +311,7 @@ export class QuotationDetail implements OnInit {
     private hotelService: HotelService,
     private activityService: ActivityService,
     private vehicleService: VehicleService,
+    private contactService: ContactService,
   ) {
     this.vehicleForm = this.fb.group({
       vehicle:    [null, Validators.required],
@@ -335,6 +357,10 @@ export class QuotationDetail implements OnInit {
       flight_number_departure: [''],
       commission: [1.92],
       shared: [false],
+      source: [null],
+      budget: [null],
+      traveller_type: [null],
+      ritm: [null],
     });
 
     // Cargar habitaciones al elegir hotel (más fiable que onChange de p-select en PrimeNG 21)
@@ -910,6 +936,10 @@ export class QuotationDetail implements OnInit {
       flight_number_departure: q.flight_number_departure ?? '',
       commission: q.commission ?? 1.92,
       shared: q.shared ?? false,
+      source: q.contact_source ?? null,
+      budget: q.contact_budget ?? null,
+      traveller_type: q.contact_traveller_type ?? null,
+      ritm: q.contact_ritm ?? null,
     });
     this.showEdit.set(true);
   }
@@ -935,12 +965,31 @@ export class QuotationDetail implements OnInit {
       body['commission'] = raw.commission;
     }
     this.saving.set(true);
+
+    const contactBody: Record<string, unknown> = {
+      source: raw.source || null,
+      budget: raw.budget || null,
+      traveller_type: raw.traveller_type || null,
+      ritm: raw.ritm || null,
+    };
+
+    const finalize = () => {
+      this.showEdit.set(false);
+      this.saving.set(false);
+      this.messageService.add({ severity: 'success', summary: 'Cotización actualizada' });
+      this.load(q.id);
+    };
+
     this.quotationService.update(q.id, body).subscribe({
       next: () => {
-        this.showEdit.set(false);
-        this.saving.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Cotización actualizada' });
-        this.load(q.id);
+        if (q.contact_id) {
+          this.contactService.update(q.contact_id, contactBody as any).subscribe({
+            next: () => finalize(),
+            error: () => finalize(),
+          });
+        } else {
+          finalize();
+        }
       },
       error: (err) => {
         this.saving.set(false);
@@ -1598,6 +1647,40 @@ export class QuotationDetail implements OnInit {
     return base;
   }
 
+  fichaVersionLabel(ficha: FileAAWithDetails, q: QuotationFull): string {
+    const vid = ficha.version_id;
+    let vn: number | null = null;
+    if (vid && q.versions?.length) {
+      const found = q.versions.find((v) => v.id === vid);
+      if (found) vn = found.version_number;
+    }
+    if (vn == null) {
+      vn = q.versions?.find((v) => v.is_current)?.version_number ?? null;
+    }
+    if (vn == null) return '';
+    return vn === 1 ? 'Programme' : `Modif ${vn}`;
+  }
+
+  fichaHeaderChecklistLine(ficha: FileAAWithDetails): string {
+    if (!ficha.details?.length) return '';
+    const prefixes = ['fecha especial', 'persona con discapacidad', 'alergia', 'allergie', 'allergy'];
+    const seen = new Set<string>();
+    const items: string[] = [];
+    for (const d of ficha.details) {
+      if (d.row_status === 'red') continue;
+      for (const ln of (d.observations || '').split('\n')) {
+        const s = ln.trim();
+        if (!s) continue;
+        const low = s.toLowerCase();
+        if (!prefixes.some((p) => low.startsWith(p))) continue;
+        if (seen.has(low)) continue;
+        seen.add(low);
+        items.push(s);
+      }
+    }
+    return items.join(' · ');
+  }
+
   private formatIsoDateFr(iso: string | null | undefined): string {
     if (!iso) return '';
     const d = new Date(iso + 'T12:00:00');
@@ -1716,7 +1799,7 @@ export class QuotationDetail implements OnInit {
     for (const d of ficha.details) {
       if (d.category !== 'vehicle') continue;
       const lname = (d.name || '').toLowerCase();
-      if (lname.includes('transfert') || lname.includes('retour')) continue;
+      if (lname.includes('transfert') || lname.includes('retour') || lname.includes('taxi')) continue;
       let n = (d.name || '').trim();
       const cuts = [n.indexOf('('), n.indexOf('/')].filter((i) => i >= 0);
       if (cuts.length > 0) {
@@ -2809,27 +2892,12 @@ export class QuotationDetail implements OnInit {
 
   private checklistLinesForCategory(cat: string): string[] {
     const lines: string[] = [];
-    const disability = this.fichaDisabilityInfo().trim();
     if (cat === 'room') {
       if (this.fichaNeedBabyBed()) lines.push('Cama para bebés');
-      if (this.fichaHasSpecialDate()) {
-        const special = this.fichaSpecialDate().trim();
-        lines.push(special ? `Fecha Especial: ${special}` : 'Fecha Especial');
-      }
       if (this.fichaNeedAC()) lines.push('Aire acondicionado');
       if (this.fichaNeedConnectingRooms()) lines.push('Habitaciones communicante');
-      if (this.fichaHasDisability()) {
-        lines.push(disability ? `Persona con discapacidad: ${disability}` : 'Persona con discapacidad');
-      }
-    } else if (cat === 'activity') {
-      if (this.fichaHasDisability()) {
-        lines.push(disability ? `Persona con discapacidad: ${disability}` : 'Persona con discapacidad');
-      }
     } else if (cat === 'vehicle') {
       if (this.fichaNeedBabyChairs()) lines.push('Sillas para bebés');
-      if (this.fichaHasDisability()) {
-        lines.push(disability ? `Persona con discapacidad: ${disability}` : 'Persona con discapacidad');
-      }
     }
     return lines;
   }

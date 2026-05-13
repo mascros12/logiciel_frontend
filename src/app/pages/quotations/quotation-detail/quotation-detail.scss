@@ -43,6 +43,24 @@
       color: var(--p-text-muted-color);
       i { font-size: 0.925rem; }
     }
+
+    .contact-summary-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1rem;
+      list-style: none;
+      margin: 0.35rem 0 0;
+      padding: 0;
+      font-size: 0.875rem;
+      color: var(--p-text-muted-color);
+
+      li {
+        strong {
+          font-weight: 600;
+          color: var(--p-text-color);
+        }
+      }
+    }
   
     .header-right {
       flex: 1;
@@ -1262,11 +1280,26 @@
     }
 
     .ficha-aa-summary-title {
-      margin: 0 0 0.35rem;
+      margin: 0 0 0.15rem;
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: 0.01em;
       color: #0f172a;
+    }
+
+    .ficha-aa-summary-checklist-fr {
+      margin: 0 0 0.15rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #991B1B;
+      text-align: center;
+    }
+
+    .ficha-aa-summary-version-fr {
+      margin: 0 0 0.35rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #166534;
     }
 
     // Línea «Du DD/MM/AAAA au DD/MM/AAAA» con la fecha límite (-30d) a la derecha

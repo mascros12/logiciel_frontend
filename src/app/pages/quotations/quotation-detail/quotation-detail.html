@@ -33,6 +33,22 @@
           </span>
         }
       </div>
+      @if (q.contact_source || q.contact_budget || q.contact_traveller_type || q.contact_ritm) {
+        <ul class="contact-summary-list">
+          @if (q.contact_source) {
+            <li><strong>Origen:</strong> {{ q.contact_source }}</li>
+          }
+          @if (q.contact_budget) {
+            <li><strong>Presupuesto:</strong> {{ q.contact_budget }}</li>
+          }
+          @if (q.contact_traveller_type) {
+            <li><strong>Tipo de viajero:</strong> {{ q.contact_traveller_type }}</li>
+          }
+          @if (q.contact_ritm) {
+            <li><strong>Ritmo:</strong> {{ q.contact_ritm }}</li>
+          }
+        </ul>
+      }
       @if (q.notes?.trim()) {
         <p class="version-notes-hint">
           <span class="version-notes-label">Notas internas</span>
@@ -912,6 +928,14 @@
                             <br><br>
 
                             <p class="ficha-aa-summary-title">{{ fichaExportTitleNameFr(ficha.name) }}</p>
+                            @let checklistLn = fichaHeaderChecklistLine(ficha);
+                            @if (checklistLn) {
+                              <p class="ficha-aa-summary-checklist-fr">{{ checklistLn }}</p>
+                            }
+                            @let versionLbl = fichaVersionLabel(ficha, q);
+                            @if (versionLbl) {
+                              <p class="ficha-aa-summary-version-fr">{{ versionLbl }}</p>
+                            }
 
                             @if (fichaSummaryDatesLineFr(ficha)) {
                               <div class="ficha-aa-summary-dates-fr">
@@ -1066,7 +1090,7 @@
                                   [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
                                   [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
                                   [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
-                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,</span> <span class="ficha-room-type">{{ svcLines[1] }}</span></span>
+                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (ensureHotelFichaObsDraft(d).room_quantity) {{{ ensureHotelFichaObsDraft(d).room_quantity }} }{{ svcLines[1] }}</span></span>
                               } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
                                 <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
@@ -2173,6 +2197,62 @@
       <div class="field flex items-center pt-6">
         <p-checkbox formControlName="shared" [binary]="true" inputId="edit-shared" />
         <label for="edit-shared" class="ml-2">Compartida</label>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Origen</label>
+        <p-select
+          formControlName="source"
+          [options]="sourceOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+          [showClear]="true"
+        />
+      </div>
+      <div class="field">
+        <label>Presupuesto</label>
+        <p-select
+          formControlName="budget"
+          [options]="budgetOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+          [showClear]="true"
+        />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Tipo de viajero</label>
+        <p-select
+          formControlName="traveller_type"
+          [options]="travellerTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+          [showClear]="true"
+        />
+      </div>
+      <div class="field">
+        <label>Ritmo</label>
+        <p-select
+          formControlName="ritm"
+          [options]="ritmOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+          [showClear]="true"
+        />
       </div>
     </div>
   </form>
