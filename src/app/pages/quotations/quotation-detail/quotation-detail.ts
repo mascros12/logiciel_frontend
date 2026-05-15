@@ -1182,10 +1182,11 @@ export class QuotationDetail implements OnInit {
   /**
    * Divide la línea de servicio de una actividad en `{ main, time }`,
    * donde `time` es el sufijo ``", XhMM"`` (formato producido por el
-   * backend desde `observation_extras.ficha_horario`). En el HTML, el
-   * fragmento de hora se renderiza en rojo oscuro para que coincida
-   * con el render Word/PDF. Si no hay hora, `time` queda vacío y la
-   * línea se imprime tal cual.
+   * backend desde `observation_extras.ficha_horario`). Puede ir prefijo
+   * ``Proveedor - `` delante del nombre. En el HTML, el fragmento de
+   * hora se renderiza en rojo oscuro para que coincida con el render
+   * Word/PDF. Si no hay hora, `time` queda vacío y la línea se imprime
+   * tal cual.
    */
   fichaSplitActivityTimeSuffix(line: string): { main: string; time: string } {
     const m = /^(.*?),\s*(\d{1,2}h\d{2})\s*$/i.exec(line ?? '');
