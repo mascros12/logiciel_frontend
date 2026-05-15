@@ -16,6 +16,7 @@ export interface Activity {
   province: string;
   address: string | null;
   category: string | null;
+  provider?: string | null;
   commission: number;
   net_adult_price: number;
   rack_adult_price: number;
@@ -40,6 +41,7 @@ export interface ActivityCreate {
   province: string;
   address?: string;
   category?: string;
+  provider?: string | null;
   commission?: number;
   net_adult_price: number;
   rack_adult_price: number;

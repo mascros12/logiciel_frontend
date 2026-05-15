@@ -72,6 +72,7 @@ export class ActivityList implements OnInit {
       province: [null],
       address: [''],
       category: [''],
+      provider: [''],
       commission: [1.92],
       reservation_email: [''],
       net_adult_price: [0, Validators.required],
@@ -110,6 +111,7 @@ export class ActivityList implements OnInit {
       net_child_price: 0,
       rack_child_price: 0,
       reservation_email: '',
+      provider: '',
     });
     this.showDialog.set(true);
   }
@@ -148,6 +150,7 @@ export class ActivityList implements OnInit {
       province: activity.province,
       address: activity.address,
       category: activity.category,
+      provider: activity.provider ?? '',
       commission: activity.commission,
       reservation_email: activity.reservation_email ?? '',
       net_adult_price: activity.net_adult_price,
@@ -162,9 +165,16 @@ export class ActivityList implements OnInit {
     if (this.form.invalid) return;
     this.saving.set(true);
   
-    const val = this.form.getRawValue(); // ← getRawValue incluye disabled
+    const raw = this.form.getRawValue();
     const id = this.editingId();
-  
+    const val = {
+      ...raw,
+      provider:
+        raw.provider != null && String(raw.provider).trim() !== ''
+          ? String(raw.provider).trim()
+          : null,
+    };
+
     const request = id
       ? this.activityService.update(id, val)
       : this.activityService.create(val);
