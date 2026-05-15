@@ -20,7 +20,7 @@ export interface Contact {
 export interface ContactCreate {
   full_name: string;
   email?: string;
-  source?: ContactSource;
+  source: ContactSource;
   budget?: ContactBudget;
   traveller_type?: TravellerType;
   ritm?: Ritm;

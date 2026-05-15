@@ -98,7 +98,7 @@ export class QuotationList implements OnInit {
       commission: [1.92],
       // Contacto
       email: [''],
-      source: [null],
+      source: [null, Validators.required],
       budget: [null],
       traveller_type: [null],
       ritm: [null],
@@ -137,7 +137,17 @@ export class QuotationList implements OnInit {
   }
 
   submitCreate() {
-    if (this.createForm.invalid) return;
+    if (this.createForm.invalid) {
+      this.createForm.markAllAsTouched();
+      if (this.createForm.get('source')?.invalid) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Origen obligatorio',
+          detail: 'Seleccione Evaneos o Directo.',
+        });
+      }
+      return;
+    }
     this.creating.set(true);
   
     const val = this.createForm.value;
@@ -146,7 +156,7 @@ export class QuotationList implements OnInit {
     this.contactService.create({
       full_name: val.name,
       email: val.email || undefined,
-      source: val.source || undefined,
+      source: val.source,
       budget: val.budget || undefined,
       traveller_type: val.traveller_type || undefined,
       ritm: val.ritm || undefined,
