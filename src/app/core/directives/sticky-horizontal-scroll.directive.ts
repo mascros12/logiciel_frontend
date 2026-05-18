@@ -7,9 +7,8 @@ import {
 } from '@angular/core';
 
 /**
- * Mantiene una barra de scroll horizontal fija al pie del viewport cuando la tabla
- * es más ancha que el contenedor y el scroll nativo quedaría fuera de pantalla.
- * El scroll vertical de la página no se modifica.
+ * Barra de scroll horizontal fija al pie del viewport cuando la tabla desborda
+ * y su scroll nativo quedaría fuera de pantalla. El scroll vertical no cambia.
  */
 @Directive({
   selector: '[appStickyHorizontalScroll]',
@@ -21,13 +20,22 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
   private track: HTMLDivElement | null = null;
   private trackInner: HTMLDivElement | null = null;
   private ro: ResizeObserver | null = null;
+  private rafId = 0;
   private syncing = false;
   private visible = false;
+  private trackDragging = false;
+  private lastContentWidth = 0;
 
-  private readonly onWindowScroll = () => this.refresh();
-  private readonly onWindowResize = () => this.refresh();
+  private readonly onWindowScroll = () => this.scheduleLayout();
+  private readonly onWindowResize = () => this.scheduleLayout();
   private readonly onHostScroll = () => this.syncHostToTrack();
   private readonly onTrackScroll = () => this.syncTrackToHost();
+  private readonly onTrackPointerDown = () => {
+    this.trackDragging = true;
+  };
+  private readonly onTrackPointerUp = () => {
+    this.trackDragging = false;
+  };
 
   ngAfterViewInit(): void {
     const host = this.hostRef.nativeElement;
@@ -42,29 +50,54 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
     document.body.appendChild(this.track);
 
     this.track.addEventListener('scroll', this.onTrackScroll, { passive: true });
+    this.track.addEventListener('pointerdown', this.onTrackPointerDown);
+    this.track.addEventListener('pointerup', this.onTrackPointerUp);
+    this.track.addEventListener('pointercancel', this.onTrackPointerUp);
+    this.track.addEventListener('lostpointercapture', this.onTrackPointerUp);
+
     host.addEventListener('scroll', this.onHostScroll, { passive: true });
-    window.addEventListener('scroll', this.onWindowScroll, { passive: true, capture: true });
+    window.addEventListener('scroll', this.onWindowScroll, { passive: true });
     window.addEventListener('resize', this.onWindowResize, { passive: true });
 
-    this.ro = new ResizeObserver(() => this.refresh());
+    this.ro = new ResizeObserver(() => this.scheduleLayout());
     this.ro.observe(host);
     const table = host.querySelector('table');
     if (table) {
       this.ro.observe(table);
     }
 
-    queueMicrotask(() => this.refresh());
+    this.scheduleLayout();
   }
 
   ngOnDestroy(): void {
     const host = this.hostRef.nativeElement;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
     host.removeEventListener('scroll', this.onHostScroll);
-    window.removeEventListener('scroll', this.onWindowScroll, true);
+    window.removeEventListener('scroll', this.onWindowScroll);
     window.removeEventListener('resize', this.onWindowResize);
     this.ro?.disconnect();
     this.track?.removeEventListener('scroll', this.onTrackScroll);
+    this.track?.removeEventListener('pointerdown', this.onTrackPointerDown);
+    this.track?.removeEventListener('pointerup', this.onTrackPointerUp);
+    this.track?.removeEventListener('pointercancel', this.onTrackPointerUp);
+    this.track?.removeEventListener('lostpointercapture', this.onTrackPointerUp);
     this.track?.remove();
     host.classList.remove('sticky-h-scroll-host', 'sticky-h-scroll-host--mirror');
+  }
+
+  private scheduleLayout(): void {
+    if (this.trackDragging) {
+      return;
+    }
+    if (this.rafId) {
+      return;
+    }
+    this.rafId = requestAnimationFrame(() => {
+      this.rafId = 0;
+      this.updateLayout();
+    });
   }
 
   private hasHorizontalOverflow(host: HTMLElement): boolean {
@@ -79,20 +112,36 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
     if (rect.bottom <= 0 || rect.top >= window.innerHeight) {
       return false;
     }
-    // El scroll horizontal nativo está al final del contenedor: si el borde
-    // inferior de la tabla queda bajo el viewport, mostramos la barra fija.
-    return rect.bottom > window.innerHeight;
+    const edge = window.innerHeight;
+    if (this.visible) {
+      return rect.bottom > edge - 8;
+    }
+    return rect.bottom > edge;
   }
 
-  private refresh(): void {
+  private updateContentWidth(host: HTMLElement, track: HTMLDivElement): void {
+    const inner = this.trackInner;
+    if (!inner) {
+      return;
+    }
+    const w = host.scrollWidth;
+    if (w === this.lastContentWidth) {
+      return;
+    }
+    const scrollLeft = track.scrollLeft;
+    inner.style.width = `${w}px`;
+    track.scrollLeft = scrollLeft;
+    this.lastContentWidth = w;
+  }
+
+  private updateLayout(): void {
     const host = this.hostRef.nativeElement;
     const track = this.track;
-    const inner = this.trackInner;
-    if (!track || !inner) {
+    if (!track) {
       return;
     }
 
-    inner.style.width = `${host.scrollWidth}px`;
+    this.updateContentWidth(host, track);
 
     const show = this.shouldMirror(host);
     if (show) {
@@ -105,12 +154,11 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
       this.visible = show;
       track.classList.toggle('sticky-h-scroll-track--visible', show);
       host.classList.toggle('sticky-h-scroll-host--mirror', show);
-    }
-
-    if (show && !this.syncing) {
-      this.syncing = true;
-      track.scrollLeft = host.scrollLeft;
-      this.syncing = false;
+      if (show) {
+        this.syncing = true;
+        track.scrollLeft = host.scrollLeft;
+        this.syncing = false;
+      }
     }
   }
 
@@ -118,9 +166,12 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
     if (this.syncing || !this.visible) {
       return;
     }
-    const host = this.hostRef.nativeElement;
     const track = this.track;
     if (!track) {
+      return;
+    }
+    const host = this.hostRef.nativeElement;
+    if (track.scrollLeft === host.scrollLeft) {
       return;
     }
     this.syncing = true;
@@ -135,6 +186,9 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
     const host = this.hostRef.nativeElement;
     const track = this.track;
     if (!track) {
+      return;
+    }
+    if (host.scrollLeft === track.scrollLeft) {
       return;
     }
     this.syncing = true;
