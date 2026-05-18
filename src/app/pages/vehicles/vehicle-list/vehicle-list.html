@@ -149,7 +149,8 @@
   [visible]="showDialog()"
   (visibleChange)="showDialog.set($event)"
   [modal]="true"
-  [style]="{ width: 'min(680px, 96vw)' }"
+  styleClass="vehicle-form-dialog"
+  [style]="{ width: 'min(560px, 96vw)' }"
 >
   <form [formGroup]="form" class="vehicle-form">
     <p-tabs value="info">
@@ -164,10 +165,11 @@
           <div class="tab-content-pad">
             <div class="field-row">
               <div class="field">
-              <label>Nombre *
-                  <span class="format-hint">
+              <label class="label-stacked">
+                <span>Nombre *</span>
+                <span class="format-hint">
                   Soporta: *<strong>negrita</strong>* &nbsp; _<em>cursiva</em>_ &nbsp; ~<s>tachado</s>~
-                  </span>
+                </span>
               </label>
               <input pInputText formControlName="name" class="w-full" placeholder="Toyota Hilux 4x4" />
               @if (form.get('name')!.value) {
@@ -179,18 +181,34 @@
                 <input pInputText formControlName="brand" class="w-full" placeholder="Toyota" />
               </div>
             </div>
-            <div class="field-row three-cols">
-              <div class="field">
+            <div class="field-row capacity-cols">
+              <div class="field field-compact">
                 <label>Asientos *</label>
-                <p-inputNumber formControlName="seats" [min]="1" [max]="50" styleClass="w-full" />
+                <p-inputNumber
+                  formControlName="seats"
+                  [min]="1"
+                  [max]="50"
+                  styleClass="capacity-input"
+                  inputStyleClass="capacity-input-inner"
+                />
               </div>
-              <div class="field">
-                <label>Maletas de Bodega *</label>
-                <p-inputNumber formControlName="bag" [min]="0" styleClass="w-full" />
+              <div class="field field-compact">
+                <label>M. de Bodega *</label>
+                <p-inputNumber
+                  formControlName="bag"
+                  [min]="0"
+                  styleClass="capacity-input"
+                  inputStyleClass="capacity-input-inner"
+                />
               </div>
-              <div class="field">
-                <label>Maletas de mano *</label>
-                <p-inputNumber formControlName="carryon_bag" [min]="0" styleClass="w-full" />
+              <div class="field field-compact">
+                <label>M. de mano *</label>
+                <p-inputNumber
+                  formControlName="carryon_bag"
+                  [min]="0"
+                  styleClass="capacity-input"
+                  inputStyleClass="capacity-input-inner"
+                />
               </div>
             </div>
             <div class="field-row">
