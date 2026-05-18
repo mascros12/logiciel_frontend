@@ -23,6 +23,7 @@ import { ContactService } from '../../../core/services/contact.service';
 import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import { SelectModule } from 'primeng/select';
 import { AuthService } from '../../../core/auth/auth.service';
+import { formatQuotationVersionLabel } from '../../../core/utils/quotation-version-label';
 
 
 @Component({
@@ -336,6 +337,8 @@ export class QuotationList implements OnInit {
   canRestoreQuotations(): boolean {
     return this.canDeleteQuotations();
   }
+
+  readonly formatQuotationVersionLabel = formatQuotationVersionLabel;
 
   getCurrentVersion(versions: QuotationVersion[]): QuotationVersion | null {
     return versions.find(v => v.is_current) ?? null;

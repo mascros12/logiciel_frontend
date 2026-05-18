@@ -51,6 +51,7 @@ import {
   VehicleOption, HotelOption, RoomOption, ActivityOption
 } from '../../../core/models/provider.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
+import { formatQuotationVersionLabel } from '../../../core/utils/quotation-version-label';
 import { StickyHorizontalScrollDirective } from '../../../core/directives/sticky-horizontal-scroll.directive';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
@@ -868,10 +869,10 @@ export class QuotationDetail implements OnInit {
   // ─── Helpers ───────────────────────────────────────────────
 
   getVersionLabel(v: QuotationVersion): string {
-    return `V${v.version_number}${v.is_current ? ' (actual)' : ''}`;
+    return formatQuotationVersionLabel(v.version_number, { current: v.is_current });
   }
 
-  /** Opciones del selector de versión: orden descendente (V3, V2, V1…). */
+  /** Opciones del selector de versión: orden descendente (Modif N…, Programme). */
   get versionSelectOptions() {
     const q = this.quotation();
     if (!q?.versions?.length) return [];
@@ -880,6 +881,7 @@ export class QuotationDetail implements OnInit {
       .sort((a, b) => b.version_number - a.version_number)
       .map((v) => ({
         value: v.id,
+        label: formatQuotationVersionLabel(v.version_number, { current: v.is_current }),
         versionNumber: v.version_number,
         isCurrent: v.is_current,
         createdByName: (v.created_by_name && String(v.created_by_name).trim()) || null,

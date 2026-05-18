@@ -74,9 +74,7 @@
               <ng-template let-opt pTemplate="selectedItem">
                 @if (opt) {
                   <span class="version-opt-row">
-                    <span class="version-opt-v"
-                      >V{{ opt.versionNumber }}{{ opt.isCurrent ? ' (actual)' : '' }}</span
-                    >
+                    <span class="version-opt-v">{{ opt.label }}</span>
                     @if (opt.createdByName) {
                       <span class="version-opt-creator">{{ opt.createdByName }}</span>
                     }
@@ -85,9 +83,7 @@
               </ng-template>
               <ng-template let-opt pTemplate="item">
                 <span class="version-opt-row">
-                  <span class="version-opt-v"
-                    >V{{ opt.versionNumber }}{{ opt.isCurrent ? ' (actual)' : '' }}</span
-                  >
+                  <span class="version-opt-v">{{ opt.label }}</span>
                   @if (opt.createdByName) {
                     <span class="version-opt-creator">{{ opt.createdByName }}</span>
                   }

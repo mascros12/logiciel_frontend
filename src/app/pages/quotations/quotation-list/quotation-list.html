@@ -110,7 +110,7 @@
         </td>
         <td>
           @if (getCurrentVersion(q.versions); as v) {
-            <p-tag [value]="'v' + v.version_number" severity="info" />
+            <p-tag [value]="formatQuotationVersionLabel(v.version_number)" severity="info" />
           }
         </td>
         <td>{{ q.created_by_name ?? '—' }}</td>
@@ -166,7 +166,7 @@
                   </ng-template>
                   <ng-template pTemplate="body" let-v>
                     <tr>
-                      <td>v{{ v.version_number }}</td>
+                      <td>{{ formatQuotationVersionLabel(v.version_number) }}</td>
                       <td>{{ v.total | currency: 'USD' }}</td>
                       <td>{{ v.notes ?? '—' }}</td>
                       <td>{{ v.created_at | date: 'dd/MM/yyyy' }}</td>
