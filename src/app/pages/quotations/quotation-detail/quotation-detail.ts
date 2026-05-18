@@ -51,6 +51,7 @@ import {
   VehicleOption, HotelOption, RoomOption, ActivityOption
 } from '../../../core/models/provider.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
+import { StickyHorizontalScrollDirective } from '../../../core/directives/sticky-horizontal-scroll.directive';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 /** Entrada del desplegable Ficha AA: catálogo maestro hotel / actividad / vehículo. */
@@ -102,6 +103,7 @@ const FICHA_HEADER_COLORS = FICHA_HEADER_COLOR_PAIRS.flat() as readonly string[]
     InputNumberModule, CheckboxModule,
     ToastModule, SkeletonModule, TooltipModule, ConfirmDialogModule, AutoCompleteModule,
     FormsModule, DatePickerModule, RichTextPipe, DragDropModule, MenuModule,
+    StickyHorizontalScrollDirective,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './quotation-detail.html',

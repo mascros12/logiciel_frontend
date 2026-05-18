@@ -219,7 +219,7 @@
             }
 
             <!-- Tabla de itinerario -->
-            <div class="itinerary-table-wrapper">
+            <div class="itinerary-table-wrapper" appStickyHorizontalScroll>
               <table class="itinerary-table">
                 <thead>
                   <tr>
@@ -888,7 +888,7 @@
             @if (fichaFileAA(); as ficha) {
             @if (!fichaAABlockedForComercial() && fichaAATab() === 'ficha') {
               <div class="ficha-aa-generated ficha-aa-generated--minimal">
-                <div class="ficha-aa-generated-table-wrap">
+                <div class="ficha-aa-generated-table-wrap" appStickyHorizontalScroll>
                   <table class="ficha-aa-generated-table">
                     <thead>
                       <tr>
