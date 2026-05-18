@@ -1,3 +1,21 @@
+/** Valor por defecto al crear un vehículo. */
+export const DEFAULT_VEHICLE_CATEGORY = 'Vehiculo de Alquiler';
+
+/** Categorías de servicio / tipo de transporte (catálogo vehículos). */
+export const VEHICLE_CATEGORY_OPTIONS: readonly { label: string; value: string }[] = [
+  { label: 'Transporte del Aeropuerto', value: 'Transporte del Aeropuerto' },
+  { label: 'Chofer', value: 'Chofer' },
+  { label: 'Transporte del Hotel a Actividad', value: 'Transporte del Hotel a Actividad' },
+  { label: 'Transporte entre Zonas', value: 'Transporte entre Zonas' },
+  { label: 'Transporte Privado entre Zonas', value: 'Transporte Privado entre Zonas' },
+  { label: 'Taxi Maritimo', value: 'Taxi Maritimo' },
+  { label: 'Taxi Maritimo Privado', value: 'Taxi Maritimo Privado' },
+  { label: 'Interbus', value: 'Interbus' },
+  { label: 'Vehiculo de Alquiler', value: 'Vehiculo de Alquiler' },
+  { label: 'Devolucion de Vehiculo', value: 'Devolucion de Vehiculo' },
+  { label: 'Vuelo Interno', value: 'Vuelo Interno' },
+];
+
 export interface VehicleSeason {
     id: string;
     vehicle_id: string;

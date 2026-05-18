@@ -196,7 +196,15 @@
             <div class="field-row">
               <div class="field">
                 <label>Categoría</label>
-                <input pInputText formControlName="category" class="w-full" placeholder="SUV, Sedán..." />
+                <p-select
+                  formControlName="category"
+                  [options]="categoryOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccionar categoría"
+                  styleClass="w-full"
+                  appendTo="body"
+                />
               </div>
               <div class="field">
                 <label>Comisión</label>

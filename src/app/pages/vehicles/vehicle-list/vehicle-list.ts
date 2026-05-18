@@ -17,7 +17,12 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { TagModule } from 'primeng/tag';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { VehicleService } from '../../../core/services/vehicle.service';
-import { Vehicle, VehicleSeason } from '../../../core/models/vehicle.model';
+import {
+  Vehicle,
+  VehicleSeason,
+  DEFAULT_VEHICLE_CATEGORY,
+  VEHICLE_CATEGORY_OPTIONS,
+} from '../../../core/models/vehicle.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -71,6 +76,8 @@ export class VehicleList implements OnInit {
     high: 'danger', medium: 'warn', low: 'success'
   };
 
+  readonly categoryOptions = [...VEHICLE_CATEGORY_OPTIONS];
+
   constructor(
     private router: Router,
     private vehicleService: VehicleService,
@@ -85,7 +92,7 @@ export class VehicleList implements OnInit {
       seats: [5, Validators.required],
       bag: [3, Validators.required],
       carryon_bag: [3, Validators.required],
-      category: [''],
+      category: [DEFAULT_VEHICLE_CATEGORY],
       reservation_email: [''],
       commission: [1.2],
       // Diarios neto
@@ -206,7 +213,8 @@ export class VehicleList implements OnInit {
   openCreate() {
     this.editingVehicle.set(null);
     this.form.reset({
-      seats: 5, bag: 3, carryon_bag: 3, commission: 1.2, reservation_email: '',
+      seats: 5, bag: 3, carryon_bag: 3, category: DEFAULT_VEHICLE_CATEGORY,
+      commission: 1.2, reservation_email: '',
       net_daily_high: 0, net_daily_medium: 0, net_daily_low: 0,
       rack_daily_high: 0, rack_daily_medium: 0, rack_daily_low: 0,
       net_weekly_high: 0, net_weekly_medium: 0, net_weekly_low: 0,
@@ -217,7 +225,10 @@ export class VehicleList implements OnInit {
 
   openEdit(v: Vehicle) {
     this.editingVehicle.set(v);
-    this.form.patchValue(v);
+    this.form.patchValue({
+      ...v,
+      category: v.category || DEFAULT_VEHICLE_CATEGORY,
+    });
     this.showDialog.set(true);
   }
 
