@@ -86,10 +86,8 @@
   }
 
   &.capacity-cols {
-    grid-template-columns: repeat(3, 5.25rem);
-    gap: 0.65rem;
-    width: fit-content;
-    max-width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
   }
 }
 
@@ -104,7 +102,7 @@
 }
 
 :host ::ng-deep .vehicle-form .capacity-input {
-  width: 5.25rem;
+  width: 100%;
   max-width: 100%;
 }
 
