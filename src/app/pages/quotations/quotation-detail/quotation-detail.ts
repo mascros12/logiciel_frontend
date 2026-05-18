@@ -1670,7 +1670,7 @@ export class QuotationDetail implements OnInit {
       vn = q.versions?.find((v) => v.is_current)?.version_number ?? null;
     }
     if (vn == null) return '';
-    return vn === 1 ? 'Programme' : `Modif ${vn}`;
+    return formatQuotationVersionLabel(vn);
   }
 
   fichaHeaderChecklistLine(ficha: FileAAWithDetails): string {
