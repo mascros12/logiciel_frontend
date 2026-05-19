@@ -888,7 +888,7 @@
                   <table class="ficha-aa-generated-table">
                     <thead>
                       <tr>
-                      <th colspan="11" [style.background-color]="fichaHeaderColor()">
+                      <th colspan="12" [style.background-color]="fichaHeaderColor()">
                         <button
                         style="width: 100% !important;"
                           type="button"
@@ -916,7 +916,7 @@
                       </th>
                       </tr>
                       <tr class="ficha-aa-table-summary-row">
-                        <td colspan="11" class="ficha-aa-table-summary-cell">
+                        <td colspan="12" class="ficha-aa-table-summary-cell">
                           @if (q.contact_source) {
                             <span class="ficha-aa-summary-source-fr">{{ q.contact_source }}</span>
                           }
@@ -965,6 +965,7 @@
                         </td>
                       </tr>
                       <tr>
+                        <th class="col-ficha-drag" scope="col" aria-label="Reordenar filas"></th>
                         <th class="col-cb" scope="col">F</th>
                         <th class="col-ficha-row-actions" scope="col" pTooltip="Añadir o quitar línea">±</th>
                         <th scope="col">Servicio</th>
@@ -978,12 +979,28 @@
                         <th class="col-ficha-email" scope="col" pTooltip="Enviar solicitud por correo al proveedor">Correo</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody
+                      cdkDropList
+                      [cdkDropListDisabled]="fichaDetailReorderSaving()"
+                      (cdkDropListDropped)="dropFichaDetailRow($event, ficha)"
+                    >
                       @for (d of ficha.details; track d.id) {
                         <tr
+                          cdkDrag
                           [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)"
                           [class.ficha-aa-row-new]="fichaIsAddedDetail(d)"
                         >
+                          <td class="col-ficha-drag">
+                            <button
+                              type="button"
+                              class="ficha-drag-handle"
+                              cdkDragHandle
+                              aria-label="Arrastrar para reordenar"
+                              [disabled]="fichaDetailReorderSaving()"
+                            >
+                              <i class="pi pi-bars"></i>
+                            </button>
+                          </td>
                           <td class="col-cb">
                             <p-checkbox
                               [binary]="true"
@@ -1101,14 +1118,16 @@
                                   [class.pick-gama-low]="d.category === 'room' && fichaRoomHotelGama(d) === 'low'"
                                 >{{ svcLines[0] }}</span>
                               }
-                              <button
-                                pButton
-                                icon="pi pi-pencil"
-                                class="p-button-rounded p-button-text p-button-sm ficha-name-edit-trigger"
-                                (click)="startFichaNameEdit(d)"
-                                pTooltip="Editar nombre para futuras fichas"
-                                tooltipPosition="top"
-                              ></button>
+                              @if (canEditFichaCatalogueName()) {
+                                <button
+                                  pButton
+                                  icon="pi pi-pencil"
+                                  class="p-button-rounded p-button-text p-button-sm ficha-name-edit-trigger"
+                                  (click)="startFichaNameEdit(d)"
+                                  pTooltip="Editar nombre para futuras fichas"
+                                  tooltipPosition="top"
+                                ></button>
+                              }
                             }
                           </td>
                           <td>

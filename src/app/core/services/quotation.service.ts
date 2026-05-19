@@ -190,6 +190,13 @@ export class QuotationService {
     return this.http.post<FileAADetailRow>(`${this.url}/file-aa/${fileId}/details`, body);
   }
 
+  reorderFileAADetails(fileId: string, body: { detail_ids_in_order: string[] }) {
+    return this.http.post<FileAAWithDetails>(
+      `${this.url}/file-aa/${fileId}/details/reorder`,
+      body,
+    );
+  }
+
   deleteFileAADetail(detailId: string) {
     return this.http.delete<void>(`${this.url}/details/${detailId}`);
   }

@@ -909,6 +909,55 @@
       color: #6b7280;
     }
 
+    .col-ficha-drag {
+      width: 2.25rem;
+      padding: 0.35rem 0.25rem;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .ficha-drag-handle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      padding: 0;
+      border: none;
+      border-radius: var(--p-border-radius);
+      background: transparent;
+      color: var(--p-text-muted-color);
+      cursor: grab;
+      touch-action: none;
+
+      &:hover:not(:disabled) {
+        background: var(--p-surface-hover);
+        color: var(--p-text-color);
+      }
+
+      &:active:not(:disabled) {
+        cursor: grabbing;
+      }
+
+      &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+    }
+
+    tr.cdk-drag-preview {
+      display: table;
+      table-layout: fixed;
+      width: 100%;
+      box-sizing: border-box;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    }
+
+    tr.cdk-drag-placeholder {
+      opacity: 0.35;
+    }
+
     .col-cb {
       width: 2.75rem;
       text-align: center;

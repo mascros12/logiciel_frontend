@@ -120,6 +120,11 @@ export class QuotationDetail implements OnInit {
   loadingSummary = signal(false);
   isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
   isOperaciones = computed(() => this.auth.currentUser()?.role === 'operaciones');
+  /** Editar y guardar `file_aa_name` desde la Ficha AA (catálogo + fila). */
+  canEditFichaCatalogueName = computed(() => {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'operaciones';
+  });
   canViewQuotationBreakdown = computed(() => {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
@@ -210,6 +215,7 @@ export class QuotationDetail implements OnInit {
 
   /** Última Ficha AA generada con tabla de servicios (se recarga al abrir la cotización). */
   fichaFileAA = signal<FileAAWithDetails | null>(null);
+  fichaDetailReorderSaving = signal(false);
   fichaAATab = signal<'ficha' | 'config'>('ficha');
   /** Borradores UI de los textos libres que se imprimen al final del Word/PDF
    * (debajo de los virements). Se persisten en `FileAA.observations` /
@@ -1100,6 +1106,34 @@ export class QuotationDetail implements OnInit {
     this.organizeDraftLines.set(arr);
   }
 
+  dropFichaDetailRow(event: CdkDragDrop<FileAADetailRow[]>, ficha: FileAAWithDetails): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const details = [...ficha.details];
+    const previousOrder = [...ficha.details];
+    moveItemInArray(details, event.previousIndex, event.currentIndex);
+    this.fichaFileAA.set({ ...ficha, details });
+    this.fichaDetailReorderSaving.set(true);
+    this.quotationService
+      .reorderFileAADetails(ficha.id, { detail_ids_in_order: details.map((d) => d.id) })
+      .subscribe({
+        next: (updated) => {
+          this.fichaFileAA.set(updated);
+          this.fichaDetailReorderSaving.set(false);
+        },
+        error: (err) => {
+          this.fichaFileAA.set({ ...ficha, details: previousOrder });
+          this.fichaDetailReorderSaving.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary:
+              typeof err.error?.detail === 'string'
+                ? err.error.detail
+                : 'No se pudo guardar el orden de la ficha',
+          });
+        },
+      });
+  }
+
   lineDateDisplay(iso: string): string {
     const [y, m, d] = iso.split('-');
     return y && m && d ? `${d}/${m}/${y}` : iso;
@@ -1742,14 +1776,14 @@ export class QuotationDetail implements OnInit {
     return `${dd}/${mm}/${d.getFullYear()}`;
   }
 
-  /** Composición de pasajeros en francés: «3 Adultes + 1 Mineur (10 ans)». */
+  /** Composición de pasajeros en francés: «3 Adultes + 1 enfant (10 ans)». */
   fichaCompositionFr(ficha: FileAAWithDetails): string {
     const na = Number(ficha.quantity_adults) || 0;
     const nc = Number(ficha.quantity_children) || 0;
     if (na === 0 && nc === 0) return '';
     const adultPart = na === 1 ? '1 Adulte' : `${na} Adultes`;
     if (nc === 0) return adultPart;
-    const minorPart = nc === 1 ? '1 Mineur' : `${nc} Mineurs`;
+    const minorPart = nc === 1 ? '1 enfant' : `${nc} enfants`;
     const ages = (ficha.children_ages || '')
       .split(',')
       .map((s) => s.trim())
@@ -2152,6 +2186,7 @@ export class QuotationDetail implements OnInit {
   // ── Edición inline de nombre (file_aa_name) ─────────────────────────────
 
   startFichaNameEdit(d: FileAADetailRow): void {
+    if (!this.canEditFichaCatalogueName()) return;
     this.fichaNameEditDetailId.set(d.id);
     const extras = d.observation_extras as Record<string, unknown> | null | undefined;
     if (d.category === 'room') {
@@ -2188,6 +2223,14 @@ export class QuotationDetail implements OnInit {
   }
 
   confirmFichaNameEdit(d: FileAADetailRow, ficha: FileAAWithDetails): void {
+    if (!this.canEditFichaCatalogueName()) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Sin permisos',
+        detail: 'Solo Administración y Operaciones pueden guardar el nombre de catálogo.',
+      });
+      return;
+    }
     const newName = this.fichaNameEditValue().trim();
     const newName2 = this.fichaNameEditValue2().trim();
 
