@@ -3,16 +3,20 @@ export const DEFAULT_VEHICLE_CATEGORY = 'Vehiculo de Alquiler';
 
 /** Categorías de servicio / tipo de transporte (catálogo vehículos). */
 export const VEHICLE_CATEGORY_OPTIONS: readonly { label: string; value: string }[] = [
-  { label: 'Transporte del Aeropuerto', value: 'Transporte del Aeropuerto' },
-  { label: 'Chofer', value: 'Chofer' },
-  { label: 'Transporte del Hotel a Actividad', value: 'Transporte del Hotel a Actividad' },
-  { label: 'Transporte entre Zonas', value: 'Transporte entre Zonas' },
-  { label: 'Transporte Privado entre Zonas', value: 'Transporte Privado entre Zonas' },
+
+  { label: 'Bote Publico', value: 'Bote Publico' },
+  { label: 'Devolucion de Vehiculo (no sj-aeropuerto)', value: 'Devolucion de Vehiculo' },
+  { label: 'Gira', value: 'Gira' },
+  { label: 'Interbus', value: 'Interbus' },
   { label: 'Taxi Maritimo', value: 'Taxi Maritimo' },
   { label: 'Taxi Maritimo Privado', value: 'Taxi Maritimo Privado' },
-  { label: 'Interbus', value: 'Interbus' },
+  { label: 'Transfer Aeropuerto/Hotel', value: 'Transfer Aeropuerto/Hotel' },
+  { label: 'Transfer Colectivo Privado Tortuguero', value: 'Transfer Colectivo Privado Tortuguero' },
+  { label: 'Transfer del Hotel - Actividad - Hotel', value: 'Transfer del Hotel - Actividad - Hotel' },
+  { label: 'Transfer de un Vehiculo Hacia X Zona', value: 'Transfer de un Vehiculo Hacia X Zona' },
+  { label: 'Transfer Zona a Zona', value: 'Transfer Zona a Zona' },
+  { label: 'Transfer Privado Zona a Zona', value: 'Transfer Privado Zona a Zona' },
   { label: 'Vehiculo de Alquiler', value: 'Vehiculo de Alquiler' },
-  { label: 'Devolucion de Vehiculo', value: 'Devolucion de Vehiculo' },
   { label: 'Vuelo Interno', value: 'Vuelo Interno' },
 ];
 
