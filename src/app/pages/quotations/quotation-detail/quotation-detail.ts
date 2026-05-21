@@ -756,10 +756,20 @@ export class QuotationDetail implements OnInit {
 
   // ─── Nueva versión ─────────────────────────────────────────
 
+  openNewVersionDialog() {
+    const v = this.selectedVersion();
+    const parentLabel = v
+      ? formatQuotationVersionLabel(v.version_number, { current: false })
+      : null;
+    this.versionForm.reset({ notes: parentLabel ? `Copiada de: ${parentLabel}` : '' });
+    this.showNewVersion.set(true);
+  }
+
   submitNewVersion() {
     const q = this.quotation()!;
+    const sourceVersionId = this.selectedVersionId() ?? undefined;
     this.saving.set(true);
-    this.quotationService.createVersion(q.id, this.versionForm.value.notes).subscribe({
+    this.quotationService.createVersion(q.id, this.versionForm.value.notes, sourceVersionId).subscribe({
       next: (v) => {
         this.showNewVersion.set(false);
         this.selectedVersionId.set(v.id);

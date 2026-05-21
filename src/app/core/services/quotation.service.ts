@@ -107,9 +107,10 @@ export class QuotationService {
     return this.http.post(`${this.url}/${id}/restore`, {});
   }
 
-  createVersion(quotationId: string, notes?: string) {
+  createVersion(quotationId: string, notes?: string, sourceVersionId?: string) {
     return this.http.post<QuotationVersion>(
-      `${this.url}/${quotationId}/versions`, { notes }
+      `${this.url}/${quotationId}/versions`,
+      { notes, source_version_id: sourceVersionId ?? null },
     );
   }
 

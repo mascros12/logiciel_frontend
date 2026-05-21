@@ -120,9 +120,9 @@
               size="small"
               severity="secondary"
               [outlined]="true"
-              pTooltip="Nueva versión a partir de la actual"
+              pTooltip="Nueva versión a partir de la versión seleccionada"
               tooltipPosition="bottom"
-              (onClick)="showNewVersion.set(true)"
+              (onClick)="openNewVersionDialog()"
             />
             @if (canDeleteVersions()) {
               <p-button
@@ -2133,7 +2133,11 @@
     <div class="dialog-info">
       <i class="pi pi-info-circle"></i>
       <div class="dialog-info-body">
-        <p>Se copiará todo el itinerario de la versión actual como base.</p>
+        @if (selectedVersion(); as sv) {
+          <p>Se copiará el itinerario de <strong>{{ getVersionLabel(sv) }}</strong> como base de la nueva versión.</p>
+        } @else {
+          <p>Se copiará el itinerario de la versión actual como base de la nueva versión.</p>
+        }
       </div>
     </div>
   </form>
