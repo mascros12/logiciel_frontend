@@ -1141,6 +1141,21 @@
       color: #111827;
     }
 
+    .ficha-name-vehicle {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.15rem;
+    }
+
+    .ficha-name-vehicle-sub {
+      display: block;
+      font-weight: 400;
+      font-size: 0.95em;
+      line-height: 1.25;
+      color: #111827;
+    }
+
     // Estilo «misma línea» (espejo del export Word/PDF):
     //   HOTEL
     //   Nombre Hotel, Nombre Habitación

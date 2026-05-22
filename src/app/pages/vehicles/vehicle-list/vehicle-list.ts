@@ -8,6 +8,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -33,7 +34,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   imports: [
     ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, DialogModule,
-    InputTextModule, InputNumberModule, ToastModule,
+    InputTextModule, InputNumberModule, TextareaModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
     DatePickerModule, TagModule, RichTextPipe,
   ],
@@ -88,6 +89,7 @@ export class VehicleList implements OnInit {
   ) {
     this.form = this.fb.group({
       name: ['', Validators.required],
+      ficha_aa_subtitle: [''],
       brand: ['', Validators.required],
       seats: [5, Validators.required],
       bag: [3, Validators.required],
@@ -214,6 +216,7 @@ export class VehicleList implements OnInit {
     this.editingVehicle.set(null);
     this.form.reset({
       seats: 5, bag: 3, carryon_bag: 3, category: DEFAULT_VEHICLE_CATEGORY,
+      ficha_aa_subtitle: '',
       commission: 1.2, reservation_email: '',
       net_daily_high: 0, net_daily_medium: 0, net_daily_low: 0,
       rack_daily_high: 0, rack_daily_medium: 0, rack_daily_low: 0,
@@ -235,7 +238,9 @@ export class VehicleList implements OnInit {
   submit() {
     if (this.form.invalid) return;
     this.saving.set(true);
-    const val = this.form.value;
+    const raw = this.form.value;
+    const subtitle = (raw.ficha_aa_subtitle ?? '').trim();
+    const val = { ...raw, ficha_aa_subtitle: subtitle || null };
     const id = this.editingVehicle()?.id;
 
     const req = id
