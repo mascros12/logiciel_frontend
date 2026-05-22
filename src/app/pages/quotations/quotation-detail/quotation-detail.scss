@@ -1148,12 +1148,19 @@
       gap: 0.15rem;
     }
 
-    .ficha-name-vehicle-sub {
-      display: block;
+    .ficha-vehicle-service-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.35rem;
+      width: 100%;
+    }
+
+    .ficha-vehicle-service-sub-input {
+      width: 100%;
+      min-width: 0;
       font-weight: 400;
-      font-size: 0.95em;
-      line-height: 1.25;
-      color: #111827;
+      font-size: 0.9em;
     }
 
     // Estilo «misma línea» (espejo del export Word/PDF):

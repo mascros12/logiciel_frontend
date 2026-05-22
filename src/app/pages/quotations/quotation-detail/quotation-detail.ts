@@ -265,6 +265,8 @@ export class QuotationDetail implements OnInit {
 
   /** Borrador UI para observaciones estructuradas (vehículo) en Ficha AA — evita pisar texto al teclear */
   private vehicleFichaObsDraft: Record<string, FileAADetailVehicleObsState> = {};
+  /** Texto debajo del nombre en columna Service (solo esta Ficha AA). */
+  private vehicleServiceSubtitleDraft: Record<string, string> = {};
   /** Borrador UI para observaciones estructuradas (actividad): pick up + notas */
   private activityFichaObsDraft: Record<string, FileAADetailActivityObsState> = {};
   /** Borrador UI para filas hotel: número de habitaciones + observaciones */
@@ -2133,6 +2135,7 @@ export class QuotationDetail implements OnInit {
         this.fichaFileAA.set({ ...f, details });
         if (patch.observation_extras !== undefined || patch.observations !== undefined) {
           delete this.vehicleFichaObsDraft[detailId];
+          delete this.vehicleServiceSubtitleDraft[detailId];
           delete this.activityFichaObsDraft[detailId];
           delete this.hotelFichaObsDraft[detailId];
         }
@@ -2160,8 +2163,44 @@ export class QuotationDetail implements OnInit {
 
   private clearAllVehicleFichaObsDrafts(): void {
     this.vehicleFichaObsDraft = {};
+    this.vehicleServiceSubtitleDraft = {};
     this.activityFichaObsDraft = {};
     this.hotelFichaObsDraft = {};
+  }
+
+  private vehicleServiceSubtitleFromServer(d: FileAADetailRow): string {
+    const raw = d.observation_extras;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      return String((raw as Record<string, unknown>)['vehicle_ficha_aa_subtitle'] ?? '').trim();
+    }
+    return '';
+  }
+
+  /** Referencia estable para ngModel — subtítulo bajo el nombre (vehículo). */
+  ensureVehicleServiceSubtitleDraft(d: FileAADetailRow): string {
+    if (!(d.id in this.vehicleServiceSubtitleDraft)) {
+      this.vehicleServiceSubtitleDraft[d.id] = this.vehicleServiceSubtitleFromServer(d);
+    }
+    return this.vehicleServiceSubtitleDraft[d.id];
+  }
+
+  setVehicleServiceSubtitleDraft(d: FileAADetailRow, value: string): void {
+    this.vehicleServiceSubtitleDraft[d.id] = value;
+  }
+
+  commitVehicleServiceSubtitle(d: FileAADetailRow): void {
+    const text = (this.vehicleServiceSubtitleDraft[d.id] ?? '').trim();
+    const prev =
+      d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+        ? { ...(d.observation_extras as Record<string, unknown>) }
+        : {};
+    const observation_extras = { ...prev };
+    if (text) {
+      observation_extras['vehicle_ficha_aa_subtitle'] = text;
+    } else {
+      delete observation_extras['vehicle_ficha_aa_subtitle'];
+    }
+    this.patchFileDetail(d.id, { observation_extras });
   }
 
   private vehicleFichaObsFromServer(d: FileAADetailRow): FileAADetailVehicleObsState {

@@ -34,7 +34,6 @@ export interface VehicleSeason {
     id: string;
     name: string;
     file_aa_name?: string | null;
-    ficha_aa_subtitle?: string | null;
     brand: string;
     seats: number;
     carryon_bag: number;
@@ -68,7 +67,6 @@ export interface VehicleSeason {
   export interface VehicleCreate {
     name: string;
     file_aa_name?: string | null;
-    ficha_aa_subtitle?: string | null;
     brand: string;
     seats: number;
     carryon_bag: number;

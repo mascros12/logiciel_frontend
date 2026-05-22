@@ -1106,12 +1106,20 @@
                                 ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (ensureHotelFichaObsDraft(d).room_quantity) {{{ ensureHotelFichaObsDraft(d).room_quantity }} }{{ svcLines[1] }}</span></span>
                               } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
-                                <span class="ficha-name ficha-name-vehicle">
-                                  <span class="ficha-name-vehicle-main">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
-                                  @if (svcLines.length >= 2 && svcLines[1].trim()) {
-                                    <span class="ficha-name-vehicle-sub">{{ svcLines[1] }}</span>
-                                  }
-                                </span>
+                                <div class="ficha-vehicle-service-cell">
+                                  <span class="ficha-name ficha-name-vehicle">
+                                    <span class="ficha-name-vehicle-main">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                                  </span>
+                                  <textarea
+                                    pInputTextarea
+                                    class="ficha-cell-input ficha-vehicle-service-sub-input"
+                                    rows="2"
+                                    placeholder="Texto debajo del nombre (solo esta ficha)"
+                                    [ngModel]="ensureVehicleServiceSubtitleDraft(d)"
+                                    (ngModelChange)="setVehicleServiceSubtitleDraft(d, $event)"
+                                    (blur)="commitVehicleServiceSubtitle(d)"
+                                  ></textarea>
+                                </div>
                               } @else if (d.category === 'activity') {
                                 @let actParts = fichaSplitActivityTimeSuffix(svcLines[0]);
                                 <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
