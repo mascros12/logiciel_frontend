@@ -1056,7 +1056,7 @@
                                     (keydown.escape)="cancelFichaNameEdit()"
                                   />
                                 } @else if (d.category === 'vehicle') {
-                                  @let vSuffix = fichaSplitVehicleJoursSuffix(fichaDetailServiceLines(d)[0] ?? '').suffix;
+                                  @let vSuffix = fichaSplitVehicleJoursSuffix(fichaDetailServiceLines(d)[0]).suffix;
                                   <input
                                     pInputText
                                     class="ficha-name-edit-input"
@@ -1107,12 +1107,10 @@
                               } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
                                 <div class="ficha-vehicle-service-cell">
-                                  <span class="ficha-name ficha-name-vehicle">
-                                    <span class="ficha-name-vehicle-main">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
-                                  </span>
+                                  <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
                                   <textarea
                                     pInputTextarea
-                                    class="ficha-cell-input ficha-vehicle-service-sub-input"
+                                    class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     placeholder="Texto debajo del nombre (solo esta ficha)"
                                     [ngModel]="ensureVehicleServiceSubtitleDraft(d)"
