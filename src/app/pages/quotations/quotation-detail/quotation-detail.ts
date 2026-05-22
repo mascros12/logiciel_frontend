@@ -52,6 +52,14 @@ import {
 } from '../../../core/models/provider.model';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { formatQuotationVersionLabel } from '../../../core/utils/quotation-version-label';
+import {
+  vehicleBrandFromExtras,
+  vehicleCategoryFromExtras,
+  vehicleFichaDatesLayout,
+  vehicleFichaServiceLayout,
+  type VehicleFichaDatesLayout,
+  type VehicleFichaServiceLayout,
+} from '../../../core/models/vehicle-ficha-layout';
 import { StickyHorizontalScrollDirective } from '../../../core/directives/sticky-horizontal-scroll.directive';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
@@ -1218,6 +1226,26 @@ export class QuotationDetail implements OnInit {
     return lines.length > 0 ? lines : [(d.name ?? '').trim()];
   }
 
+  fichaVehicleCategory(d: FileAADetailRow): string | null {
+    return vehicleCategoryFromExtras(d.observation_extras);
+  }
+
+  fichaVehicleServiceLayout(d: FileAADetailRow): VehicleFichaServiceLayout {
+    return vehicleFichaServiceLayout(this.fichaVehicleCategory(d), d.name ?? '');
+  }
+
+  fichaVehicleDatesLayout(d: FileAADetailRow): VehicleFichaDatesLayout {
+    return vehicleFichaDatesLayout(this.fichaVehicleCategory(d), d.name ?? '');
+  }
+
+  fichaVehicleBrand(d: FileAADetailRow): string {
+    return vehicleBrandFromExtras(d.observation_extras);
+  }
+
+  fichaVehicleAllowsSubtitle(d: FileAADetailRow): boolean {
+    return vehicleFichaAllowsSubtitle(this.fichaVehicleCategory(d), d.name ?? '');
+  }
+
   /**
    * Divide la línea de servicio de un vehículo en `{ main, suffix }`,
    * donde `suffix` es el bloque ` (N jour[s])` que en el export Word/PDF
@@ -2189,6 +2217,7 @@ export class QuotationDetail implements OnInit {
   }
 
   commitVehicleServiceSubtitle(d: FileAADetailRow): void {
+    if (!this.fichaVehicleAllowsSubtitle(d)) return;
     const text = (this.vehicleServiceSubtitleDraft[d.id] ?? '').trim();
     const prev =
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
@@ -2214,11 +2243,22 @@ export class QuotationDetail implements OnInit {
     };
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       const o = raw as Record<string, unknown>;
+      const s = (k: string) => String(o[k] ?? '');
       return {
         luggage_cover: !!o['luggage_cover'],
-        pickup_detail: String(o['pickup_detail'] ?? ''),
-        dropoff_detail: String(o['dropoff_detail'] ?? ''),
-        notes: String(o['notes'] ?? notes),
+        pickup_detail: s('pickup_detail'),
+        dropoff_detail: s('dropoff_detail'),
+        notes: s('notes') || notes,
+        ficha_fecha: s('ficha_fecha'),
+        ficha_hora: s('ficha_hora'),
+        ficha_fecha_ida: s('ficha_fecha_ida'),
+        ficha_hora_ida: s('ficha_hora_ida'),
+        ficha_fecha_vuelta: s('ficha_fecha_vuelta'),
+        ficha_hora_vuelta: s('ficha_hora_vuelta'),
+        ficha_fecha_recogida: s('ficha_fecha_recogida'),
+        ficha_hora_recogida: s('ficha_hora_recogida'),
+        ficha_fecha_devolucion: s('ficha_fecha_devolucion'),
+        ficha_hora_devolucion: s('ficha_hora_devolucion'),
       };
     }
     return def;
@@ -2379,13 +2419,33 @@ export class QuotationDetail implements OnInit {
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
         ? { ...(d.observation_extras as Record<string, unknown>) }
         : {};
-    const observation_extras = {
+    const observation_extras: Record<string, unknown> = {
       ...prev,
       luggage_cover: row.luggage_cover,
       pickup_detail: row.pickup_detail,
       dropoff_detail: row.dropoff_detail,
       notes: row.notes,
+      ficha_fecha: row.ficha_fecha ?? '',
+      ficha_hora: row.ficha_hora ?? '',
+      ficha_fecha_ida: row.ficha_fecha_ida ?? '',
+      ficha_hora_ida: row.ficha_hora_ida ?? '',
+      ficha_fecha_vuelta: row.ficha_fecha_vuelta ?? '',
+      ficha_hora_vuelta: row.ficha_hora_vuelta ?? '',
+      ficha_fecha_recogida: row.ficha_fecha_recogida ?? '',
+      ficha_hora_recogida: row.ficha_hora_recogida ?? '',
+      ficha_fecha_devolucion: row.ficha_fecha_devolucion ?? '',
+      ficha_hora_devolucion: row.ficha_hora_devolucion ?? '',
     };
+    if (this.fichaVehicleAllowsSubtitle(d)) {
+      const sub = (this.vehicleServiceSubtitleDraft[d.id] ?? '').trim();
+      if (sub) {
+        observation_extras['vehicle_ficha_aa_subtitle'] = sub;
+      } else {
+        delete observation_extras['vehicle_ficha_aa_subtitle'];
+      }
+    } else {
+      delete observation_extras['vehicle_ficha_aa_subtitle'];
+    }
     const notesTrim = row.notes.trim();
     this.patchFileDetail(d.id, {
       observation_extras,

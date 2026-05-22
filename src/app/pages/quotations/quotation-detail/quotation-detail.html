@@ -1106,17 +1106,59 @@
                                 ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (ensureHotelFichaObsDraft(d).room_quantity) {{{ ensureHotelFichaObsDraft(d).room_quantity }} }{{ svcLines[1] }}</span></span>
                               } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
+                                @let vSvcLayout = fichaVehicleServiceLayout(d);
                                 <div class="ficha-vehicle-service-cell">
-                                  <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
-                                  <textarea
-                                    pInputTextarea
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    placeholder="Texto debajo del nombre (solo esta ficha)"
-                                    [ngModel]="ensureVehicleServiceSubtitleDraft(d)"
-                                    (ngModelChange)="setVehicleServiceSubtitleDraft(d, $event)"
-                                    (blur)="commitVehicleServiceSubtitle(d)"
-                                  ></textarea>
+                                  @switch (vSvcLayout) {
+                                    @case ('brand_subtitle') {
+                                      <span class="ficha-name">{{ fichaVehicleBrand(d) || d.name }}</span>
+                                    }
+                                    @case ('interbus') {
+                                      <span class="ficha-name">Interbus</span>
+                                    }
+                                    @case ('fixed_transfer') {
+                                      <span class="ficha-name">Transfer@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                                    }
+                                    @case ('fixed_colectivo') {
+                                      <span class="ficha-name">Transporte coletivo privado</span>
+                                    }
+                                    @case ('transfer_comma') {
+                                      <span class="ficha-name">Transfer</span>
+                                      @if (fichaVehicleBrand(d)) {
+                                        <span class="ficha-vehicle-brand-hint">Marca: {{ fichaVehicleBrand(d) }}</span>
+                                      }
+                                    }
+                                    @case ('transfer_privee_comma') {
+                                      <span class="ficha-name">Transfer "privée"</span>
+                                      @if (fichaVehicleBrand(d)) {
+                                        <span class="ficha-vehicle-brand-hint">Marca: {{ fichaVehicleBrand(d) }}</span>
+                                      }
+                                    }
+                                    @case ('vuelo_comma') {
+                                      @if (fichaVehicleBrand(d)) {
+                                        <span class="ficha-name">{{ fichaVehicleBrand(d) }}</span>
+                                      }
+                                    }
+                                    @case ('name_only') {
+                                      <span class="ficha-name">{{ vehParts.main || d.name }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                                    }
+                                    @case ('name_subtitle') {
+                                      <span class="ficha-name">{{ vehParts.main || d.name }}</span>
+                                    }
+                                    @default {
+                                      <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                                    }
+                                  }
+                                  @if (fichaVehicleAllowsSubtitle(d)) {
+                                    <textarea
+                                      pInputTextarea
+                                      class="ficha-cell-input ficha-obs-textarea"
+                                      rows="2"
+                                      placeholder="Texto complementario (solo esta ficha)"
+                                      [ngModel]="ensureVehicleServiceSubtitleDraft(d)"
+                                      (ngModelChange)="setVehicleServiceSubtitleDraft(d, $event)"
+                                      (blur)="commitVehicleFichaObs(d)"
+                                    ></textarea>
+                                  }
                                 </div>
                               } @else if (d.category === 'activity') {
                                 @let actParts = fichaSplitActivityTimeSuffix(svcLines[0]);
@@ -1179,34 +1221,103 @@
                                 </div>
                               </div>
                             } @else if (d.category === 'vehicle') {
-                              <div class="ficha-vehicle-dates-blocks">
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-vpu-' + d.id">
-                                    Fecha, hora y lugar de Recibo del Auto
-                                  </label>
-                                  <textarea
-                                    pInputTextarea
-                                    [id]="'aa-vpu-' + d.id"
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).pickup_detail"
-                                    (blur)="commitVehicleFichaObs(d)"
-                                  ></textarea>
-                                </div>
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-vdo-' + d.id">
-                                    Fecha, hora y lugar de Devolución del Auto
-                                  </label>
-                                  <textarea
-                                    pInputTextarea
-                                    [id]="'aa-vdo-' + d.id"
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    [(ngModel)]="ensureVehicleFichaObsDraft(d).dropoff_detail"
-                                    (blur)="commitVehicleFichaObs(d)"
-                                  ></textarea>
-                                </div>
-                              </div>
+                              @switch (fichaVehicleDatesLayout(d)) {
+                                @case ('empty') {
+                                  <span class="ficha-dates-muted">—</span>
+                                }
+                                @case ('fecha_hora') {
+                                  <div class="ficha-vehicle-dates-blocks">
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label" [attr.for]="'aa-vfe-' + d.id">Fecha</label>
+                                      <input pInputText [id]="'aa-vfe-' + d.id" class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label" [attr.for]="'aa-vho-' + d.id">Hora</label>
+                                      <input pInputText [id]="'aa-vho-' + d.id" class="ficha-cell-input" placeholder="Ej. 9h30"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_hora" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                  </div>
+                                }
+                                @case ('fecha_only') {
+                                  <div class="ficha-obs-block">
+                                    <label class="ficha-obs-label" [attr.for]="'aa-vfe-' + d.id">Fecha</label>
+                                    <textarea pInputTextarea [id]="'aa-vfe-' + d.id" class="ficha-cell-input ficha-obs-textarea" rows="2"
+                                      placeholder="Ej. 20/3 y 25/3"
+                                      [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha" (blur)="commitVehicleFichaObs(d)"></textarea>
+                                  </div>
+                                }
+                                @case ('ida_vuelta') {
+                                  <div class="ficha-vehicle-dates-blocks">
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Ida — Fecha</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha_ida" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Ida — Hora</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_hora_ida" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Vuelta — Fecha</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha_vuelta" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Vuelta — Hora</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_hora_vuelta" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                  </div>
+                                }
+                                @case ('recogida_devolucion') {
+                                  <div class="ficha-vehicle-dates-blocks">
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Recogida — Fecha</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha_recogida" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Recogida — Hora</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_hora_recogida" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Devolución — Fecha</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha_devolucion" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Devolución — Hora</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_hora_devolucion" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                  </div>
+                                }
+                                @case ('retour') {
+                                  <input pInputText class="ficha-cell-input" [ngModel]="d.dates"
+                                    (blur)="onFichaDetailDatesBlur(d, $event.target)" />
+                                }
+                                @default {
+                                  <div class="ficha-vehicle-dates-blocks">
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label" [attr.for]="'aa-vpu-' + d.id">
+                                        Fecha, hora y lugar de Recibo del Auto
+                                      </label>
+                                      <textarea pInputTextarea [id]="'aa-vpu-' + d.id" class="ficha-cell-input ficha-obs-textarea" rows="2"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).pickup_detail" (blur)="commitVehicleFichaObs(d)"></textarea>
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label" [attr.for]="'aa-vdo-' + d.id">
+                                        Fecha, hora y lugar de Devolución del Auto
+                                      </label>
+                                      <textarea pInputTextarea [id]="'aa-vdo-' + d.id" class="ficha-cell-input ficha-obs-textarea" rows="2"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).dropoff_detail" (blur)="commitVehicleFichaObs(d)"></textarea>
+                                    </div>
+                                  </div>
+                                }
+                              }
                             } @else if (d.category === 'activity') {
                               <div class="ficha-activity-dates-blocks">
                                 <div class="ficha-obs-block">

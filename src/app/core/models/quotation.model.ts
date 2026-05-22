@@ -90,6 +90,16 @@ export interface FileAADetailVehicleObsState {
   pickup_detail: string;
   dropoff_detail: string;
   notes: string;
+  ficha_fecha?: string;
+  ficha_hora?: string;
+  ficha_fecha_ida?: string;
+  ficha_hora_ida?: string;
+  ficha_fecha_vuelta?: string;
+  ficha_hora_vuelta?: string;
+  ficha_fecha_recogida?: string;
+  ficha_hora_recogida?: string;
+  ficha_fecha_devolucion?: string;
+  ficha_hora_devolucion?: string;
 }
 
 /** Observaciones estructuradas en Ficha AA — filas categoría actividad */
