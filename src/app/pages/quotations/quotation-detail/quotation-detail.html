@@ -1134,9 +1134,7 @@
                                       }
                                     }
                                     @case ('vuelo_comma') {
-                                      @if (fichaVehicleBrand(d)) {
-                                        <span class="ficha-name">{{ fichaVehicleBrand(d) }}</span>
-                                      }
+                                      <span class="ficha-name">{{ fichaVueloInternoRoute(d) }}</span>
                                     }
                                     @case ('name_only') {
                                       <span class="ficha-name">{{ vehParts.main || d.name }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>

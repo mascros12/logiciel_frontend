@@ -58,6 +58,8 @@ import {
   vehicleFichaAllowsSubtitle,
   vehicleFichaDatesLayout,
   vehicleFichaServiceLayout,
+  vueloInternoRouteFromName,
+  vueloInternoServiceLabel,
   type VehicleFichaDatesLayout,
   type VehicleFichaServiceLayout,
 } from '../../../core/models/vehicle-ficha-layout';
@@ -1250,6 +1252,14 @@ export class QuotationDetail implements OnInit {
     return vehicleBrandFromExtras(d.observation_extras);
   }
 
+  fichaVueloInternoRoute(d: FileAADetailRow): string {
+    return vueloInternoRouteFromName(d.name ?? '');
+  }
+
+  fichaVueloInternoServiceLabel(d: FileAADetailRow): string {
+    return vueloInternoServiceLabel(d.observation_extras, d.name ?? '');
+  }
+
   fichaVehicleAllowsSubtitle(d: FileAADetailRow): boolean {
     return vehicleFichaAllowsSubtitle(this.fichaVehicleCategory(d), d.name ?? '');
   }
@@ -1904,7 +1914,7 @@ export class QuotationDetail implements OnInit {
 
   /**
    * «Voiture de Location: …» — solo Alquiler (file_aa_name), Interbus (una vez)
-   * y Vuelo Interno (brand). Misma lógica que el export Word/PDF.
+   * y Vuelo Interno (file_aa_name: proveedor - ruta). Misma lógica que el export Word/PDF.
    */
   fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
@@ -1930,13 +1940,10 @@ export class QuotationDetail implements OnInit {
       } else if (cat === 'Interbus') {
         hasInterbus = true;
       } else if (cat === 'Vuelo Interno') {
-        let brand = String(ex['vehicle_brand'] ?? '').trim();
-        if (brand.includes('/')) {
-          brand = brand.split('/', 1)[0].trim();
-        }
-        if (brand && !seenVuelo.has(brand)) {
-          seenVuelo.add(brand);
-          vueloBrands.push(brand);
+        const label = vueloInternoServiceLabel(ex, d.name ?? '');
+        if (label && !seenVuelo.has(label)) {
+          seenVuelo.add(label);
+          vueloBrands.push(label);
         }
       }
     }

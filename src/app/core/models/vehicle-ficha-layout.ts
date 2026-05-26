@@ -106,6 +106,38 @@ export function vehicleBrandFromExtras(
   return String(extras['vehicle_brand'] ?? '').trim();
 }
 
+/** Quita «Avion » / «avion » al inicio del nombre de ruta (Vuelo Interno). */
+export function stripVueloInternoAvionPrefix(rawName: string): string {
+  return (rawName ?? '').trim().replace(/^avion\s+/i, '').trim();
+}
+
+/** Ruta visible en Ficha AA: nombre sin prefijo Avion. */
+export function vueloInternoRouteFromName(rawName: string): string {
+  return stripVueloInternoAvionPrefix(rawName);
+}
+
+/** ``proveedor - ruta`` para ``file_aa_name`` de Vuelo Interno. */
+export function computeVueloInternoFileAaName(rawName: string, brand: string): string {
+  const route = stripVueloInternoAvionPrefix(rawName);
+  const prov = (brand ?? '').split('/', 1)[0]?.trim() ?? '';
+  if (prov && route) return `${prov} - ${route}`;
+  if (prov) return prov;
+  return route;
+}
+
+/** Etiqueta Service en UI: ``vehicle_file_aa_name`` o calculada al vuelo. */
+export function vueloInternoServiceLabel(
+  extras: Record<string, unknown> | null | undefined,
+  snapshotName: string,
+): string {
+  const pre = extras && typeof extras === 'object' && !Array.isArray(extras)
+    ? String(extras['vehicle_file_aa_name'] ?? '').trim()
+    : '';
+  if (pre) return pre;
+  const brand = vehicleBrandFromExtras(extras);
+  return computeVueloInternoFileAaName(snapshotName, brand);
+}
+
 const NO_SUBTITLE_CATEGORIES = new Set([
   'Vehiculo de Alquiler',
   'Transfer del Hotel - Actividad - Hotel',
