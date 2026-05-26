@@ -60,6 +60,7 @@ import {
   vehicleFichaServiceLayout,
   botePublicoServiceLabel,
   transferZonaZonaServiceLabel,
+  fichaAaDetailVisibleInTable,
   vueloInternoServiceLabel,
   type VehicleFichaDatesLayout,
   type VehicleFichaServiceLayout,
@@ -1139,9 +1140,14 @@ export class QuotationDetail implements OnInit {
 
   dropFichaDetailRow(event: CdkDragDrop<FileAADetailRow[]>, ficha: FileAAWithDetails): void {
     if (event.previousIndex === event.currentIndex) return;
-    const details = [...ficha.details];
+    const visible = this.fichaVisibleDetails(ficha);
+    const reorderedVisible = [...visible];
+    moveItemInArray(reorderedVisible, event.previousIndex, event.currentIndex);
+    const visibleQueue = [...reorderedVisible];
+    const details = (ficha.details ?? []).map((d) =>
+      fichaAaDetailVisibleInTable(d) ? visibleQueue.shift()! : d,
+    );
     const previousOrder = [...ficha.details];
-    moveItemInArray(details, event.previousIndex, event.currentIndex);
     this.fichaFileAA.set({ ...ficha, details });
     this.fichaDetailReorderSaving.set(true);
     this.quotationService
@@ -1235,6 +1241,10 @@ export class QuotationDetail implements OnInit {
       (s): s is string => typeof s === 'string' && s.trim().length > 0,
     );
     return lines.length > 0 ? lines : [(d.name ?? '').trim()];
+  }
+
+  fichaVisibleDetails(ficha: FileAAWithDetails): FileAADetailRow[] {
+    return (ficha.details ?? []).filter((d) => fichaAaDetailVisibleInTable(d));
   }
 
   fichaVehicleCategory(d: FileAADetailRow): string | null {

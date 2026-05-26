@@ -130,6 +130,19 @@ export function computeBotePublicoFileAaName(rawName: string): string {
   return (rawName ?? '').trim();
 }
 
+/** Segmento antes del primer ``/`` (fallback de nombre en Transfer Zona a Zona). */
+export function textBeforeFirstSlash(raw: string): string {
+  const s = (raw ?? '').trim();
+  if (!s) return '';
+  const idx = s.indexOf('/');
+  return idx >= 0 ? s.slice(0, idx).trim() : s;
+}
+
+/** ``file_aa_name`` del catálogo o segmento del ``name`` antes del primer ``/``. */
+export function computeTransferZonaZonaFileAaName(rawName: string): string {
+  return textBeforeFirstSlash(rawName);
+}
+
 /** Etiqueta Service en UI para Transfer Zona a Zona: ``file_aa_name`` o ``name``. */
 export function transferZonaZonaServiceLabel(
   extras: Record<string, unknown> | null | undefined,
@@ -140,7 +153,7 @@ export function transferZonaZonaServiceLabel(
       ? String(extras['vehicle_file_aa_name'] ?? '').trim()
       : '';
   if (pre) return pre;
-  return (snapshotName ?? '').trim();
+  return computeTransferZonaZonaFileAaName(snapshotName);
 }
 
 /** Etiqueta Service en UI para Bote Publico. */
@@ -172,8 +185,24 @@ export function vueloInternoServiceLabel(
 const NO_SUBTITLE_CATEGORIES = new Set([
   'Vehiculo de Alquiler',
   'Transfer del Hotel - Actividad - Hotel',
+  'Transfer de un Vehiculo Hacia X Zona',
   'Vuelo Interno',
 ]);
+
+/** Vehículos cuya fila no aparece en tablas Ficha AA (fusionados al generar). */
+export const FICHA_AA_MERGED_VEHICLE_CATEGORIES = new Set([
+  'Transfer del Hotel - Actividad - Hotel',
+  'Transfer de un Vehiculo Hacia X Zona',
+]);
+
+export function fichaAaDetailVisibleInTable(d: {
+  category: string;
+  observation_extras?: Record<string, unknown> | null;
+}): boolean {
+  if (d.category !== 'vehicle') return true;
+  const cat = vehicleCategoryFromExtras(d.observation_extras);
+  return !cat || !FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat);
+}
 
 export function vehicleFichaAllowsSubtitle(
   category: string | null,

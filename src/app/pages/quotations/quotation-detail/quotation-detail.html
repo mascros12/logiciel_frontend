@@ -984,7 +984,7 @@
                       [cdkDropListDisabled]="fichaDetailReorderSaving()"
                       (cdkDropListDropped)="dropFichaDetailRow($event, ficha)"
                     >
-                      @for (d of ficha.details; track d.id) {
+                      @for (d of fichaVisibleDetails(ficha); track d.id) {
                         <tr
                           cdkDrag
                           [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)"
