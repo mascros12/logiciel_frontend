@@ -58,7 +58,7 @@ import {
   vehicleFichaAllowsSubtitle,
   vehicleFichaDatesLayout,
   vehicleFichaServiceLayout,
-  vueloInternoRouteFromName,
+  botePublicoServiceLabel,
   vueloInternoServiceLabel,
   type VehicleFichaDatesLayout,
   type VehicleFichaServiceLayout,
@@ -1252,12 +1252,12 @@ export class QuotationDetail implements OnInit {
     return vehicleBrandFromExtras(d.observation_extras);
   }
 
-  fichaVueloInternoRoute(d: FileAADetailRow): string {
-    return vueloInternoRouteFromName(d.name ?? '');
-  }
-
   fichaVueloInternoServiceLabel(d: FileAADetailRow): string {
     return vueloInternoServiceLabel(d.observation_extras, d.name ?? '');
+  }
+
+  fichaBotePublicoServiceLabel(d: FileAADetailRow): string {
+    return botePublicoServiceLabel(d.observation_extras, d.name ?? '');
   }
 
   fichaVehicleAllowsSubtitle(d: FileAADetailRow): boolean {
@@ -1914,7 +1914,7 @@ export class QuotationDetail implements OnInit {
 
   /**
    * «Voiture de Location: …» — solo Alquiler (file_aa_name), Interbus (una vez)
-   * y Vuelo Interno (file_aa_name: proveedor - ruta). Misma lógica que el export Word/PDF.
+   * y Vuelo Interno (file_aa_name: proveedor + ruta). Misma lógica que el export Word/PDF.
    */
   fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';

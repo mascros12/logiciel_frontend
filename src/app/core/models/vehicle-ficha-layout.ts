@@ -116,13 +116,31 @@ export function vueloInternoRouteFromName(rawName: string): string {
   return stripVueloInternoAvionPrefix(rawName);
 }
 
-/** ``proveedor - ruta`` para ``file_aa_name`` de Vuelo Interno. */
+/** ``proveedor ruta`` para ``file_aa_name`` de Vuelo Interno. */
 export function computeVueloInternoFileAaName(rawName: string, brand: string): string {
   const route = stripVueloInternoAvionPrefix(rawName);
   const prov = (brand ?? '').split('/', 1)[0]?.trim() ?? '';
-  if (prov && route) return `${prov} - ${route}`;
+  if (prov && route) return `${prov} ${route}`;
   if (prov) return prov;
   return route;
+}
+
+/** ``file_aa_name`` para Bote Publico: nombre del vehículo. */
+export function computeBotePublicoFileAaName(rawName: string): string {
+  return (rawName ?? '').trim();
+}
+
+/** Etiqueta Service en UI para Bote Publico. */
+export function botePublicoServiceLabel(
+  extras: Record<string, unknown> | null | undefined,
+  snapshotName: string,
+): string {
+  const pre =
+    extras && typeof extras === 'object' && !Array.isArray(extras)
+      ? String(extras['vehicle_file_aa_name'] ?? '').trim()
+      : '';
+  if (pre) return pre;
+  return computeBotePublicoFileAaName(snapshotName);
 }
 
 /** Etiqueta Service en UI: ``vehicle_file_aa_name`` o calculada al vuelo. */
@@ -141,6 +159,7 @@ export function vueloInternoServiceLabel(
 const NO_SUBTITLE_CATEGORIES = new Set([
   'Vehiculo de Alquiler',
   'Transfer del Hotel - Actividad - Hotel',
+  'Vuelo Interno',
 ]);
 
 export function vehicleFichaAllowsSubtitle(

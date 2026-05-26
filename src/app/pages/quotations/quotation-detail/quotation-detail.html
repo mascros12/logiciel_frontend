@@ -1110,10 +1110,10 @@
                                 <div class="ficha-vehicle-service-cell">
                                   @switch (vSvcLayout) {
                                     @case ('brand_subtitle') {
-                                      <span class="ficha-name">{{ fichaVehicleBrand(d) || d.name }}</span>
+                                      <span class="ficha-name">{{ fichaBotePublicoServiceLabel(d) }}</span>
                                     }
                                     @case ('interbus') {
-                                      <span class="ficha-name">Interbus</span>
+                                      <span class="ficha-name">Interbus:</span>
                                     }
                                     @case ('fixed_transfer') {
                                       <span class="ficha-name">Transfer@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
@@ -1134,7 +1134,7 @@
                                       }
                                     }
                                     @case ('vuelo_comma') {
-                                      <span class="ficha-name">{{ fichaVueloInternoRoute(d) }}</span>
+                                      <span class="ficha-name">{{ fichaVueloInternoServiceLabel(d) }}</span>
                                     }
                                     @case ('name_only') {
                                       <span class="ficha-name">{{ vehParts.main || d.name }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
