@@ -2339,9 +2339,11 @@ export class QuotationDetail implements OnInit {
       }
       this.fichaNameEditValue2.set('');
     } else {
+      const actLine = (d.display_service_lines?.[0] ?? '').trim();
+      const actMain = actLine.includes(' - ') ? actLine.split(' - ').slice(1).join(' - ').trim() : actLine;
+      const actMainNoTime = actMain.replace(/,\s*\d{1,2}h\d{0,2}$/i, '').trim();
       this.fichaNameEditValue.set(
-        (extras?.['activity_file_aa_name'] as string) ||
-        (d.display_service_lines?.[0] ?? '')
+        (extras?.['activity_name_es'] as string) || actMainNoTime,
       );
       this.fichaNameEditValue2.set('');
     }
@@ -2410,7 +2412,7 @@ export class QuotationDetail implements OnInit {
     } else {
       // Activity or vehicle: single field
       const obsKey =
-        d.category === 'activity' ? 'activity_file_aa_name' :
+        d.category === 'activity' ? 'activity_name_es' :
         d.category === 'vehicle' ? 'vehicle_file_aa_name' : null;
       const catalogueUpdate$ = this._fichaNameCatalogueUpdate(d, newName);
       catalogueUpdate$.subscribe({
@@ -2443,7 +2445,7 @@ export class QuotationDetail implements OnInit {
       return this.vehicleService.update(d.catalogue_vehicle_id, { file_aa_name: newName });
     }
     if (d.category === 'activity' && d.catalogue_activity_id) {
-      return this.activityService.update(d.catalogue_activity_id, { file_aa_name: newName });
+      return this.activityService.update(d.catalogue_activity_id, { name_es: newName });
     }
     // Rooms are handled directly in confirmFichaNameEdit (hotel + room separately)
     return of(null);
