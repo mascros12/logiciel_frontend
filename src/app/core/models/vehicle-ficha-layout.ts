@@ -130,6 +130,19 @@ export function computeBotePublicoFileAaName(rawName: string): string {
   return (rawName ?? '').trim();
 }
 
+/** Etiqueta Service en UI para Transfer Zona a Zona: ``file_aa_name`` o ``name``. */
+export function transferZonaZonaServiceLabel(
+  extras: Record<string, unknown> | null | undefined,
+  snapshotName: string,
+): string {
+  const pre =
+    extras && typeof extras === 'object' && !Array.isArray(extras)
+      ? String(extras['vehicle_file_aa_name'] ?? '').trim()
+      : '';
+  if (pre) return pre;
+  return (snapshotName ?? '').trim();
+}
+
 /** Etiqueta Service en UI para Bote Publico. */
 export function botePublicoServiceLabel(
   extras: Record<string, unknown> | null | undefined,

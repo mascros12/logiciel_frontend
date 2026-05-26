@@ -1126,10 +1126,7 @@
                                       <span class="ficha-name">Transporte coletivo privado</span>
                                     }
                                     @case ('transfer_comma') {
-                                      <span class="ficha-name">Transfer</span>
-                                      @if (fichaVehicleBrand(d)) {
-                                        <span class="ficha-vehicle-brand-hint">Marca: {{ fichaVehicleBrand(d) }}</span>
-                                      }
+                                      <span class="ficha-name">{{ fichaTransferZonaZonaServiceLabel(d) }}</span>
                                     }
                                     @case ('transfer_privee_comma') {
                                       <span class="ficha-name">Transfer "privée"</span>

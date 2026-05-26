@@ -59,6 +59,7 @@ import {
   vehicleFichaDatesLayout,
   vehicleFichaServiceLayout,
   botePublicoServiceLabel,
+  transferZonaZonaServiceLabel,
   vueloInternoServiceLabel,
   type VehicleFichaDatesLayout,
   type VehicleFichaServiceLayout,
@@ -1258,6 +1259,10 @@ export class QuotationDetail implements OnInit {
 
   fichaBotePublicoServiceLabel(d: FileAADetailRow): string {
     return botePublicoServiceLabel(d.observation_extras, d.name ?? '');
+  }
+
+  fichaTransferZonaZonaServiceLabel(d: FileAADetailRow): string {
+    return transferZonaZonaServiceLabel(d.observation_extras, d.name ?? '');
   }
 
   fichaVehicleAllowsSubtitle(d: FileAADetailRow): boolean {
