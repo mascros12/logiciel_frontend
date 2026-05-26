@@ -55,6 +55,7 @@ import { formatQuotationVersionLabel } from '../../../core/utils/quotation-versi
 import {
   vehicleBrandFromExtras,
   vehicleCategoryFromExtras,
+  vehicleFichaAllowsSubtitle,
   vehicleFichaDatesLayout,
   vehicleFichaServiceLayout,
   type VehicleFichaDatesLayout,
@@ -1805,15 +1806,27 @@ export class QuotationDetail implements OnInit {
     return n === 1 ? '1 nuit' : `${n} nuits`;
   }
 
-  /** Fecha de llegada − 30 días (DD/MM/AAAA), para alinear a la derecha. */
-  fichaArrivalMinus30DaysFr(ficha: FileAAWithDetails): string {
+  /** Fecha de llegada − 1 mes calendario (DD/MM/AAAA), p. ej. 01/03/2026 → 01/02/2026. */
+  fichaArrivalMinusOneMonthFr(ficha: FileAAWithDetails): string {
     if (!ficha.from_date) return '';
     const d = new Date(ficha.from_date + 'T12:00:00');
     if (isNaN(d.getTime())) return '';
-    d.setDate(d.getDate() - 30);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    return `${dd}/${mm}/${d.getFullYear()}`;
+    const target = this.subtractOneCalendarMonth(d);
+    const dd = String(target.getDate()).padStart(2, '0');
+    const mm = String(target.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${target.getFullYear()}`;
+  }
+
+  private subtractOneCalendarMonth(d: Date): Date {
+    let year = d.getFullYear();
+    let month = d.getMonth() - 1;
+    if (month < 0) {
+      month = 11;
+      year -= 1;
+    }
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const day = Math.min(d.getDate(), lastDay);
+    return new Date(year, month, day, 12, 0, 0);
   }
 
   /** Composición de pasajeros en francés: «3 Adultes + 1 enfant (10 ans)». */
