@@ -102,6 +102,13 @@ const FICHA_HEADER_COLOR_PAIRS = [
 
 const FICHA_HEADER_COLORS = FICHA_HEADER_COLOR_PAIRS.flat() as readonly string[];
 
+/** Categorías de vehículo en la línea «Voiture de Location» (orden fijo). */
+const VOITURE_LOCATION_VEHICLE_CATEGORIES = [
+  'Vehiculo de Alquiler',
+  'Interbus',
+  'Vuelo Interno',
+] as const;
+
 
 @Component({
   selector: 'app-quotation-detail',
@@ -1896,28 +1903,48 @@ export class QuotationDetail implements OnInit {
   }
 
   /**
-   * «Voiture de Location: NOMBRE» — vehículos no-Transfert y no-Retour
-   * (trim al primer `(` o `/`). Espejo de
-   * `_vehicle_excluded_from_voiture_location` en el backend.
+   * «Voiture de Location: …» — solo Alquiler (file_aa_name), Interbus (una vez)
+   * y Vuelo Interno (brand). Misma lógica que el export Word/PDF.
    */
   fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
-    const names: string[] = [];
-    const seen = new Set<string>();
+    const alquiler: string[] = [];
+    const seenAlquiler = new Set<string>();
+    let hasInterbus = false;
+    const vueloBrands: string[] = [];
+    const seenVuelo = new Set<string>();
+
     for (const d of ficha.details) {
       if (d.category !== 'vehicle') continue;
-      const lname = (d.name || '').toLowerCase();
-      if (lname.includes('transfert') || lname.includes('retour') || lname.includes('taxi')) continue;
-      let n = (d.name || '').trim();
-      const cuts = [n.indexOf('('), n.indexOf('/')].filter((i) => i >= 0);
-      if (cuts.length > 0) {
-        n = n.slice(0, Math.min(...cuts)).trim();
+      const ex = (d.observation_extras ?? {}) as Record<string, unknown>;
+      const cat = String(ex['vehicle_category'] ?? '').trim();
+      if (!(VOITURE_LOCATION_VEHICLE_CATEGORIES as readonly string[]).includes(cat)) {
+        continue;
       }
-      if (!n || seen.has(n)) continue;
-      seen.add(n);
-      names.push(n);
+      if (cat === 'Vehiculo de Alquiler') {
+        const label = String(ex['vehicle_file_aa_name'] ?? '').trim();
+        if (label && !seenAlquiler.has(label)) {
+          seenAlquiler.add(label);
+          alquiler.push(label);
+        }
+      } else if (cat === 'Interbus') {
+        hasInterbus = true;
+      } else if (cat === 'Vuelo Interno') {
+        let brand = String(ex['vehicle_brand'] ?? '').trim();
+        if (brand.includes('/')) {
+          brand = brand.split('/', 1)[0].trim();
+        }
+        if (brand && !seenVuelo.has(brand)) {
+          seenVuelo.add(brand);
+          vueloBrands.push(brand);
+        }
+      }
     }
-    return names.length ? `Voiture de Location: ${names.join(', ')}` : '';
+
+    const parts: string[] = [...alquiler];
+    if (hasInterbus) parts.push('Interbus');
+    parts.push(...vueloBrands);
+    return parts.length ? `Voiture de Location: ${parts.join(', ')}` : '';
   }
 
   fichaCategoryLabel(cat: string): string {
