@@ -1116,7 +1116,11 @@
                                       <span class="ficha-name">Interbus:</span>
                                     }
                                     @case ('fixed_transfer') {
-                                      <span class="ficha-name">Transfer@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                                      @if (fichaVehicleCategory(d) === 'Transfer Aeropuerto/Hotel') {
+                                        <span class="ficha-name">Transfert</span>
+                                      } @else {
+                                        <span class="ficha-name">Transfer@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                                      }
                                     }
                                     @case ('fixed_colectivo') {
                                       <span class="ficha-name">Transporte coletivo privado</span>
