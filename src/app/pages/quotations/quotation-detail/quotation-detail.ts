@@ -60,6 +60,7 @@ import {
   vehicleFichaServiceLayout,
   botePublicoServiceLabel,
   transferZonaZonaServiceLabel,
+  rentalVehicleServiceLabel,
   fichaAaDetailVisibleInTable,
   vueloInternoServiceLabel,
   type VehicleFichaDatesLayout,
@@ -112,6 +113,34 @@ const VOITURE_LOCATION_VEHICLE_CATEGORIES = [
   'Interbus',
   'Vuelo Interno',
 ] as const;
+
+type FichaAaResizableColumn =
+  | 'servicio'
+  | 'fechas'
+  | 'observaciones'
+  | 'nReserva'
+  | 'precioSistema'
+  | 'precioProveedor';
+
+const FICHA_AA_COL_WIDTHS_STORAGE_KEY = 'ficha-aa-col-widths-v1';
+
+const FICHA_AA_DEFAULT_COL_WIDTHS: Record<FichaAaResizableColumn, number> = {
+  servicio: 240,
+  fechas: 220,
+  observaciones: 280,
+  nReserva: 110,
+  precioSistema: 115,
+  precioProveedor: 115,
+};
+
+const FICHA_AA_MIN_COL_WIDTHS: Record<FichaAaResizableColumn, number> = {
+  servicio: 120,
+  fechas: 120,
+  observaciones: 140,
+  nReserva: 80,
+  precioSistema: 90,
+  precioProveedor: 90,
+};
 
 
 @Component({
@@ -236,6 +265,14 @@ export class QuotationDetail implements OnInit {
   /** Última Ficha AA generada con tabla de servicios (se recarga al abrir la cotización). */
   fichaFileAA = signal<FileAAWithDetails | null>(null);
   fichaDetailReorderSaving = signal(false);
+  /** Anchos en px de columnas redimensionables de la tabla Ficha AA. */
+  fichaAaColWidths = signal<Record<FichaAaResizableColumn, number>>({
+    ...FICHA_AA_DEFAULT_COL_WIDTHS,
+  });
+  fichaAaColResizing = signal(false);
+  private fichaAaColResize:
+    | { key: FichaAaResizableColumn; startX: number; startWidth: number }
+    | null = null;
   fichaAATab = signal<'ficha' | 'config'>('ficha');
   /** Borradores UI de los textos libres que se imprimen al final del Word/PDF
    * (debajo de los virements). Se persisten en `FileAA.observations` /
@@ -419,6 +456,7 @@ export class QuotationDetail implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;
+    this.loadFichaAaColWidths();
     this.load(id);
     this.loadProviders();
   }
@@ -1247,6 +1285,67 @@ export class QuotationDetail implements OnInit {
     return (ficha.details ?? []).filter((d) => fichaAaDetailVisibleInTable(d));
   }
 
+  private loadFichaAaColWidths(): void {
+    try {
+      const raw = localStorage.getItem(FICHA_AA_COL_WIDTHS_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<Record<FichaAaResizableColumn, number>>;
+      const next = { ...FICHA_AA_DEFAULT_COL_WIDTHS };
+      for (const key of Object.keys(FICHA_AA_DEFAULT_COL_WIDTHS) as FichaAaResizableColumn[]) {
+        const w = parsed[key];
+        if (typeof w === 'number' && Number.isFinite(w) && w >= FICHA_AA_MIN_COL_WIDTHS[key]) {
+          next[key] = Math.round(w);
+        }
+      }
+      this.fichaAaColWidths.set(next);
+    } catch {
+      /* ignore corrupt storage */
+    }
+  }
+
+  private persistFichaAaColWidths(): void {
+    try {
+      localStorage.setItem(
+        FICHA_AA_COL_WIDTHS_STORAGE_KEY,
+        JSON.stringify(this.fichaAaColWidths()),
+      );
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
+
+  startFichaAaColResize(event: MouseEvent, key: FichaAaResizableColumn): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.fichaAaColResize = {
+      key,
+      startX: event.clientX,
+      startWidth: this.fichaAaColWidths()[key],
+    };
+    this.fichaAaColResizing.set(true);
+    const onMove = (e: MouseEvent) => this.onFichaAaColResizeMove(e);
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      this.fichaAaColResizing.set(false);
+      this.fichaAaColResize = null;
+      this.persistFichaAaColWidths();
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  private onFichaAaColResizeMove(event: MouseEvent): void {
+    const state = this.fichaAaColResize;
+    if (!state) return;
+    const delta = event.clientX - state.startX;
+    const next = Math.max(
+      FICHA_AA_MIN_COL_WIDTHS[state.key],
+      Math.round(state.startWidth + delta),
+    );
+    this.fichaAaColWidths.update((widths) => ({ ...widths, [state.key]: next }));
+  }
+
   fichaVehicleCategory(d: FileAADetailRow): string | null {
     return vehicleCategoryFromExtras(d.observation_extras);
   }
@@ -1273,6 +1372,22 @@ export class QuotationDetail implements OnInit {
 
   fichaTransferZonaZonaServiceLabel(d: FileAADetailRow): string {
     return transferZonaZonaServiceLabel(d.observation_extras, d.name ?? '');
+  }
+
+  fichaRentalServiceLabel(d: FileAADetailRow): string {
+    return rentalVehicleServiceLabel(d.observation_extras, d.name ?? '');
+  }
+
+  /** Filas visibles en los textareas Interbus (lugares + fechas alineados). */
+  fichaInterbusLineRows(d: FileAADetailRow): number {
+    const places = this.ensureVehicleServiceSubtitleDraft(d);
+    const fechas = this.ensureVehicleFichaObsDraft(d).ficha_interbus_fechas ?? '';
+    const n = Math.max(
+      places.split('\n').length,
+      fechas.split('\n').length,
+      2,
+    );
+    return Math.min(n, 12);
   }
 
   fichaVehicleAllowsSubtitle(d: FileAADetailRow): boolean {
@@ -1928,6 +2043,38 @@ export class QuotationDetail implements OnInit {
   }
 
   /**
+   * Hora del vuelo de salida menos 4 h (HHhMM), como en export Word/PDF cuando hay
+   * transfert el último día del viaje.
+   */
+  fichaDeparturePickupEarlyFr(q: QuotationFull): string {
+    const t = q.departure_time;
+    if (!t) return '';
+    const m = /^(\d{2}):(\d{2})/.exec(t);
+    if (!m) return '';
+    let totalMin = parseInt(m[1], 10) * 60 + parseInt(m[2], 10) - 4 * 60;
+    while (totalMin < 0) {
+      totalMin += 24 * 60;
+    }
+    const h = Math.floor(totalMin / 60) % 24;
+    const min = totalMin % 60;
+    return `${String(h).padStart(2, '0')}h${String(min).padStart(2, '0')}`;
+  }
+
+  /** Transfert en el último día del viaje (misma regla que ``_has_transfert_vehicle_on_last_trip_day``). */
+  fichaHasTransfertOnLastTripDay(ficha: FileAAWithDetails): boolean {
+    const last = (ficha.to_date ?? '').trim();
+    if (!last) return false;
+    const details = (ficha.details ?? []).filter((d) => fichaAaDetailVisibleInTable(d));
+    return details.some((d) => {
+      if (d.category !== 'vehicle') return false;
+      if (!/transfert/i.test(d.name ?? '')) return false;
+      const from = (d.date_from ?? '').slice(0, 10);
+      const to = (d.date_to ?? d.date_from ?? '').slice(0, 10);
+      return from <= last && last <= to;
+    });
+  }
+
+  /**
    * «Voiture de Location: …» — solo Alquiler (file_aa_name), Interbus (una vez)
    * y Vuelo Interno (file_aa_name: proveedor + ruta). Misma lógica que el export Word/PDF.
    */
@@ -1947,7 +2094,7 @@ export class QuotationDetail implements OnInit {
         continue;
       }
       if (cat === 'Vehiculo de Alquiler') {
-        const label = String(ex['vehicle_file_aa_name'] ?? '').trim();
+        const label = rentalVehicleServiceLabel(ex, d.name ?? '');
         if (label && !seenAlquiler.has(label)) {
           seenAlquiler.add(label);
           alquiler.push(label);
@@ -2321,6 +2468,7 @@ export class QuotationDetail implements OnInit {
         ficha_hora_recogida: s('ficha_hora_recogida'),
         ficha_fecha_devolucion: s('ficha_fecha_devolucion'),
         ficha_hora_devolucion: s('ficha_hora_devolucion'),
+        ficha_interbus_fechas: s('ficha_interbus_fechas'),
       };
     }
     return def;
@@ -2499,8 +2647,16 @@ export class QuotationDetail implements OnInit {
       ficha_hora_recogida: row.ficha_hora_recogida ?? '',
       ficha_fecha_devolucion: row.ficha_fecha_devolucion ?? '',
       ficha_hora_devolucion: row.ficha_hora_devolucion ?? '',
+      ficha_interbus_fechas: row.ficha_interbus_fechas ?? '',
     };
-    if (this.fichaVehicleAllowsSubtitle(d)) {
+    if (this.fichaVehicleCategory(d) === 'Interbus') {
+      const sub = (this.vehicleServiceSubtitleDraft[d.id] ?? '').trim();
+      if (sub) {
+        observation_extras['vehicle_ficha_aa_subtitle'] = sub;
+      } else {
+        delete observation_extras['vehicle_ficha_aa_subtitle'];
+      }
+    } else if (this.fichaVehicleAllowsSubtitle(d)) {
       const sub = (this.vehicleServiceSubtitleDraft[d.id] ?? '').trim();
       if (sub) {
         observation_extras['vehicle_ficha_aa_subtitle'] = sub;

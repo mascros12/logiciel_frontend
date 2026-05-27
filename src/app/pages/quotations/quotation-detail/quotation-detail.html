@@ -884,8 +884,26 @@
             @if (fichaFileAA(); as ficha) {
             @if (!fichaAABlockedForComercial() && fichaAATab() === 'ficha') {
               <div class="ficha-aa-generated ficha-aa-generated--minimal">
-                <div class="ficha-aa-generated-table-wrap" appStickyHorizontalScroll>
-                  <table class="ficha-aa-generated-table">
+                <div
+                  class="ficha-aa-generated-table-wrap"
+                  appStickyHorizontalScroll
+                  [class.ficha-aa-col-resizing]="fichaAaColResizing()"
+                >
+                  <table class="ficha-aa-generated-table ficha-aa-generated-table--resizable">
+                    <colgroup>
+                      <col class="col-ficha-drag" />
+                      <col class="col-cb" />
+                      <col class="col-ficha-row-actions" />
+                      <col [style.width.px]="fichaAaColWidths().servicio" />
+                      <col [style.width.px]="fichaAaColWidths().fechas" />
+                      <col [style.width.px]="fichaAaColWidths().observaciones" />
+                      <col class="col-cb" />
+                      <col [style.width.px]="fichaAaColWidths().nReserva" />
+                      <col [style.width.px]="fichaAaColWidths().precioSistema" />
+                      <col [style.width.px]="fichaAaColWidths().precioProveedor" />
+                      <col class="col-cb" />
+                      <col class="col-ficha-email" />
+                    </colgroup>
                     <thead>
                       <tr>
                       <th colspan="12" [style.background-color]="fichaHeaderColor()">
@@ -955,7 +973,15 @@
                             }
 
                             <p class="ficha-aa-summary-flight-fr">{{ fichaArrivalLineFr(q) }}</p>
-                            <p class="ficha-aa-summary-flight-fr">{{ fichaDepartureLineFr(q) }}</p>
+                            @if (fichaHasTransfertOnLastTripDay(ficha)) {
+                              <div class="ficha-aa-summary-dates-fr ficha-aa-summary-flight-row">
+                                <span class="ficha-aa-summary-dates-fr-spacer"></span>
+                                <span class="ficha-aa-summary-dates-fr-main">{{ fichaDepartureLineFr(q) }}</span>
+                                <span class="ficha-aa-summary-dates-fr-deadline">{{ fichaDeparturePickupEarlyFr(q) }}</span>
+                              </div>
+                            } @else {
+                              <p class="ficha-aa-summary-flight-fr">{{ fichaDepartureLineFr(q) }}</p>
+                            }
 
                             @let voitureLocFr = fichaVoitureLocationLineFr(ficha);
                             @if (voitureLocFr) {
@@ -968,13 +994,67 @@
                         <th class="col-ficha-drag" scope="col" aria-label="Reordenar filas"></th>
                         <th class="col-cb" scope="col">F</th>
                         <th class="col-ficha-row-actions" scope="col" pTooltip="Añadir o quitar línea">±</th>
-                        <th scope="col">Servicio</th>
-                        <th scope="col">Fechas</th>
-                        <th scope="col" class="ficha-col-obs">Observaciones</th>
+                        <th scope="col" class="ficha-col-resizable">
+                          <span class="ficha-col-header-label">Servicio</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Servicio"
+                            (mousedown)="startFichaAaColResize($event, 'servicio')"
+                          ></span>
+                        </th>
+                        <th scope="col" class="ficha-col-resizable">
+                          <span class="ficha-col-header-label">Fechas</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Fechas"
+                            (mousedown)="startFichaAaColResize($event, 'fechas')"
+                          ></span>
+                        </th>
+                        <th scope="col" class="ficha-col-resizable ficha-col-obs">
+                          <span class="ficha-col-header-label">Observaciones</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Observaciones"
+                            (mousedown)="startFichaAaColResize($event, 'observaciones')"
+                          ></span>
+                        </th>
                         <th class="col-cb" scope="col">Reservado</th>
-                        <th scope="col">Nº reserva</th>
-                        <th class="col-money" scope="col">Precio sistema</th>
-                        <th class="col-money" scope="col">Precio proveedor</th>
+                        <th scope="col" class="ficha-col-resizable">
+                          <span class="ficha-col-header-label">Nº reserva</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Nº reserva"
+                            (mousedown)="startFichaAaColResize($event, 'nReserva')"
+                          ></span>
+                        </th>
+                        <th class="col-money ficha-col-resizable" scope="col">
+                          <span class="ficha-col-header-label">Precio sistema</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Precio sistema"
+                            (mousedown)="startFichaAaColResize($event, 'precioSistema')"
+                          ></span>
+                        </th>
+                        <th class="col-money ficha-col-resizable" scope="col">
+                          <span class="ficha-col-header-label">Precio proveedor</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Precio proveedor"
+                            (mousedown)="startFichaAaColResize($event, 'precioProveedor')"
+                          ></span>
+                        </th>
                         <th class="col-cb" scope="col">Pagado</th>
                         <th class="col-ficha-email" scope="col" pTooltip="Enviar solicitud por correo al proveedor">Correo</th>
                       </tr>
@@ -1113,7 +1193,18 @@
                                       <span class="ficha-name">{{ fichaBotePublicoServiceLabel(d) }}</span>
                                     }
                                     @case ('interbus') {
-                                      <span class="ficha-name">Interbus:</span>
+                                      <div class="ficha-interbus-cell">
+                                        <div class="ficha-interbus-header">Interbus:</div>
+                                        <textarea
+                                          pInputTextarea
+                                          class="ficha-cell-input ficha-obs-textarea ficha-interbus-lines-input"
+                                          [rows]="fichaInterbusLineRows(d)"
+                                          placeholder="Un trayecto por línea"
+                                          [ngModel]="ensureVehicleServiceSubtitleDraft(d)"
+                                          (ngModelChange)="setVehicleServiceSubtitleDraft(d, $event)"
+                                          (blur)="commitVehicleFichaObs(d)"
+                                        ></textarea>
+                                      </div>
                                     }
                                     @case ('fixed_transfer') {
                                       @if (fichaVehicleCategory(d) === 'Transfer Aeropuerto/Hotel') {
@@ -1136,6 +1227,9 @@
                                     }
                                     @case ('vuelo_comma') {
                                       <span class="ficha-name">{{ fichaVueloInternoServiceLabel(d) }}</span>
+                                    }
+                                    @case ('rental') {
+                                      <span class="ficha-name">{{ fichaRentalServiceLabel(d) }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
                                     }
                                     @case ('name_only') {
                                       <span class="ficha-name">{{ vehParts.main || d.name }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
@@ -1221,6 +1315,19 @@
                               </div>
                             } @else if (d.category === 'vehicle') {
                               @switch (fichaVehicleDatesLayout(d)) {
+                                @case ('interbus') {
+                                  <div class="ficha-interbus-cell">
+                                    <div class="ficha-interbus-header">Fechas:</div>
+                                    <textarea
+                                      pInputTextarea
+                                      class="ficha-cell-input ficha-obs-textarea ficha-interbus-lines-input"
+                                      [rows]="fichaInterbusLineRows(d)"
+                                      placeholder="Una fecha por línea"
+                                      [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_interbus_fechas"
+                                      (blur)="commitVehicleFichaObs(d)"
+                                    ></textarea>
+                                  </div>
+                                }
                                 @case ('empty') {
                                   <span class="ficha-dates-muted">—</span>
                                 }

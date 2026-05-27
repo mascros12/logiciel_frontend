@@ -100,6 +100,8 @@ export interface FileAADetailVehicleObsState {
   ficha_hora_recogida?: string;
   ficha_fecha_devolucion?: string;
   ficha_hora_devolucion?: string;
+  /** Interbus: fechas por trayecto (una por línea, alineada con ``vehicle_ficha_aa_subtitle``). */
+  ficha_interbus_fechas?: string;
 }
 
 /** Observaciones estructuradas en Ficha AA — filas categoría actividad */

@@ -883,6 +883,15 @@
     border-radius: var(--p-border-radius);
     border: 1px solid #d5dbe3;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+
+    &.ficha-aa-col-resizing {
+      cursor: col-resize;
+      user-select: none;
+
+      .ficha-col-resize-handle::after {
+        opacity: 1;
+      }
+    }
   }
 
   .ficha-aa-generated-table {
@@ -892,6 +901,73 @@
     font-size: 0.9rem;
     background: #ffffff;
     color: #1f2937;
+
+    &--resizable {
+      table-layout: fixed;
+
+      th.ficha-col-resizable {
+        position: relative;
+        padding-right: 0.85rem;
+        overflow: hidden;
+      }
+
+      .ficha-col-header-label {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-right: 0.15rem;
+      }
+
+      .ficha-col-resize-handle {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 0.45rem;
+        height: 100%;
+        cursor: col-resize;
+        touch-action: none;
+        user-select: none;
+        z-index: 2;
+
+        &::after {
+          content: '';
+          position: absolute;
+          top: 15%;
+          bottom: 15%;
+          right: 0.15rem;
+          width: 2px;
+          border-radius: 1px;
+          background: #cbd5e1;
+          opacity: 0;
+          transition: opacity 0.15s ease;
+        }
+
+        &:hover::after {
+          opacity: 1;
+        }
+      }
+
+      td {
+        overflow: hidden;
+      }
+
+      .ficha-col-obs {
+        max-width: none;
+      }
+
+      .ficha-vehicle-dates-blocks,
+      .ficha-room-dates-blocks,
+      .ficha-activity-dates-blocks {
+        max-width: 100%;
+      }
+
+      .ficha-cell-input,
+      .ficha-obs-textarea {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+    }
 
     th,
     td {
@@ -1053,6 +1129,34 @@
     .ficha-vehicle-dates-blocks {
       min-width: 12rem;
       max-width: 18rem;
+    }
+
+    .ficha-interbus-cell {
+      display: flex;
+      flex-direction: column;
+      min-width: 9rem;
+      vertical-align: top;
+    }
+
+    .ficha-interbus-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1.5rem;
+      margin-bottom: 0.1rem;
+      color: var(--p-text-color);
+    }
+
+    .ficha-interbus-lines-input {
+      line-height: 1.5rem;
+      resize: vertical;
+      min-height: 3rem;
+      padding: 0.15rem 0.35rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+    }
+
+    td:has(.ficha-interbus-cell) {
+      vertical-align: top;
     }
 
     .ficha-obs-block {
@@ -1392,6 +1496,17 @@
         font-size: 0.95rem;
         font-weight: 800;
         color: #991B1B; // rojo oscuro (idéntico al export Word/PDF)
+      }
+    }
+
+    // Départ con recogida −4 h (transfert último día): misma cuadrícula que fechas límite
+    .ficha-aa-summary-flight-row {
+      margin-top: 0;
+
+      .ficha-aa-summary-dates-fr-main {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #991B1B;
       }
     }
 

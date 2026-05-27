@@ -20,7 +20,8 @@ export type VehicleFichaDatesLayout =
   | 'fecha_hora'
   | 'ida_vuelta'
   | 'recogida_devolucion'
-  | 'fecha_only';
+  | 'fecha_only'
+  | 'interbus';
 
 const SERVICE_BY_CATEGORY: Record<string, VehicleFichaServiceLayout> = {
   'Bote Publico': 'brand_subtitle',
@@ -43,7 +44,7 @@ const DATES_BY_CATEGORY: Record<string, VehicleFichaDatesLayout> = {
   'Bote Publico': 'fecha_hora',
   'Devolucion de Vehiculo': 'retour',
   Gira: 'recogida_devolucion',
-  Interbus: 'empty',
+  Interbus: 'interbus',
   'Taxi Maritimo': 'ida_vuelta',
   'Taxi Maritimo Privado': 'ida_vuelta',
   'Transfer Aeropuerto/Hotel': 'fecha_only',
@@ -143,6 +144,25 @@ export function computeTransferZonaZonaFileAaName(rawName: string): string {
   return textBeforeFirstSlash(rawName);
 }
 
+/** Fallback ``file_aa_name`` para Vehiculo de Alquiler: marca antes del ``/``. */
+export function computeRentalVehicleFileAaName(brand: string): string {
+  return textBeforeFirstSlash(brand);
+}
+
+/** Etiqueta Service en UI para Vehiculo de Alquiler: ``file_aa_name`` o marca. */
+export function rentalVehicleServiceLabel(
+  extras: Record<string, unknown> | null | undefined,
+  _snapshotName: string,
+): string {
+  const pre =
+    extras && typeof extras === 'object' && !Array.isArray(extras)
+      ? String(extras['vehicle_file_aa_name'] ?? '').trim()
+      : '';
+  if (pre) return pre;
+  const brand = vehicleBrandFromExtras(extras);
+  return computeRentalVehicleFileAaName(brand);
+}
+
 /** Etiqueta Service en UI para Transfer Zona a Zona: ``file_aa_name`` o ``name``. */
 export function transferZonaZonaServiceLabel(
   extras: Record<string, unknown> | null | undefined,
@@ -210,6 +230,7 @@ export function vehicleFichaAllowsSubtitle(
 ): boolean {
   if (category && NO_SUBTITLE_CATEGORIES.has(category)) return false;
   const layout = vehicleFichaServiceLayout(category, name);
+  if (layout === 'interbus') return false;
   return layout !== 'fixed_transfer'
     && layout !== 'fixed_colectivo'
     && layout !== 'name_only'
