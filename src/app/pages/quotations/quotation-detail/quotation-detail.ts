@@ -60,6 +60,7 @@ import {
   vehicleFichaServiceLayout,
   botePublicoServiceLabel,
   transferZonaZonaServiceLabel,
+  rentalVoitureLocationLabel,
   rentalVehicleServiceLabel,
   fichaAaDetailVisibleInTable,
   vueloInternoServiceLabel,
@@ -2075,8 +2076,8 @@ export class QuotationDetail implements OnInit {
   }
 
   /**
-   * «Voiture de Location: …» — solo Alquiler (file_aa_name), Interbus (una vez)
-   * y Vuelo Interno (file_aa_name: proveedor + ruta). Misma lógica que el export Word/PDF.
+   * «Voiture de Location: …» — Alquiler: nombre del vehículo (antes del ``/``),
+   * Interbus (una vez) y Vuelo Interno (file_aa_name). Igual que export Word/PDF.
    */
   fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
@@ -2094,7 +2095,7 @@ export class QuotationDetail implements OnInit {
         continue;
       }
       if (cat === 'Vehiculo de Alquiler') {
-        const label = rentalVehicleServiceLabel(ex, d.name ?? '');
+        const label = rentalVoitureLocationLabel(d.name ?? '');
         if (label && !seenAlquiler.has(label)) {
           seenAlquiler.add(label);
           alquiler.push(label);
