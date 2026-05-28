@@ -64,6 +64,7 @@ import {
   rentalVehicleServiceLabel,
   fichaAaDetailVisibleInTable,
   vueloInternoServiceLabel,
+  formatTaxiMaritimoFichaDatesCell,
   parseTaxiMaritimoRoute,
   taxiMaritimoServiceLabel,
   type TaxiMaritimoRouteParts,
@@ -1754,11 +1755,23 @@ export class QuotationDetail implements OnInit {
   onFichaSpecialDateToggle(checked: boolean): void {
     this.fichaHasSpecialDate.set(!!checked);
     if (!checked) this.fichaSpecialDate.set('');
+    this.syncFichaChecklistToDetails();
+  }
+
+  onFichaSpecialDateBlur(): void {
+    this.syncFichaChecklistToDetails();
+  }
+
+  /** Persiste checklist operativo en filas de la ficha ya generada. */
+  private syncFichaChecklistToDetails(): void {
+    const ficha = this.fichaFileAA();
+    if (ficha) this.applyChecklistToFichaDetails(ficha);
   }
 
   onFichaDisabilityToggle(checked: boolean): void {
     this.fichaHasDisability.set(!!checked);
     if (!checked) this.fichaDisabilityInfo.set('');
+    this.syncFichaChecklistToDetails();
   }
 
   private asRecord(raw: unknown): Record<string, unknown> {
@@ -1911,30 +1924,53 @@ export class QuotationDetail implements OnInit {
     return formatQuotationVersionLabel(vn);
   }
 
-  fichaHeaderChecklistLine(ficha: FileAAWithDetails): string {
+  /** Fecha especial del checklist (cabecera Ficha AA, entre composición y Modif). */
+  fichaHeaderSpecialDateLine(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
-    const matchPrefixes = ['fecha especial', 'persona con discapacidad', 'alergia', 'allergie', 'allergy'];
     const stripPrefixes = ['fecha especial:', 'fecha especial'];
-    const seen = new Set<string>();
-    const items: string[] = [];
     for (const d of ficha.details) {
       if (d.row_status === 'red') continue;
       for (const ln of (d.observations || '').split('\n')) {
         let s = ln.trim();
         if (!s) continue;
         const low = s.toLowerCase();
-        if (!matchPrefixes.some((p) => low.startsWith(p))) continue;
+        if (!low.startsWith('fecha especial')) continue;
         for (const sp of stripPrefixes) {
           if (low.startsWith(sp)) {
             const rest = s.slice(sp.length).trim();
-            if (rest) s = rest;
+            if (rest) return rest;
             break;
           }
         }
-        const key = s.toLowerCase();
+        return s;
+      }
+    }
+    const draft = (this.fichaSpecialDate() || '').trim();
+    return this.fichaHasSpecialDate() ? draft : '';
+  }
+
+  fichaHeaderChecklistLine(ficha: FileAAWithDetails): string {
+    if (!ficha.details?.length) return '';
+    const matchPrefixes = ['persona con discapacidad', 'alergia', 'allergie', 'allergy'];
+    const seen = new Set<string>();
+    const items: string[] = [];
+    for (const d of ficha.details) {
+      if (d.row_status === 'red') continue;
+      for (const ln of (d.observations || '').split('\n')) {
+        const s = ln.trim();
+        if (!s) continue;
+        const low = s.toLowerCase();
+        if (low.startsWith('fecha especial')) continue;
+        if (!matchPrefixes.some((p) => low.startsWith(p))) continue;
+        let text = s;
+        if (low.startsWith('persona con discapacidad')) {
+          const i = s.indexOf(':');
+          text = i >= 0 ? s.slice(i + 1).trim() || s : s;
+        }
+        const key = text.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);
-        items.push(s);
+        items.push(text);
       }
     }
     return items.join(' · ');
@@ -2672,19 +2708,14 @@ export class QuotationDetail implements OnInit {
     const notesTrim = row.notes.trim();
     if (this.fichaVehicleCategory(d) === 'Taxi Maritimo') {
       delete observation_extras['vehicle_ficha_aa_subtitle'];
-      const idaParts = [
-        (row.ficha_fecha_ida ?? '').trim(),
-        (row.ficha_pick_up ?? '').trim(),
-      ].filter(Boolean);
-      const vueltaParts = [
-        (row.ficha_fecha_vuelta ?? '').trim(),
-        (row.ficha_drop_off ?? '').trim(),
-      ].filter(Boolean);
-      const dateLines = [idaParts.join(' · '), vueltaParts.join(' · ')].filter(Boolean);
+      const dates = formatTaxiMaritimoFichaDatesCell(
+        row.ficha_fecha_ida,
+        row.ficha_fecha_vuelta,
+      );
       this.patchFileDetail(d.id, {
         observation_extras,
         observations: notesTrim ? notesTrim : null,
-        dates: dateLines.join('\n'),
+        dates,
       });
       return;
     }
@@ -3321,10 +3352,25 @@ export class QuotationDetail implements OnInit {
     return cleaned.join('\n').trim();
   }
 
+  private checklistLinesForDetail(d: FileAADetailRow): string[] {
+    const lines = this.checklistLinesForCategory(d.category);
+    if (this.fichaHasDisability()) {
+      const info = (this.fichaDisabilityInfo() || '').trim();
+      lines.push(
+        info ? `Persona con discapacidad: ${info}` : 'Persona con discapacidad',
+      );
+    }
+    return lines;
+  }
+
   private checklistLinesForCategory(cat: string): string[] {
     const lines: string[] = [];
     if (cat === 'room') {
       if (this.fichaNeedBabyBed()) lines.push('Cama para bebés');
+      if (this.fichaHasSpecialDate()) {
+        const detail = (this.fichaSpecialDate() || '').trim();
+        lines.push(detail ? `Fecha Especial: ${detail}` : 'Fecha Especial');
+      }
       if (this.fichaNeedAC()) lines.push('Aire acondicionado');
       if (this.fichaNeedConnectingRooms()) lines.push('Habitaciones communicante');
     } else if (cat === 'vehicle') {
@@ -3342,7 +3388,7 @@ export class QuotationDetail implements OnInit {
   private applyChecklistToFichaDetails(ficha: FileAAWithDetails): void {
     for (const d of ficha.details) {
       if (d.row_status === 'red') continue;
-      const lines = this.checklistLinesForCategory(d.category);
+      const lines = this.checklistLinesForDetail(d);
       const merged = this.mergedObservationWithChecklist(d.observations ?? null, lines);
       if ((d.observations ?? null) === merged) continue;
       this.patchFileDetail(d.id, { observations: merged });

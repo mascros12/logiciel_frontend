@@ -809,7 +809,14 @@
                     <span>Fecha Especial <em>[Hoteles]</em></span>
                   </label>
                   @if (fichaHasSpecialDate()) {
-                    <input pInputText class="ficha-check-input" [ngModel]="fichaSpecialDate()" (ngModelChange)="fichaSpecialDate.set($event ?? '')" placeholder="Detalle (si aplica)" />
+                    <input
+                      pInputText
+                      class="ficha-check-input"
+                      [ngModel]="fichaSpecialDate()"
+                      (ngModelChange)="fichaSpecialDate.set($event ?? '')"
+                      (blur)="onFichaSpecialDateBlur()"
+                      placeholder="Detalle (si aplica)"
+                    />
                   }
                 </div>
                 <label class="ficha-check-row">
@@ -962,6 +969,10 @@
                             @let compChambresFr = fichaCompositionAndChambresLineFr(ficha);
                             @if (compChambresFr) {
                               <p class="ficha-aa-summary-family-fr">{{ compChambresFr }}</p>
+                            }
+                            @let specialDateLn = fichaHeaderSpecialDateLine(ficha);
+                            @if (specialDateLn) {
+                              <p class="ficha-aa-summary-special-date-fr">{{ specialDateLn }}</p>
                             }
                             @let checklistLn = fichaHeaderChecklistLine(ficha);
                             @if (checklistLn) {
@@ -1239,7 +1250,9 @@
                                     }
                                     @case ('taxi_maritimo') {
                                       @let tmRoute = fichaTaxiMaritimoRoute(d);
-                                      <span class="ficha-name">{{ tmRoute.header || fichaTaxiMaritimoServiceLabel(d) }}</span>
+                                      @if (tmRoute.providerLine) {
+                                        <span class="ficha-name">{{ tmRoute.providerLine }}</span>
+                                      }
                                       <div class="ficha-taxi-maritimo-legs">
                                         <div class="ficha-obs-block">
                                           <label class="ficha-obs-label">{{ tmRoute.legIda }}, hora ida</label>

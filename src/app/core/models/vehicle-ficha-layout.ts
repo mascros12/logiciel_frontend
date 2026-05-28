@@ -242,6 +242,8 @@ export function fichaAaDetailVisibleInTable(d: {
 /** Ruta Taxi Marítimo: ``proveedor : origen - dest1 - dest2``. */
 export interface TaxiMaritimoRouteParts {
   header: string;
+  /** Primera línea en columna Service: ``Proveedor :`` */
+  providerLine: string;
   provider: string;
   origin: string;
   dest1: string;
@@ -270,7 +272,35 @@ export function parseTaxiMaritimoRoute(label: string): TaxiMaritimoRouteParts {
     origin && dest1 ? `${origin} - ${dest1}` : origin || dest1 || routePart;
   const legVuelta =
     dest1 && dest2 ? `${dest1} - ${dest2}` : dest1 || dest2 || '';
-  return { header, provider, origin, dest1, dest2, legIda, legVuelta };
+  const providerLine = provider ? `${provider} :` : '';
+  return {
+    header,
+    providerLine,
+    provider,
+    origin,
+    dest1,
+    dest2,
+    legIda,
+    legVuelta,
+  };
+}
+
+/** Fecha sin año para columna Date (Ficha AA). */
+export function stripFichaDateYear(text: string): string {
+  return (text ?? '').trim().replace(/\/\d{2,4}\s*$/, '').trim();
+}
+
+/** Texto columna Date Taxi Marítimo: Aller / Retour. */
+export function formatTaxiMaritimoFichaDatesCell(
+  fechaIda: string | undefined,
+  fechaVuelta: string | undefined,
+): string {
+  const lines: string[] = [];
+  const ida = stripFichaDateYear(fechaIda ?? '');
+  const vuelta = stripFichaDateYear(fechaVuelta ?? '');
+  if (ida) lines.push(`Aller : ${ida}`);
+  if (vuelta) lines.push(`Retour : ${vuelta}`);
+  return lines.join('\n');
 }
 
 /** Etiqueta Service / ``file_aa_name`` para Taxi Marítimo. */
