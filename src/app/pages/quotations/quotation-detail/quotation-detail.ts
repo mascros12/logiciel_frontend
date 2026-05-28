@@ -2076,7 +2076,7 @@ export class QuotationDetail implements OnInit {
   }
 
   /**
-   * «Voiture de Location: …» — Alquiler: nombre del vehículo (antes del ``/``),
+   * «Voiture de Location: …» — Alquiler: nombre del vehículo (antes del ``/`` y del ``(``),
    * Interbus (una vez) y Vuelo Interno (file_aa_name). Igual que export Word/PDF.
    */
   fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {

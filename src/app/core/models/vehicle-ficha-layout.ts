@@ -149,9 +149,14 @@ export function computeRentalVehicleFileAaName(brand: string): string {
   return textBeforeFirstSlash(brand);
 }
 
-/** Etiqueta «Voiture de Location» para Vehiculo de Alquiler: ``name`` antes del primer ``/``. */
+/** Etiqueta «Voiture de Location» para Vehiculo de Alquiler: antes del primer ``/`` y del primer ``(``. */
 export function rentalVoitureLocationLabel(snapshotName: string): string {
-  return textBeforeFirstSlash(snapshotName);
+  let s = textBeforeFirstSlash(snapshotName);
+  const p = s.indexOf('(');
+  if (p >= 0) {
+    s = s.slice(0, p).trim();
+  }
+  return s;
 }
 
 /** Etiqueta Service en UI para Vehiculo de Alquiler: ``file_aa_name`` o marca. */
