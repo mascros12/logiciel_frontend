@@ -100,6 +100,10 @@ export interface FileAADetailVehicleObsState {
   ficha_hora_recogida?: string;
   ficha_fecha_devolucion?: string;
   ficha_hora_devolucion?: string;
+  /** Taxi Marítimo: texto opcional junto a la fecha de ida (columna Fechas). */
+  ficha_pick_up?: string;
+  /** Taxi Marítimo: texto opcional junto a la fecha de vuelta (columna Fechas). */
+  ficha_drop_off?: string;
   /** Interbus: fechas por trayecto (una por línea, alineada con ``vehicle_ficha_aa_subtitle``). */
   ficha_interbus_fechas?: string;
 }

@@ -892,16 +892,16 @@
                   <table class="ficha-aa-generated-table ficha-aa-generated-table--resizable">
                     <colgroup>
                       <col class="col-ficha-drag" />
-                      <col class="col-cb" />
+                      <col class="col-ficha-confirmed" />
                       <col class="col-ficha-row-actions" />
                       <col [style.width.px]="fichaAaColWidths().servicio" />
                       <col [style.width.px]="fichaAaColWidths().fechas" />
                       <col [style.width.px]="fichaAaColWidths().observaciones" />
-                      <col class="col-cb" />
+                      <col class="col-ficha-reserved" />
                       <col [style.width.px]="fichaAaColWidths().nReserva" />
                       <col [style.width.px]="fichaAaColWidths().precioSistema" />
                       <col [style.width.px]="fichaAaColWidths().precioProveedor" />
-                      <col class="col-cb" />
+                      <col class="col-ficha-paid" />
                       <col class="col-ficha-email" />
                     </colgroup>
                     <thead>
@@ -992,7 +992,7 @@
                       </tr>
                       <tr>
                         <th class="col-ficha-drag" scope="col" aria-label="Reordenar filas"></th>
-                        <th class="col-cb" scope="col">F</th>
+                        <th class="col-ficha-confirmed" scope="col">F</th>
                         <th class="col-ficha-row-actions" scope="col" pTooltip="Añadir o quitar línea">±</th>
                         <th scope="col" class="ficha-col-resizable">
                           <span class="ficha-col-header-label">Servicio</span>
@@ -1024,7 +1024,7 @@
                             (mousedown)="startFichaAaColResize($event, 'observaciones')"
                           ></span>
                         </th>
-                        <th class="col-cb" scope="col">Reservado</th>
+                        <th class="col-ficha-reserved" scope="col">Reservado</th>
                         <th scope="col" class="ficha-col-resizable">
                           <span class="ficha-col-header-label">Nº reserva</span>
                           <span
@@ -1055,7 +1055,7 @@
                             (mousedown)="startFichaAaColResize($event, 'precioProveedor')"
                           ></span>
                         </th>
-                        <th class="col-cb" scope="col">Pagado</th>
+                        <th class="col-ficha-paid" scope="col">Pagado</th>
                         <th class="col-ficha-email" scope="col" pTooltip="Enviar solicitud por correo al proveedor">Correo</th>
                       </tr>
                     </thead>
@@ -1081,7 +1081,7 @@
                               <i class="pi pi-bars"></i>
                             </button>
                           </td>
-                          <td class="col-cb">
+                          <td class="col-ficha-confirmed">
                             <p-checkbox
                               [binary]="true"
                               [ngModel]="d.confirmed"
@@ -1237,6 +1237,24 @@
                                     @case ('name_subtitle') {
                                       <span class="ficha-name">{{ vehParts.main || d.name }}</span>
                                     }
+                                    @case ('taxi_maritimo') {
+                                      @let tmRoute = fichaTaxiMaritimoRoute(d);
+                                      <span class="ficha-name">{{ tmRoute.header || fichaTaxiMaritimoServiceLabel(d) }}</span>
+                                      <div class="ficha-taxi-maritimo-legs">
+                                        <div class="ficha-obs-block">
+                                          <label class="ficha-obs-label">{{ tmRoute.legIda }}, hora ida</label>
+                                          <input pInputText class="ficha-cell-input" placeholder="Ej. 9h30"
+                                            [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_hora_ida"
+                                            (blur)="commitVehicleFichaObs(d)" />
+                                        </div>
+                                        <div class="ficha-obs-block">
+                                          <label class="ficha-obs-label">{{ tmRoute.legVuelta }}, hora vuelta</label>
+                                          <input pInputText class="ficha-cell-input" placeholder="Ej. 14h00"
+                                            [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_hora_vuelta"
+                                            (blur)="commitVehicleFichaObs(d)" />
+                                        </div>
+                                      </div>
+                                    }
                                     @default {
                                       <span class="ficha-name">{{ vehParts.main }}@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
                                     }
@@ -1350,6 +1368,30 @@
                                     <textarea pInputTextarea [id]="'aa-vfe-' + d.id" class="ficha-cell-input ficha-obs-textarea" rows="2"
                                       placeholder="Ej. 20/3 y 25/3"
                                       [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha" (blur)="commitVehicleFichaObs(d)"></textarea>
+                                  </div>
+                                }
+                                @case ('taxi_maritimo') {
+                                  <div class="ficha-vehicle-dates-blocks">
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Ida — Fecha</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha_ida" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Pick up</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_pick_up" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Vuelta — Fecha</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha_vuelta" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Drop off</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_drop_off" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
                                   </div>
                                 }
                                 @case ('ida_vuelta') {
@@ -1600,7 +1642,7 @@
                               ></textarea>
                             }
                           </td>
-                          <td class="col-cb">
+                          <td class="col-ficha-reserved">
                             <p-checkbox
                               [binary]="true"
                               [ngModel]="d.reserved"
@@ -1632,7 +1674,7 @@
                               (blur)="onFichaDetailProviderBlur(d, $event.target)"
                             />
                           </td>
-                          <td class="col-cb">
+                          <td class="col-ficha-paid">
                             <p-checkbox
                               [binary]="true"
                               [ngModel]="d.paid"

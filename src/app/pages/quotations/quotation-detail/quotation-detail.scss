@@ -1039,6 +1039,40 @@
       text-align: center;
     }
 
+    .col-ficha-confirmed {
+      width: 2.35rem;
+      min-width: 2.35rem;
+      max-width: 2.35rem;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .col-ficha-reserved {
+      width: 5.5rem;
+      min-width: 5.5rem;
+      max-width: 5.5rem;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .col-ficha-paid {
+      width: 4.75rem;
+      min-width: 4.75rem;
+      max-width: 4.75rem;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .ficha-aa-generated-table thead th.col-ficha-confirmed,
+    .ficha-aa-generated-table thead th.col-ficha-reserved,
+    .ficha-aa-generated-table thead th.col-ficha-paid {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-left: 0.35rem;
+      padding-right: 0.35rem;
+    }
+
     .col-ficha-row-actions {
       width: 3.25rem;
       text-align: center;
@@ -1070,11 +1104,19 @@
     }
 
     .col-ficha-email {
-      min-width: 4.75rem;
-      max-width: 7.5rem;
-      width: auto;
+      width: 5.25rem;
+      min-width: 5.25rem;
+      max-width: 5.25rem;
       text-align: center;
       white-space: normal;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .ficha-aa-generated-table thead th.col-ficha-email {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .ficha-email-sent {
@@ -1246,6 +1288,12 @@
     }
 
     .ficha-vehicle-service-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .ficha-taxi-maritimo-legs {
       display: flex;
       flex-direction: column;
       gap: 0.35rem;

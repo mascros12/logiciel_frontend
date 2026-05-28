@@ -7,6 +7,7 @@ export type VehicleFichaServiceLayout =
   | 'brand_subtitle'
   | 'interbus'
   | 'name_subtitle'
+  | 'taxi_maritimo'
   | 'fixed_transfer'
   | 'fixed_colectivo'
   | 'transfer_comma'
@@ -19,6 +20,7 @@ export type VehicleFichaDatesLayout =
   | 'empty'
   | 'fecha_hora'
   | 'ida_vuelta'
+  | 'taxi_maritimo'
   | 'recogida_devolucion'
   | 'fecha_only'
   | 'interbus';
@@ -28,7 +30,7 @@ const SERVICE_BY_CATEGORY: Record<string, VehicleFichaServiceLayout> = {
   'Devolucion de Vehiculo': 'retour',
   Gira: 'name_only',
   Interbus: 'interbus',
-  'Taxi Maritimo': 'name_subtitle',
+  'Taxi Maritimo': 'taxi_maritimo',
   'Taxi Maritimo Privado': 'name_subtitle',
   'Transfer Aeropuerto/Hotel': 'fixed_transfer',
   'Transfer Colectivo Privado Tortuguero': 'fixed_colectivo',
@@ -45,7 +47,7 @@ const DATES_BY_CATEGORY: Record<string, VehicleFichaDatesLayout> = {
   'Devolucion de Vehiculo': 'retour',
   Gira: 'recogida_devolucion',
   Interbus: 'interbus',
-  'Taxi Maritimo': 'ida_vuelta',
+  'Taxi Maritimo': 'taxi_maritimo',
   'Taxi Maritimo Privado': 'ida_vuelta',
   'Transfer Aeropuerto/Hotel': 'fecha_only',
   'Transfer Colectivo Privado Tortuguero': 'ida_vuelta',
@@ -218,6 +220,7 @@ const NO_SUBTITLE_CATEGORIES = new Set([
   'Transfer de un Vehiculo Hacia X Zona',
   'Devolucion de Vehiculo',
   'Vuelo Interno',
+  'Taxi Maritimo',
 ]);
 
 /** Vehículos cuya fila no aparece en tablas Ficha AA (fusionados al generar). */
@@ -236,13 +239,64 @@ export function fichaAaDetailVisibleInTable(d: {
   return !cat || !FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat);
 }
 
+/** Ruta Taxi Marítimo: ``proveedor : origen - dest1 - dest2``. */
+export interface TaxiMaritimoRouteParts {
+  header: string;
+  provider: string;
+  origin: string;
+  dest1: string;
+  dest2: string;
+  legIda: string;
+  legVuelta: string;
+}
+
+export function parseTaxiMaritimoRoute(label: string): TaxiMaritimoRouteParts {
+  const header = (label ?? '').trim();
+  let provider = '';
+  let routePart = header;
+  const colon = header.indexOf(':');
+  if (colon >= 0) {
+    provider = header.slice(0, colon).trim();
+    routePart = header.slice(colon + 1).trim();
+  }
+  const segments = routePart
+    .split(' - ')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const origin = segments[0] ?? '';
+  const dest1 = segments[1] ?? '';
+  const dest2 = segments[2] ?? '';
+  const legIda =
+    origin && dest1 ? `${origin} - ${dest1}` : origin || dest1 || routePart;
+  const legVuelta =
+    dest1 && dest2 ? `${dest1} - ${dest2}` : dest1 || dest2 || '';
+  return { header, provider, origin, dest1, dest2, legIda, legVuelta };
+}
+
+/** Etiqueta Service / ``file_aa_name`` para Taxi Marítimo. */
+export function taxiMaritimoServiceLabel(
+  extras: Record<string, unknown> | null | undefined,
+  snapshotName: string,
+  brand: string,
+): string {
+  const pre =
+    extras && typeof extras === 'object' && !Array.isArray(extras)
+      ? String(extras['vehicle_file_aa_name'] ?? '').trim()
+      : '';
+  if (pre) return pre;
+  const prov = textBeforeFirstSlash(brand);
+  const name = (snapshotName ?? '').trim();
+  if (prov && name) return `${prov} : ${name}`;
+  return name || prov;
+}
+
 export function vehicleFichaAllowsSubtitle(
   category: string | null,
   name: string,
 ): boolean {
   if (category && NO_SUBTITLE_CATEGORIES.has(category)) return false;
   const layout = vehicleFichaServiceLayout(category, name);
-  if (layout === 'interbus') return false;
+  if (layout === 'interbus' || layout === 'taxi_maritimo') return false;
   return layout !== 'fixed_transfer'
     && layout !== 'fixed_colectivo'
     && layout !== 'name_only'

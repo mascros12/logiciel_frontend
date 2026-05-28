@@ -64,6 +64,9 @@ import {
   rentalVehicleServiceLabel,
   fichaAaDetailVisibleInTable,
   vueloInternoServiceLabel,
+  parseTaxiMaritimoRoute,
+  taxiMaritimoServiceLabel,
+  type TaxiMaritimoRouteParts,
   type VehicleFichaDatesLayout,
   type VehicleFichaServiceLayout,
 } from '../../../core/models/vehicle-ficha-layout';
@@ -1379,6 +1382,18 @@ export class QuotationDetail implements OnInit {
     return rentalVehicleServiceLabel(d.observation_extras, d.name ?? '');
   }
 
+  fichaTaxiMaritimoServiceLabel(d: FileAADetailRow): string {
+    return taxiMaritimoServiceLabel(
+      d.observation_extras,
+      d.name ?? '',
+      this.fichaVehicleBrand(d),
+    );
+  }
+
+  fichaTaxiMaritimoRoute(d: FileAADetailRow): TaxiMaritimoRouteParts {
+    return parseTaxiMaritimoRoute(this.fichaTaxiMaritimoServiceLabel(d));
+  }
+
   /** Filas visibles en los textareas Interbus (lugares + fechas alineados). */
   fichaInterbusLineRows(d: FileAADetailRow): number {
     const places = this.ensureVehicleServiceSubtitleDraft(d);
@@ -2469,6 +2484,8 @@ export class QuotationDetail implements OnInit {
         ficha_hora_recogida: s('ficha_hora_recogida'),
         ficha_fecha_devolucion: s('ficha_fecha_devolucion'),
         ficha_hora_devolucion: s('ficha_hora_devolucion'),
+        ficha_pick_up: s('ficha_pick_up'),
+        ficha_drop_off: s('ficha_drop_off'),
         ficha_interbus_fechas: s('ficha_interbus_fechas'),
       };
     }
@@ -2648,8 +2665,29 @@ export class QuotationDetail implements OnInit {
       ficha_hora_recogida: row.ficha_hora_recogida ?? '',
       ficha_fecha_devolucion: row.ficha_fecha_devolucion ?? '',
       ficha_hora_devolucion: row.ficha_hora_devolucion ?? '',
+      ficha_pick_up: row.ficha_pick_up ?? '',
+      ficha_drop_off: row.ficha_drop_off ?? '',
       ficha_interbus_fechas: row.ficha_interbus_fechas ?? '',
     };
+    const notesTrim = row.notes.trim();
+    if (this.fichaVehicleCategory(d) === 'Taxi Maritimo') {
+      delete observation_extras['vehicle_ficha_aa_subtitle'];
+      const idaParts = [
+        (row.ficha_fecha_ida ?? '').trim(),
+        (row.ficha_pick_up ?? '').trim(),
+      ].filter(Boolean);
+      const vueltaParts = [
+        (row.ficha_fecha_vuelta ?? '').trim(),
+        (row.ficha_drop_off ?? '').trim(),
+      ].filter(Boolean);
+      const dateLines = [idaParts.join(' · '), vueltaParts.join(' · ')].filter(Boolean);
+      this.patchFileDetail(d.id, {
+        observation_extras,
+        observations: notesTrim ? notesTrim : null,
+        dates: dateLines.join('\n'),
+      });
+      return;
+    }
     if (this.fichaVehicleCategory(d) === 'Interbus') {
       const sub = (this.vehicleServiceSubtitleDraft[d.id] ?? '').trim();
       if (sub) {
@@ -2667,7 +2705,6 @@ export class QuotationDetail implements OnInit {
     } else {
       delete observation_extras['vehicle_ficha_aa_subtitle'];
     }
-    const notesTrim = row.notes.trim();
     this.patchFileDetail(d.id, {
       observation_extras,
       observations: notesTrim ? notesTrim : null,
