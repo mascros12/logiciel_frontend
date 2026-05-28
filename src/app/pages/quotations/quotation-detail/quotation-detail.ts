@@ -505,6 +505,10 @@ export class QuotationDetail implements OnInit {
   setActiveTab(value: string | number | undefined): void {
     if (value === 'agenda' || value === 'cotizacion' || value === 'fileaa') {
       this.activeTab.set(value);
+      if (value === 'fileaa') {
+        const q = this.quotation();
+        if (q) this.loadFileAA(q.id);
+      }
     }
   }
 
@@ -534,7 +538,7 @@ export class QuotationDetail implements OnInit {
           this.lines.set(this.sortLinesByDate(lines));
           this.loading.set(false);
           this.loadSummary();
-          this.loadFileAA(q.id, this.selectedVersionId());
+          this.loadFileAA(q.id);
         };
 
         if (keepViewingOther) {
@@ -986,7 +990,7 @@ export class QuotationDetail implements OnInit {
     if (String(normalizedId) === currentId) {
       this.lines.set(this.sortLinesByDate(q.lines ?? []));
       this.loadSummary();
-      this.loadFileAA(q.id, normalizedId);
+      this.loadFileAA(q.id);
       return;
     }
 
@@ -995,7 +999,7 @@ export class QuotationDetail implements OnInit {
         const arr = Array.isArray(resp) ? resp : (resp as any)?.lines ?? [];
         this.lines.set(this.sortLinesByDate(arr));
         this.loadSummary();
-        this.loadFileAA(q.id, normalizedId);
+        this.loadFileAA(q.id);
       },
       error: () =>
         this.messageService.add({
@@ -2279,11 +2283,9 @@ export class QuotationDetail implements OnInit {
     });
   }
 
-  private loadFileAA(quotationId: string, versionId?: string | null): void {
-    const req$ = versionId
-      ? this.quotationService.getFileAAByVersion(quotationId, versionId)
-      : this.quotationService.getLatestFileAA(quotationId);
-    req$.subscribe({
+  /** Carga la única Ficha AA activa de la cotización (no depende del selector de versión). */
+  private loadFileAA(quotationId: string): void {
+    this.quotationService.getLatestFileAA(quotationId).subscribe({
       next: (f) => {
         this.clearAllVehicleFichaObsDrafts();
         const loaded = {
@@ -2388,7 +2390,7 @@ export class QuotationDetail implements OnInit {
       next: () => {
         this.sendingFichaEmailDetailId.set(null);
         this.messageService.add({ severity: 'success', summary: 'Correo enviado al proveedor' });
-        this.loadFileAA(quotationId, this.selectedVersionId());
+        this.loadFileAA(quotationId);
       },
       error: (err) => {
         this.sendingFichaEmailDetailId.set(null);
@@ -3164,7 +3166,7 @@ export class QuotationDetail implements OnInit {
         this.showFichaAddDetailDialog.set(false);
         this.messageService.add({ severity: 'success', summary: 'Línea añadida a la ficha' });
         const q = this.quotation();
-        if (q) this.loadFileAA(q.id, this.selectedVersionId());
+        if (q) this.loadFileAA(q.id);
       },
       error: (err) => {
         this.savingFichaAddDetail.set(false);
@@ -3191,7 +3193,7 @@ export class QuotationDetail implements OnInit {
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Línea eliminada' });
             const q = this.quotation();
-            if (q) this.loadFileAA(q.id, this.selectedVersionId());
+            if (q) this.loadFileAA(q.id);
           },
           error: (err) => {
             const d = err.error?.detail;
