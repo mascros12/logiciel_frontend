@@ -269,6 +269,8 @@ export class QuotationDetail implements OnInit {
 
   /** Última Ficha AA generada con tabla de servicios (se recarga al abrir la cotización). */
   fichaFileAA = signal<FileAAWithDetails | null>(null);
+  /** Filas visibles de la tabla (misma referencia que usa CDK drag-drop). */
+  fichaVisibleDetailsList = signal<FileAADetailRow[]>([]);
   fichaDetailReorderSaving = signal(false);
   /** Anchos en px de columnas redimensionables de la tabla Ficha AA. */
   fichaAaColWidths = signal<Record<FichaAaResizableColumn, number>>({
@@ -1187,14 +1189,17 @@ export class QuotationDetail implements OnInit {
 
   dropFichaDetailRow(event: CdkDragDrop<FileAADetailRow[]>, ficha: FileAAWithDetails): void {
     if (event.previousIndex === event.currentIndex) return;
-    const visible = this.fichaVisibleDetails(ficha);
-    const reorderedVisible = [...visible];
-    moveItemInArray(reorderedVisible, event.previousIndex, event.currentIndex);
+    const previousVisible = [...this.fichaVisibleDetailsList()];
+    const previousDetails = [...(ficha.details ?? [])];
+
+    moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    const reorderedVisible = [...event.container.data];
+    this.fichaVisibleDetailsList.set(reorderedVisible);
+
     const visibleQueue = [...reorderedVisible];
     const details = (ficha.details ?? []).map((d) =>
       fichaAaDetailVisibleInTable(d) ? visibleQueue.shift()! : d,
     );
-    const previousOrder = [...ficha.details];
     this.fichaFileAA.set({ ...ficha, details });
     this.fichaDetailReorderSaving.set(true);
     this.quotationService
@@ -1202,10 +1207,12 @@ export class QuotationDetail implements OnInit {
       .subscribe({
         next: (updated) => {
           this.fichaFileAA.set(updated);
+          this.syncFichaVisibleDetailsList();
           this.fichaDetailReorderSaving.set(false);
         },
         error: (err) => {
-          this.fichaFileAA.set({ ...ficha, details: previousOrder });
+          this.fichaFileAA.set({ ...ficha, details: previousDetails });
+          this.fichaVisibleDetailsList.set(previousVisible);
           this.fichaDetailReorderSaving.set(false);
           this.messageService.add({
             severity: 'error',
@@ -1292,6 +1299,12 @@ export class QuotationDetail implements OnInit {
 
   fichaVisibleDetails(ficha: FileAAWithDetails): FileAADetailRow[] {
     return (ficha.details ?? []).filter((d) => fichaAaDetailVisibleInTable(d));
+  }
+
+  /** Sincroniza la lista mutable que renderiza el tbody (y CDK drag-drop). */
+  private syncFichaVisibleDetailsList(): void {
+    const f = this.fichaFileAA();
+    this.fichaVisibleDetailsList.set(f ? this.fichaVisibleDetails(f) : []);
   }
 
   private loadFichaAaColWidths(): void {
@@ -2293,6 +2306,7 @@ export class QuotationDetail implements OnInit {
           header_color: f.header_color || '#2563EB',
         };
         this.fichaFileAA.set(loaded);
+        this.syncFichaVisibleDetailsList();
         this.hydrateChecklistFromFichaDetails(loaded);
         this.hydrateFichaFreeTextDrafts(loaded);
         this.fichaAATab.set('ficha');
@@ -2305,6 +2319,7 @@ export class QuotationDetail implements OnInit {
         if (err.status === 404) {
           this.clearAllVehicleFichaObsDrafts();
           this.fichaFileAA.set(null);
+          this.fichaVisibleDetailsList.set([]);
           this.resetChecklistDraft();
           this.hydrateFichaFreeTextDrafts(null);
           this.fichaAATab.set('config');
@@ -3676,6 +3691,7 @@ export class QuotationDetail implements OnInit {
           header_color: ficha.header_color || '#2563EB',
         };
         this.fichaFileAA.set(generated);
+        this.syncFichaVisibleDetailsList();
         this.applyChecklistToFichaDetails(generated);
         this.hydrateFichaFreeTextDrafts(generated);
         this.fichaAATab.set('ficha');

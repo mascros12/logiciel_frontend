@@ -1072,12 +1072,16 @@
                     </thead>
                     <tbody
                       cdkDropList
+                      cdkDropListOrientation="vertical"
+                      [cdkDropListData]="fichaVisibleDetailsList()"
                       [cdkDropListDisabled]="fichaDetailReorderSaving()"
                       (cdkDropListDropped)="dropFichaDetailRow($event, ficha)"
                     >
-                      @for (d of fichaVisibleDetails(ficha); track d.id) {
+                      @for (d of fichaVisibleDetailsList(); track d.id) {
                         <tr
                           cdkDrag
+                          cdkDragLockAxis="y"
+                          [cdkDragData]="d"
                           [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)"
                           [class.ficha-aa-row-new]="fichaIsAddedDetail(d)"
                         >
