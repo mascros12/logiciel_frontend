@@ -211,6 +211,7 @@ const NO_SUBTITLE_CATEGORIES = new Set([
   'Vehiculo de Alquiler',
   'Transfer del Hotel - Actividad - Hotel',
   'Transfer de un Vehiculo Hacia X Zona',
+  'Devolucion de Vehiculo',
   'Vuelo Interno',
 ]);
 
@@ -218,6 +219,7 @@ const NO_SUBTITLE_CATEGORIES = new Set([
 export const FICHA_AA_MERGED_VEHICLE_CATEGORIES = new Set([
   'Transfer del Hotel - Actividad - Hotel',
   'Transfer de un Vehiculo Hacia X Zona',
+  'Devolucion de Vehiculo',
 ]);
 
 export function fichaAaDetailVisibleInTable(d: {
