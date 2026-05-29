@@ -1073,11 +1073,12 @@
                     <tbody
                       cdkDropList
                       cdkDropListOrientation="vertical"
+                      cdkDropListSortingDisabled
                       [cdkDropListData]="fichaVisibleDetailsList()"
                       [cdkDropListDisabled]="fichaDetailReorderSaving()"
                       (cdkDropListDropped)="dropFichaDetailRow($event, ficha)"
                     >
-                      @for (d of fichaVisibleDetailsList(); track d.id) {
+                      @for (d of fichaVisibleDetailsList(); track fichaDetailTableEpoch() + '-' + d.id) {
                         <tr
                           cdkDrag
                           cdkDragLockAxis="y"
@@ -1737,6 +1738,11 @@
                               <span class="text-muted">—</span>
                             }
                           </td>
+                          <ng-template cdkDragPlaceholder>
+                            <tr class="ficha-aa-drag-placeholder">
+                              <td colspan="12"></td>
+                            </tr>
+                          </ng-template>
                         </tr>
                       }
                       <tr class="ficha-aa-totals-row">
