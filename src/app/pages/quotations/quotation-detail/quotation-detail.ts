@@ -269,10 +269,8 @@ export class QuotationDetail implements OnInit {
 
   /** Última Ficha AA generada con tabla de servicios (se recarga al abrir la cotización). */
   fichaFileAA = signal<FileAAWithDetails | null>(null);
-  /** Filas visibles de la tabla (misma referencia que usa CDK drag-drop). */
+  /** Filas visibles de la tabla Ficha AA (orden manual drag-drop). */
   fichaVisibleDetailsList = signal<FileAADetailRow[]>([]);
-  /** Fuerza re-render del tbody tras drag (CDK + `<tr>` desincroniza el DOM). */
-  fichaDetailTableEpoch = signal(0);
   fichaDetailReorderSaving = signal(false);
   /** Anchos en px de columnas redimensionables de la tabla Ficha AA. */
   fichaAaColWidths = signal<Record<FichaAaResizableColumn, number>>({
@@ -1194,13 +1192,10 @@ export class QuotationDetail implements OnInit {
     const previousVisible = [...this.fichaVisibleDetailsList()];
     const previousDetails = [...(ficha.details ?? [])];
 
-    const reorderedVisible = [...this.fichaVisibleDetailsList()];
+    const reorderedVisible = [...previousVisible];
     moveItemInArray(reorderedVisible, event.previousIndex, event.currentIndex);
-    this.fichaVisibleDetailsList.set(reorderedVisible);
-    this.fichaDetailTableEpoch.update((n) => n + 1);
-
     const details = this.buildFichaDetailsOrder(ficha, reorderedVisible);
-    this.fichaFileAA.set({ ...ficha, details });
+    this.applyFichaDetailReorder(ficha, reorderedVisible, details);
     this.fichaDetailReorderSaving.set(true);
     this.quotationService
       .reorderFileAADetails(ficha.id, { detail_ids_in_order: details.map((d) => d.id) })
@@ -1208,12 +1203,10 @@ export class QuotationDetail implements OnInit {
         next: (updated) => {
           this.fichaFileAA.set(updated);
           this.syncFichaVisibleDetailsList();
-          this.fichaDetailTableEpoch.update((n) => n + 1);
           this.fichaDetailReorderSaving.set(false);
         },
         error: (err) => {
-          this.fichaFileAA.set({ ...ficha, details: previousDetails });
-          this.fichaVisibleDetailsList.set(previousVisible);
+          this.applyFichaDetailReorder(ficha, previousVisible, previousDetails);
           this.fichaDetailReorderSaving.set(false);
           this.messageService.add({
             severity: 'error',
@@ -1311,7 +1304,18 @@ export class QuotationDetail implements OnInit {
     return [...reorderedVisible, ...hidden];
   }
 
-  /** Sincroniza la lista mutable que renderiza el tbody (y CDK drag-drop). */
+  /** Actualiza lista visible y `details` tras reordenar (evita desfase CDK vs modelo). */
+  private applyFichaDetailReorder(
+    ficha: FileAAWithDetails,
+    reorderedVisible: FileAADetailRow[],
+    detailsOverride?: FileAADetailRow[],
+  ): void {
+    this.fichaVisibleDetailsList.set([...reorderedVisible]);
+    const details = detailsOverride ?? this.buildFichaDetailsOrder(ficha, reorderedVisible);
+    this.fichaFileAA.set({ ...ficha, details: [...details] });
+  }
+
+  /** Sincroniza la lista que renderiza el tbody. */
   private syncFichaVisibleDetailsList(): void {
     const f = this.fichaFileAA();
     this.fichaVisibleDetailsList.set(f ? this.fichaVisibleDetails(f) : []);

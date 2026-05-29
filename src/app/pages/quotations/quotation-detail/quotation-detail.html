@@ -1073,12 +1073,10 @@
                     <tbody
                       cdkDropList
                       cdkDropListOrientation="vertical"
-                      cdkDropListSortingDisabled
-                      [cdkDropListData]="fichaVisibleDetailsList()"
                       [cdkDropListDisabled]="fichaDetailReorderSaving()"
                       (cdkDropListDropped)="dropFichaDetailRow($event, ficha)"
                     >
-                      @for (d of fichaVisibleDetailsList(); track fichaDetailTableEpoch() + '-' + d.id) {
+                      @for (d of fichaVisibleDetailsList(); track d.id) {
                         <tr
                           cdkDrag
                           cdkDragLockAxis="y"
@@ -1738,13 +1736,10 @@
                               <span class="text-muted">—</span>
                             }
                           </td>
-                          <ng-template cdkDragPlaceholder>
-                            <tr class="ficha-aa-drag-placeholder">
-                              <td colspan="12"></td>
-                            </tr>
-                          </ng-template>
                         </tr>
                       }
+                    </tbody>
+                    <tfoot>
                       <tr class="ficha-aa-totals-row">
                         <td colspan="8" class="totals-label">Totales</td>
                         <td class="col-money">{{ fichaTotals().system | currency: 'USD' }}</td>
@@ -1752,7 +1747,7 @@
                         <td></td>
                         <td></td>
                       </tr>
-                    </tbody>
+                    </tfoot>
                   </table>
                 </div>
               </div>
