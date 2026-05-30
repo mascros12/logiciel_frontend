@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -19,6 +19,17 @@ import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
+import {
+  CATALOG_LIST_DEFAULT_ROWS,
+  CATALOG_LIST_ROWS_OPTIONS,
+  CatalogListState,
+  clampCatalogListFirst,
+  handleCatalogRowNav,
+  normalizeListStateAfterLoad,
+  onCatalogSearchChange,
+  onCatalogTablePage,
+  readListStateFromRoute,
+} from '../../../core/utils/list-url-state';
 
 @Component({
   selector: 'app-hotel-list',
@@ -36,7 +47,6 @@ import { AuthService } from '../../../core/auth/auth.service';
 })
 export class HotelList implements OnInit {
   hotels = signal<Hotel[]>([]);
-  searchTerm = '';
   loading = signal(false);
   saving = signal(false);
   bulkDeleting = signal(false);
@@ -44,8 +54,12 @@ export class HotelList implements OnInit {
   selectedHotels: Hotel[] = [];
   showDialog = signal(false);
   editingHotel = signal<Hotel | null>(null);
-  readonly rowsPerPage = 25;
-  readonly rowsPerPageOptions = [25, 50, 100];
+  listState: CatalogListState = {
+    searchTerm: '',
+    first: 0,
+    rows: CATALOG_LIST_DEFAULT_ROWS,
+  };
+  readonly rowsPerPageOptions = CATALOG_LIST_ROWS_OPTIONS;
 
   form: FormGroup;
 
@@ -69,6 +83,7 @@ export class HotelList implements OnInit {
     private hotelService: HotelService,
     private fb: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private auth: AuthService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
@@ -83,12 +98,57 @@ export class HotelList implements OnInit {
     });
   }
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.listState = readListStateFromRoute(this.route);
+    this.load();
+  }
+
+  get searchTerm(): string {
+    return this.listState.searchTerm;
+  }
+
+  set searchTerm(value: string) {
+    this.listState = { ...this.listState, searchTerm: value };
+  }
+
+  get tableFirst(): number {
+    return clampCatalogListFirst(
+      this.listState.first,
+      this.filteredHotels().length,
+      this.listState.rows,
+    );
+  }
+
+  get tableRows(): number {
+    return this.listState.rows;
+  }
+
+  onSearchChange(): void {
+    this.listState = onCatalogSearchChange(
+      this.listState.searchTerm,
+      this.listState,
+      this.router,
+      this.route,
+    );
+  }
+
+  onTablePage(event: Parameters<typeof onCatalogTablePage>[0]): void {
+    this.listState = onCatalogTablePage(event, this.listState, this.router, this.route);
+  }
 
   load() {
     this.loading.set(true);
     this.hotelService.getAll().subscribe({
-      next: (res) => { this.hotels.set(res.items); this.loading.set(false); },
+      next: (res) => {
+        this.hotels.set(res.items);
+        this.listState = normalizeListStateAfterLoad(
+          this.listState,
+          this.filteredHotels().length,
+          this.router,
+          this.route,
+        );
+        this.loading.set(false);
+      },
       error: () => this.loading.set(false),
     });
   }
@@ -207,8 +267,8 @@ export class HotelList implements OnInit {
     });
   }
 
-  goToDetail(id: string) {
-    this.router.navigate(['/hoteles', id]);
+  onRowNav(event: MouseEvent, id: string): void {
+    handleCatalogRowNav(event, this.router, ['/hoteles', id]);
   }
 
   get dialogTitle() {

@@ -15,6 +15,7 @@
           type="text"
           placeholder="Buscar por nombre, provincia o categoría..."
           [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()"
         />
       </span>
       @if (canManageActivities()) {
@@ -38,8 +39,10 @@
     styleClass="p-datatable-gridlines"
     [rowHover]="true"
     [paginator]="true"
-    [rows]="rowsPerPage"
+    [rows]="tableRows"
+    [first]="tableFirst"
     [rowsPerPageOptions]="rowsPerPageOptions"
+    (onPage)="onTablePage($event)"
     dataKey="id"
     [(selection)]="selectedActivities"
     selectionMode="multiple"

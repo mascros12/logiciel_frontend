@@ -15,6 +15,7 @@
           type="text"
           placeholder="Buscar por nombre, marca o categoría..."
           [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()"
         />
       </span>
       @if (canManageVehicles()) {
@@ -38,8 +39,10 @@
     styleClass="p-datatable-gridlines"
     [rowHover]="true"
     [paginator]="true"
-    [rows]="rowsPerPage"
+    [rows]="tableRows"
+    [first]="tableFirst"
     [rowsPerPageOptions]="rowsPerPageOptions"
+    (onPage)="onTablePage($event)"
     dataKey="id"
     [(selection)]="selectedVehicles"
     selectionMode="multiple"
@@ -67,12 +70,16 @@
     <ng-template pTemplate="body" let-v>
       @if (canManageVehicles()) {
         @for (year of getSeasonYears(); track year) {
-          <tr>
+          <tr
+            class="clickable-row"
+            (click)="onRowNav($event, v.id)"
+            (auxclick)="onRowNav($event, v.id)"
+          >
             @if (year === getSeasonYears()[0]) {
               <td [attr.rowspan]="getSeasonYears().length" (click)="$event.stopPropagation()">
                 <p-tableCheckbox [value]="v" />
               </td>
-              <td [attr.rowspan]="getSeasonYears().length" (click)="goToDetail(v)">
+              <td [attr.rowspan]="getSeasonYears().length">
                 <div [innerHTML]="v.name | richText"></div>
                 @if (v.brand) {
                   <div class="vehicle-brand">{{ v.brand }}</div>
@@ -110,7 +117,7 @@
               </div>
             </td>
             @if (year === getSeasonYears()[0]) {
-              <td [attr.rowspan]="getSeasonYears().length">
+              <td [attr.rowspan]="getSeasonYears().length" data-row-action>
                 <div class="flex gap-1">
                   <p-button icon="pi pi-pencil" [text]="true" size="small"
                     (onClick)="openEdit(v)" />

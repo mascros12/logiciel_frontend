@@ -1070,6 +1070,7 @@
                         <th class="col-ficha-email" scope="col" pTooltip="Enviar solicitud por correo al proveedor">Correo</th>
                       </tr>
                     </thead>
+                    @for (dragBodyKey of [fichaDetailDragBodyKey()]; track dragBodyKey) {
                     <tbody
                       cdkDropList
                       cdkDropListOrientation="vertical"
@@ -1739,6 +1740,7 @@
                         </tr>
                       }
                     </tbody>
+                    }
                     <tfoot>
                       <tr class="ficha-aa-totals-row">
                         <td colspan="8" class="totals-label">Totales</td>

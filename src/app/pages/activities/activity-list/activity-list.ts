@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -18,6 +19,16 @@ import { Activity } from '../../../core/models/activity.model';
 import { FormsModule } from '@angular/forms';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
+import {
+  CATALOG_LIST_DEFAULT_ROWS,
+  CATALOG_LIST_ROWS_OPTIONS,
+  CatalogListState,
+  clampCatalogListFirst,
+  normalizeListStateAfterLoad,
+  onCatalogSearchChange,
+  onCatalogTablePage,
+  readListStateFromRoute,
+} from '../../../core/utils/list-url-state';
 
 @Component({
   selector: 'app-activity-list',
@@ -40,9 +51,12 @@ export class ActivityList implements OnInit {
   saving = signal(false);
   bulkDeleting = signal(false);
   selectedActivities: Activity[] = [];
-  searchTerm = '';
-  readonly rowsPerPage = 25;
-  readonly rowsPerPageOptions = [25, 50, 100];
+  listState: CatalogListState = {
+    searchTerm: '',
+    first: 0,
+    rows: CATALOG_LIST_DEFAULT_ROWS,
+  };
+  readonly rowsPerPageOptions = CATALOG_LIST_ROWS_OPTIONS;
 
   showDialog = signal(false);
   editingId = signal<string | null>(null);
@@ -62,6 +76,8 @@ export class ActivityList implements OnInit {
   constructor(
     private activityService: ActivityService,
     private auth: AuthService,
+    private router: Router,
+    private route: ActivatedRoute,
     private fb: FormBuilder,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
@@ -87,7 +103,41 @@ export class ActivityList implements OnInit {
   }
 
   ngOnInit() {
+    this.listState = readListStateFromRoute(this.route);
     this.load();
+  }
+
+  get searchTerm(): string {
+    return this.listState.searchTerm;
+  }
+
+  set searchTerm(value: string) {
+    this.listState = { ...this.listState, searchTerm: value };
+  }
+
+  get tableFirst(): number {
+    return clampCatalogListFirst(
+      this.listState.first,
+      this.filteredActivities().length,
+      this.listState.rows,
+    );
+  }
+
+  get tableRows(): number {
+    return this.listState.rows;
+  }
+
+  onSearchChange(): void {
+    this.listState = onCatalogSearchChange(
+      this.listState.searchTerm,
+      this.listState,
+      this.router,
+      this.route,
+    );
+  }
+
+  onTablePage(event: Parameters<typeof onCatalogTablePage>[0]): void {
+    this.listState = onCatalogTablePage(event, this.listState, this.router, this.route);
   }
 
   load() {
@@ -96,6 +146,12 @@ export class ActivityList implements OnInit {
       next: (res) => {
         this.activities.set(res.items);
         this.total.set(res.total);
+        this.listState = normalizeListStateAfterLoad(
+          this.listState,
+          this.filteredActivities().length,
+          this.router,
+          this.route,
+        );
         this.loading.set(false);
       },
       error: () => this.loading.set(false),

@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, Location } from '@angular/common';
 
 import { ButtonModule } from 'primeng/button';
 import { TabsModule } from 'primeng/tabs';
@@ -69,6 +69,7 @@ export class VehicleDetail implements OnInit {
   constructor(
     private route: ActivatedRoute,
     protected router: Router,
+    private location: Location,
     private vehicleService: VehicleService,
     private fb: FormBuilder,
     private messageService: MessageService,
@@ -93,6 +94,10 @@ export class VehicleDetail implements OnInit {
       return;
     }
     this.load(id);
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   load(id: string) {

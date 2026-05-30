@@ -15,6 +15,7 @@
           type="text"
           placeholder="Buscar por nombre, provincia o dirección..."
           [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()"
         />
       </span>
       @if (canManageHotels()) {
@@ -38,8 +39,10 @@
     styleClass="p-datatable-gridlines"
     [rowHover]="true"
     [paginator]="true"
-    [rows]="rowsPerPage"
+    [rows]="tableRows"
+    [first]="tableFirst"
     [rowsPerPageOptions]="rowsPerPageOptions"
+    (onPage)="onTablePage($event)"
     dataKey="id"
     [(selection)]="selectedHotels"
     selectionMode="multiple"
@@ -66,7 +69,8 @@
         [class.row-gama-high]="h.category === 'high'"
         [class.row-gama-medium]="h.category === 'medium'"
         [class.row-gama-low]="h.category === 'low'"
-        (click)="goToDetail(h.id)"
+        (click)="onRowNav($event, h.id)"
+        (auxclick)="onRowNav($event, h.id)"
       >
         @if (canManageHotels()) {
           <td (click)="$event.stopPropagation()">

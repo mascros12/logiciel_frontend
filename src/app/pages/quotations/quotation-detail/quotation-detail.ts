@@ -271,6 +271,8 @@ export class QuotationDetail implements OnInit {
   fichaFileAA = signal<FileAAWithDetails | null>(null);
   /** Filas visibles de la tabla Ficha AA (orden manual drag-drop). */
   fichaVisibleDetailsList = signal<FileAADetailRow[]>([]);
+  /** Remonta el tbody con CDK tras soltar (evita desfase DOM `<tr>` vs modelo Angular). */
+  fichaDetailDragBodyKey = signal(0);
   fichaDetailReorderSaving = signal(false);
   /** Anchos en px de columnas redimensionables de la tabla Ficha AA. */
   fichaAaColWidths = signal<Record<FichaAaResizableColumn, number>>({
@@ -1192,10 +1194,10 @@ export class QuotationDetail implements OnInit {
     const previousVisible = [...this.fichaVisibleDetailsList()];
     const previousDetails = [...(ficha.details ?? [])];
 
-    const reorderedVisible = [...previousVisible];
-    moveItemInArray(reorderedVisible, event.previousIndex, event.currentIndex);
+    const reorderedVisible = this.fichaVisibleOrderAfterDrop(event, previousVisible);
     const details = this.buildFichaDetailsOrder(ficha, reorderedVisible);
     this.applyFichaDetailReorder(ficha, reorderedVisible, details);
+    this.scheduleFichaDetailDragBodyRemount();
     this.fichaDetailReorderSaving.set(true);
     this.quotationService
       .reorderFileAADetails(ficha.id, { detail_ids_in_order: details.map((d) => d.id) })
@@ -1203,10 +1205,12 @@ export class QuotationDetail implements OnInit {
         next: (updated) => {
           this.fichaFileAA.set(updated);
           this.syncFichaVisibleDetailsList();
+          this.scheduleFichaDetailDragBodyRemount();
           this.fichaDetailReorderSaving.set(false);
         },
         error: (err) => {
           this.applyFichaDetailReorder(ficha, previousVisible, previousDetails);
+          this.scheduleFichaDetailDragBodyRemount();
           this.fichaDetailReorderSaving.set(false);
           this.messageService.add({
             severity: 'error',
@@ -1293,6 +1297,35 @@ export class QuotationDetail implements OnInit {
 
   fichaVisibleDetails(ficha: FileAAWithDetails): FileAADetailRow[] {
     return (ficha.details ?? []).filter((d) => fichaAaDetailVisibleInTable(d));
+  }
+
+  /**
+   * Orden tras soltar. En `<table>` el CDK a veces desvía `previousIndex`; la fila
+   * movida se identifica por `event.item.data` y el desplazamiento por delta de índices.
+   */
+  private fichaVisibleOrderAfterDrop(
+    event: CdkDragDrop<FileAADetailRow[]>,
+    beforeDrop: FileAADetailRow[],
+  ): FileAADetailRow[] {
+    const moved = event.item.data as FileAADetailRow;
+    const fromIndex = beforeDrop.findIndex((d) => d.id === moved.id);
+    if (fromIndex < 0) {
+      const fallback = [...beforeDrop];
+      moveItemInArray(fallback, event.previousIndex, event.currentIndex);
+      return fallback;
+    }
+    const delta = event.currentIndex - event.previousIndex;
+    let toIndex = fromIndex + delta;
+    toIndex = Math.max(0, Math.min(toIndex, beforeDrop.length - 1));
+    const next = [...beforeDrop];
+    const [row] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, row);
+    return next;
+  }
+
+  /** Destruye y recrea el tbody con cdkDropList para alinear DOM y señales. */
+  private scheduleFichaDetailDragBodyRemount(): void {
+    queueMicrotask(() => this.fichaDetailDragBodyKey.update((k) => k + 1));
   }
 
   /** Orden completo para API: visibles en el orden de la tabla + fusionadas al final. */

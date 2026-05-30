@@ -27,7 +27,7 @@ import {
   RoomSeasonCreate,
   HotelSeason,
 } from '../../../core/models/hotel.model';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, Location } from '@angular/common';
 @Component({
   selector: 'app-hotel-detail',
   standalone: true,
@@ -111,9 +111,14 @@ export class HotelDetail implements OnInit {
     return category in this.categoryLabels ? this.categoryLabels[category] : category;
   }
 
+  goBack(): void {
+    this.location.back();
+  }
+
   constructor(
     private route: ActivatedRoute,
     protected router: Router,
+    private location: Location,
     private hotelService: HotelService,
     private auth: AuthService,
     private fb: FormBuilder,
