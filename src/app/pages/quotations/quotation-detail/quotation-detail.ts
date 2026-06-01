@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed, inject, DestroyRef } from '@angula
 import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, forkJoin } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -175,10 +176,7 @@ export class QuotationDetail implements OnInit {
   isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
   isOperaciones = computed(() => this.auth.currentUser()?.role === 'operaciones');
   /** Editar y guardar `file_aa_name` desde la Ficha AA (catálogo + fila). */
-  canEditFichaCatalogueName = computed(() => {
-    const role = this.auth.currentUser()?.role;
-    return role === 'admin' || role === 'operaciones';
-  });
+  canEditFichaCatalogueName = computed(() => this.roleCanEditFichaCatalogueName());
   canViewQuotationBreakdown = computed(() => {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
@@ -290,8 +288,6 @@ export class QuotationDetail implements OnInit {
   fichaReminderDraft = signal('');
   savingFichaFreeText = signal(false);
   fichaNeedBabyBed = signal(false);
-  fichaHasSpecialDate = signal(false);
-  fichaSpecialDate = signal('');
   fichaNeedAC = signal(false);
   fichaHasDisability = signal(false);
   fichaDisabilityInfo = signal('');
@@ -1816,26 +1812,19 @@ export class QuotationDetail implements OnInit {
     if (value === 'ficha' || value === 'config') this.fichaAATab.set(value);
   }
 
-  onFichaSpecialDateToggle(checked: boolean): void {
-    this.fichaHasSpecialDate.set(!!checked);
-    if (!checked) this.fichaSpecialDate.set('');
-    this.syncFichaChecklistToDetails();
-  }
-
-  onFichaSpecialDateBlur(): void {
-    this.syncFichaChecklistToDetails();
-  }
-
-  /** Persiste checklist operativo en filas de la ficha ya generada. */
-  private syncFichaChecklistToDetails(): void {
-    const ficha = this.fichaFileAA();
-    if (ficha) this.applyChecklistToFichaDetails(ficha);
+  onFichaChecklistChange(): void {
+    this.syncFichaChecklistToFicha();
   }
 
   onFichaDisabilityToggle(checked: boolean): void {
-    this.fichaHasDisability.set(!!checked);
     if (!checked) this.fichaDisabilityInfo.set('');
-    this.syncFichaChecklistToDetails();
+    this.syncFichaChecklistToFicha();
+  }
+
+  /** Persiste checklist en `FileAA.observations` y lo quita de filas de detalle. */
+  private syncFichaChecklistToFicha(): void {
+    const ficha = this.fichaFileAA();
+    if (ficha) this.applyChecklistToFicha(ficha);
   }
 
   private asRecord(raw: unknown): Record<string, unknown> {
@@ -1988,34 +1977,10 @@ export class QuotationDetail implements OnInit {
     return formatQuotationVersionLabel(vn);
   }
 
-  /** Fecha especial del checklist (cabecera Ficha AA, entre composición y Modif). */
-  fichaHeaderSpecialDateLine(ficha: FileAAWithDetails): string {
-    if (!ficha.details?.length) return '';
-    const stripPrefixes = ['fecha especial:', 'fecha especial'];
-    for (const d of ficha.details) {
-      if (d.row_status === 'red') continue;
-      for (const ln of (d.observations || '').split('\n')) {
-        let s = ln.trim();
-        if (!s) continue;
-        const low = s.toLowerCase();
-        if (!low.startsWith('fecha especial')) continue;
-        for (const sp of stripPrefixes) {
-          if (low.startsWith(sp)) {
-            const rest = s.slice(sp.length).trim();
-            if (rest) return rest;
-            break;
-          }
-        }
-        return s;
-      }
-    }
-    const draft = (this.fichaSpecialDate() || '').trim();
-    return this.fichaHasSpecialDate() ? draft : '';
-  }
-
+  /** Alergias en filas de detalle (vista previa cabecera; checklist operativo va al pie). */
   fichaHeaderChecklistLine(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
-    const matchPrefixes = ['persona con discapacidad', 'alergia', 'allergie', 'allergy'];
+    const allergyPrefixes = ['alergia', 'allergie', 'allergy'];
     const seen = new Set<string>();
     const items: string[] = [];
     for (const d of ficha.details) {
@@ -2024,17 +1989,11 @@ export class QuotationDetail implements OnInit {
         const s = ln.trim();
         if (!s) continue;
         const low = s.toLowerCase();
-        if (low.startsWith('fecha especial')) continue;
-        if (!matchPrefixes.some((p) => low.startsWith(p))) continue;
-        let text = s;
-        if (low.startsWith('persona con discapacidad')) {
-          const i = s.indexOf(':');
-          text = i >= 0 ? s.slice(i + 1).trim() || s : s;
-        }
-        const key = text.toLowerCase();
+        if (!allergyPrefixes.some((p) => low.startsWith(p))) continue;
+        const key = s.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);
-        items.push(text);
+        items.push(s);
       }
     }
     return items.join(' · ');
@@ -2285,17 +2244,20 @@ export class QuotationDetail implements OnInit {
     });
   }
 
-  /** Sincroniza los borradores UI de los textos libres con la Ficha cargada. */
+  /** Sincroniza el borrador UI de recordatorios (observaciones: ver `applyChecklistToFicha`). */
   private hydrateFichaFreeTextDrafts(ficha: FileAAWithDetails | null): void {
-    this.fichaObservationsDraft.set((ficha?.observations ?? '').toString());
     this.fichaReminderDraft.set((ficha?.reminder ?? '').toString());
+    if (!ficha) {
+      this.fichaObservationsDraft.set('');
+    }
   }
 
   /** Persiste «Observaciones» del FileAA cuando el textarea pierde el foco. */
   saveFichaObservations(): void {
     const f = this.fichaFileAA();
     if (!f) return;
-    const next = (this.fichaObservationsDraft() ?? '').trim();
+    const userPart = this.stripChecklistBlock(this.fichaObservationsDraft() ?? '');
+    const next = (this.mergedObservationWithChecklist(userPart, this.buildChecklistObservationLines()) ?? '').trim();
     const current = (f.observations ?? '').trim();
     if (next === current) return;
     this.savingFichaFreeText.set(true);
@@ -2354,7 +2316,8 @@ export class QuotationDetail implements OnInit {
         };
         this.fichaFileAA.set(loaded);
         this.syncFichaVisibleDetailsList();
-        this.hydrateChecklistFromFichaDetails(loaded);
+        this.hydrateChecklistFromFicha(loaded);
+        this.applyChecklistToFicha(loaded);
         this.hydrateFichaFreeTextDrafts(loaded);
         this.fichaAATab.set('ficha');
         // Para operaciones, al entrar con Ficha AA existente abrir directamente ese tab.
@@ -2602,6 +2565,79 @@ export class QuotationDetail implements OnInit {
 
   // ── Edición inline de nombre (file_aa_name) ─────────────────────────────
 
+  private roleCanEditFichaCatalogueName(): boolean {
+    const role = (this.auth.currentUser()?.role ?? '').trim();
+    return role === 'admin' || role === 'operaciones';
+  }
+
+  /** IDs de catálogo (respuesta API o `observation_extras`). */
+  private fichaDetailCatalogueIds(d: FileAADetailRow): {
+    hotelId?: string;
+    roomId?: string;
+    activityId?: string;
+    vehicleId?: string;
+  } {
+    const extras = d.observation_extras as Record<string, unknown> | null | undefined;
+    const id = (v: unknown): string | undefined => {
+      if (v == null) return undefined;
+      const s = String(v).trim();
+      return s || undefined;
+    };
+    return {
+      hotelId: id(d.catalogue_hotel_id) ?? id(extras?.['hotel_id']),
+      roomId: id(d.catalogue_room_id) ?? id(extras?.['room_id']),
+      activityId: id(d.catalogue_activity_id) ?? id(extras?.['activity_id']),
+      vehicleId: id(d.catalogue_vehicle_id) ?? id(extras?.['vehicle_id']),
+    };
+  }
+
+  private cataloguePatchOrSkip<T>(req: Observable<T>, label: string): Observable<T | null> {
+    return req.pipe(
+      catchError((err) => {
+        const detail = err?.error?.detail;
+        this.messageService.add({
+          severity: 'warn',
+          summary: `Catálogo (${label})`,
+          detail:
+            typeof detail === 'string'
+              ? detail
+              : 'No se pudo actualizar el catálogo; el nombre se guardará solo en esta ficha.',
+        });
+        return of(null);
+      }),
+    );
+  }
+
+  private finishFichaNameEdit(
+    d: FileAADetailRow,
+    ficha: FileAAWithDetails,
+    observation_extras: Record<string, unknown>,
+  ): void {
+    this.quotationService.patchFileAADetail(d.id, { observation_extras }).subscribe({
+      next: (updated) => {
+        const cur = this.fichaFileAA();
+        if (cur) {
+          const details = cur.details.map((row) => (row.id === d.id ? { ...row, ...updated } : row));
+          this.fichaFileAA.set({ ...cur, details });
+          this.syncFichaVisibleDetailsList();
+        } else {
+          const idx = ficha.details.findIndex((r) => r.id === d.id);
+          if (idx !== -1) ficha.details[idx] = { ...ficha.details[idx], ...updated };
+        }
+        this.savingFichaName.set(false);
+        this.fichaNameEditDetailId.set(null);
+      },
+      error: () => {
+        this.savingFichaName.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo actualizar el nombre en la ficha',
+        });
+      },
+    });
+  }
+
   startFichaNameEdit(d: FileAADetailRow): void {
     if (!this.canEditFichaCatalogueName()) return;
     this.fichaNameEditDetailId.set(d.id);
@@ -2664,14 +2700,23 @@ export class QuotationDetail implements OnInit {
         ? { ...(d.observation_extras as Record<string, unknown>) }
         : {};
 
+    const ids = this.fichaDetailCatalogueIds(d);
+
     if (d.category === 'room') {
-      // Update hotel and room names independently, then patch obs_extras once
-      const hotelUpdate$: Observable<unknown> = (newName && d.catalogue_hotel_id)
-        ? this.hotelService.update(d.catalogue_hotel_id, { file_aa_name: newName })
-        : of(null);
-      const roomUpdate$: Observable<unknown> = (newName2 && d.catalogue_hotel_id && d.catalogue_room_id)
-        ? this.hotelService.updateRoom(d.catalogue_hotel_id, d.catalogue_room_id, { file_aa_name: newName2 })
-        : of(null);
+      const hotelUpdate$ =
+        newName && ids.hotelId
+          ? this.cataloguePatchOrSkip(
+              this.hotelService.update(ids.hotelId, { file_aa_name: newName }),
+              'hotel',
+            )
+          : of(null);
+      const roomUpdate$ =
+        newName2 && ids.hotelId && ids.roomId
+          ? this.cataloguePatchOrSkip(
+              this.hotelService.updateRoom(ids.hotelId, ids.roomId, { file_aa_name: newName2 }),
+              'habitación',
+            )
+          : of(null);
       forkJoin([hotelUpdate$, roomUpdate$]).subscribe({
         next: () => {
           const updated_extras = {
@@ -2679,63 +2724,48 @@ export class QuotationDetail implements OnInit {
             ...(newName ? { hotel_file_aa_name: newName } : {}),
             ...(newName2 ? { room_file_aa_name: newName2 } : {}),
           };
-          this.quotationService.patchFileAADetail(d.id, { observation_extras: updated_extras }).subscribe({
-            next: (updated) => {
-              const idx = ficha.details.findIndex(r => r.id === d.id);
-              if (idx !== -1) ficha.details[idx] = { ...ficha.details[idx], ...updated };
-              this.savingFichaName.set(false);
-              this.fichaNameEditDetailId.set(null);
-            },
-            error: () => {
-              this.savingFichaName.set(false);
-              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el nombre en la ficha' });
-            },
-          });
-        },
-        error: () => {
-          this.savingFichaName.set(false);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el nombre en el catálogo' });
+          this.finishFichaNameEdit(d, ficha, updated_extras);
         },
       });
-    } else {
-      // Activity or vehicle: single field
-      const obsKey =
-        d.category === 'activity' ? 'activity_file_aa_name' :
-        d.category === 'vehicle' ? 'vehicle_file_aa_name' : null;
-      const catalogueUpdate$ = this._fichaNameCatalogueUpdate(d, newName);
-      catalogueUpdate$.subscribe({
-        next: () => {
-          if (!obsKey) { this.savingFichaName.set(false); this.fichaNameEditDetailId.set(null); return; }
-          const updated_extras = { ...prev, [obsKey]: newName };
-          this.quotationService.patchFileAADetail(d.id, { observation_extras: updated_extras }).subscribe({
-            next: (updated) => {
-              const idx = ficha.details.findIndex(r => r.id === d.id);
-              if (idx !== -1) ficha.details[idx] = { ...ficha.details[idx], ...updated };
-              this.savingFichaName.set(false);
-              this.fichaNameEditDetailId.set(null);
-            },
-            error: () => {
-              this.savingFichaName.set(false);
-              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el nombre en la ficha' });
-            },
-          });
-        },
-        error: () => {
-          this.savingFichaName.set(false);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el nombre en el catálogo' });
-        },
-      });
+      return;
     }
+
+    const obsKey =
+      d.category === 'activity'
+        ? 'activity_file_aa_name'
+        : d.category === 'vehicle'
+          ? 'vehicle_file_aa_name'
+          : null;
+    const catalogueUpdate$ = this._fichaNameCatalogueUpdate(d, newName, ids);
+    catalogueUpdate$.subscribe({
+      next: () => {
+        if (!obsKey) {
+          this.savingFichaName.set(false);
+          this.fichaNameEditDetailId.set(null);
+          return;
+        }
+        this.finishFichaNameEdit(d, ficha, { ...prev, [obsKey]: newName });
+      },
+    });
   }
 
-  private _fichaNameCatalogueUpdate(d: FileAADetailRow, newName: string): Observable<unknown> {
-    if (d.category === 'vehicle' && d.catalogue_vehicle_id) {
-      return this.vehicleService.update(d.catalogue_vehicle_id, { file_aa_name: newName });
+  private _fichaNameCatalogueUpdate(
+    d: FileAADetailRow,
+    newName: string,
+    ids: { hotelId?: string; roomId?: string; activityId?: string; vehicleId?: string },
+  ): Observable<unknown> {
+    if (d.category === 'vehicle' && ids.vehicleId) {
+      return this.cataloguePatchOrSkip(
+        this.vehicleService.update(ids.vehicleId, { file_aa_name: newName }),
+        'vehículo',
+      );
     }
-    if (d.category === 'activity' && d.catalogue_activity_id) {
-      return this.activityService.update(d.catalogue_activity_id, { file_aa_name: newName });
+    if (d.category === 'activity' && ids.activityId) {
+      return this.cataloguePatchOrSkip(
+        this.activityService.update(ids.activityId, { file_aa_name: newName }),
+        'actividad',
+      );
     }
-    // Rooms are handled directly in confirmFichaNameEdit (hotel + room separately)
     return of(null);
   }
 
@@ -3394,51 +3424,38 @@ export class QuotationDetail implements OnInit {
     };
   }
 
+  private readonly fichaChecklistPrefixes = [
+    'Cama para bebés',
+    'Fecha Especial',
+    'Aire acondicionado',
+    'Persona con discapacidad',
+    'Habitaciones communicante',
+    'Sillas para bebés',
+  ] as const;
+
   private stripChecklistBlock(obs: string): string {
     const src = (obs || '').trim();
     if (!src) return '';
-    const checklistPrefixes = [
-      'Cama para bebés',
-      'Fecha Especial',
-      'Aire acondicionado',
-      'Persona con discapacidad',
-      'Habitaciones communicante',
-      'Sillas para bebés',
-    ];
     const cleaned = src
       .split('\n')
       .map((l) => l.trim())
       .filter((line) => {
         if (!line) return false;
         if (line === '--- Checklist Ficha AA ---' || line === '--- Fin Checklist Ficha AA ---') return false;
-        return !checklistPrefixes.some((p) => line.startsWith(p));
+        return !this.fichaChecklistPrefixes.some((p) => line.startsWith(p));
       });
     return cleaned.join('\n').trim();
   }
 
-  private checklistLinesForDetail(d: FileAADetailRow): string[] {
-    const lines = this.checklistLinesForCategory(d.category);
+  private buildChecklistObservationLines(): string[] {
+    const lines: string[] = [];
+    if (this.fichaNeedBabyBed()) lines.push('Cama para bebés');
+    if (this.fichaNeedAC()) lines.push('Aire acondicionado');
+    if (this.fichaNeedConnectingRooms()) lines.push('Habitaciones communicante');
+    if (this.fichaNeedBabyChairs()) lines.push('Sillas para bebés');
     if (this.fichaHasDisability()) {
       const info = (this.fichaDisabilityInfo() || '').trim();
-      lines.push(
-        info ? `Persona con discapacidad: ${info}` : 'Persona con discapacidad',
-      );
-    }
-    return lines;
-  }
-
-  private checklistLinesForCategory(cat: string): string[] {
-    const lines: string[] = [];
-    if (cat === 'room') {
-      if (this.fichaNeedBabyBed()) lines.push('Cama para bebés');
-      if (this.fichaHasSpecialDate()) {
-        const detail = (this.fichaSpecialDate() || '').trim();
-        lines.push(detail ? `Fecha Especial: ${detail}` : 'Fecha Especial');
-      }
-      if (this.fichaNeedAC()) lines.push('Aire acondicionado');
-      if (this.fichaNeedConnectingRooms()) lines.push('Habitaciones communicante');
-    } else if (cat === 'vehicle') {
-      if (this.fichaNeedBabyChairs()) lines.push('Sillas para bebés');
+      lines.push(info ? `Persona con discapacidad: ${info}` : 'Persona con discapacidad');
     }
     return lines;
   }
@@ -3449,20 +3466,48 @@ export class QuotationDetail implements OnInit {
     return [clean, ...lines].filter(Boolean).join('\n').trim();
   }
 
-  private applyChecklistToFichaDetails(ficha: FileAAWithDetails): void {
+  private applyChecklistToFicha(ficha: FileAAWithDetails): void {
+    const checklistLines = this.buildChecklistObservationLines();
+    const mergedObs = this.mergedObservationWithChecklist(ficha.observations ?? null, checklistLines);
+    const mergedStr = (mergedObs ?? '').trim();
+    const currentObs = (ficha.observations ?? '').trim();
+
     for (const d of ficha.details) {
       if (d.row_status === 'red') continue;
-      const lines = this.checklistLinesForDetail(d);
-      const merged = this.mergedObservationWithChecklist(d.observations ?? null, lines);
-      if ((d.observations ?? null) === merged) continue;
-      this.patchFileDetail(d.id, { observations: merged });
+      const clean = this.stripChecklistBlock(d.observations ?? '');
+      const cleanStr = (clean || '').trim();
+      const rowObs = (d.observations ?? '').trim();
+      if (rowObs !== cleanStr) {
+        this.patchFileDetail(d.id, { observations: cleanStr || null });
+      }
+    }
+
+    if (mergedStr !== currentObs) {
+      this.quotationService.updateFileAA(ficha.id, { observations: mergedObs ?? undefined }).subscribe({
+        next: (updated) => {
+          const cur = this.fichaFileAA();
+          if (cur?.id === ficha.id) {
+            this.fichaFileAA.set({ ...cur, ...updated });
+          }
+          this.fichaObservationsDraft.set((mergedObs ?? '').toString());
+        },
+        error: (err) => {
+          this.messageService.add({
+            severity: 'error',
+            summary:
+              typeof err.error?.detail === 'string'
+                ? err.error.detail
+                : 'No se pudo actualizar las observaciones de la ficha',
+          });
+        },
+      });
+    } else {
+      this.fichaObservationsDraft.set(mergedStr);
     }
   }
 
   private resetChecklistDraft(): void {
     this.fichaNeedBabyBed.set(false);
-    this.fichaHasSpecialDate.set(false);
-    this.fichaSpecialDate.set('');
     this.fichaNeedAC.set(false);
     this.fichaHasDisability.set(false);
     this.fichaDisabilityInfo.set('');
@@ -3470,36 +3515,35 @@ export class QuotationDetail implements OnInit {
     this.fichaNeedBabyChairs.set(false);
   }
 
-  private hydrateChecklistFromFichaDetails(ficha: FileAAWithDetails | null): void {
+  private hydrateChecklistFromFicha(ficha: FileAAWithDetails | null): void {
     this.resetChecklistDraft();
     if (!ficha) return;
-    const active = (ficha.details || []).filter((d) => d.row_status !== 'red');
-    const findLine = (prefix: string, cats: Array<'room' | 'activity' | 'vehicle'>): string => {
-      for (const d of active) {
-        if (!cats.includes(d.category as 'room' | 'activity' | 'vehicle')) continue;
-        const lines = String(d.observations ?? '')
+
+    const obsLines = String(ficha.observations ?? '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const findInObs = (prefix: string) => obsLines.find((l) => l.startsWith(prefix)) ?? '';
+
+    const findInDetails = (prefix: string): string => {
+      for (const d of (ficha.details || []).filter((r) => r.row_status !== 'red')) {
+        const match = String(d.observations ?? '')
           .split('\n')
           .map((l) => l.trim())
-          .filter(Boolean);
-        const match = lines.find((l) => l.startsWith(prefix));
+          .find((l) => l.startsWith(prefix));
         if (match) return match;
       }
       return '';
     };
 
-    this.fichaNeedBabyBed.set(!!findLine('Cama para bebés', ['room']));
-    this.fichaNeedAC.set(!!findLine('Aire acondicionado', ['room']));
-    this.fichaNeedConnectingRooms.set(!!findLine('Habitaciones communicante', ['room']));
-    this.fichaNeedBabyChairs.set(!!findLine('Sillas para bebés', ['vehicle']));
+    const findLine = (prefix: string) => findInObs(prefix) || findInDetails(prefix);
 
-    const special = findLine('Fecha Especial', ['room']);
-    if (special) {
-      this.fichaHasSpecialDate.set(true);
-      const i = special.indexOf(':');
-      this.fichaSpecialDate.set(i >= 0 ? special.slice(i + 1).trim() : '');
-    }
+    this.fichaNeedBabyBed.set(!!findLine('Cama para bebés'));
+    this.fichaNeedAC.set(!!findLine('Aire acondicionado'));
+    this.fichaNeedConnectingRooms.set(!!findLine('Habitaciones communicante'));
+    this.fichaNeedBabyChairs.set(!!findLine('Sillas para bebés'));
 
-    const disability = findLine('Persona con discapacidad', ['room', 'activity', 'vehicle']);
+    const disability = findLine('Persona con discapacidad');
     if (disability) {
       this.fichaHasDisability.set(true);
       const i = disability.indexOf(':');
@@ -3739,7 +3783,8 @@ export class QuotationDetail implements OnInit {
         };
         this.fichaFileAA.set(generated);
         this.syncFichaVisibleDetailsList();
-        this.applyChecklistToFichaDetails(generated);
+        this.hydrateChecklistFromFicha(generated);
+        this.applyChecklistToFicha(generated);
         this.hydrateFichaFreeTextDrafts(generated);
         this.fichaAATab.set('ficha');
         this.messageService.add({

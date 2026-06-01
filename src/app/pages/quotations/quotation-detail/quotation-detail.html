@@ -793,56 +793,45 @@
 
             <div class="ficha-aa-section">
               <h4 class="ficha-aa-section-title">Checklist operativo adicional</h4>
-              <p class="ficha-aa-hint">Se agregará automáticamente a observaciones según tipo de servicio.</p>
+              <p class="ficha-aa-hint">
+                Se añadirá en «Observaciones» de la ficha (al final del Word/PDF), una línea por ítem.
+              </p>
               <div class="ficha-aa-checklist-extra">
                 <label class="ficha-check-row">
-                  <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyBed()" (ngModelChange)="fichaNeedBabyBed.set(!!$event)" />
-                  <span>Cama para bebés <em>[Hoteles]</em></span>
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyBed()" (ngModelChange)="fichaNeedBabyBed.set(!!$event); onFichaChecklistChange()" />
+                  <span>Cama para bebés</span>
                 </label>
-                <div class="ficha-check-row ficha-check-row--with-input">
-                  <label class="ficha-check-inline">
-                    <p-checkbox
-                      [binary]="true"
-                      [ngModel]="fichaHasSpecialDate()"
-                      (ngModelChange)="onFichaSpecialDateToggle(!!$event)"
-                    />
-                    <span>Fecha Especial <em>[Hoteles]</em></span>
-                  </label>
-                  @if (fichaHasSpecialDate()) {
-                    <input
-                      pInputText
-                      class="ficha-check-input"
-                      [ngModel]="fichaSpecialDate()"
-                      (ngModelChange)="fichaSpecialDate.set($event ?? '')"
-                      (blur)="onFichaSpecialDateBlur()"
-                      placeholder="Detalle (si aplica)"
-                    />
-                  }
-                </div>
                 <label class="ficha-check-row">
-                  <p-checkbox [binary]="true" [ngModel]="fichaNeedAC()" (ngModelChange)="fichaNeedAC.set(!!$event)" />
-                  <span>Aire acondicionado <em>[Hoteles]</em></span>
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedAC()" (ngModelChange)="fichaNeedAC.set(!!$event); onFichaChecklistChange()" />
+                  <span>Aire acondicionado</span>
                 </label>
                 <div class="ficha-check-row ficha-check-row--with-input">
                   <label class="ficha-check-inline">
                     <p-checkbox
                       [binary]="true"
                       [ngModel]="fichaHasDisability()"
-                      (ngModelChange)="onFichaDisabilityToggle(!!$event)"
+                      (ngModelChange)="fichaHasDisability.set(!!$event); onFichaDisabilityToggle(!!$event)"
                     />
-                    <span>Persona con discapacidad <em>[Todos]</em></span>
+                    <span>Persona con discapacidad</span>
                   </label>
                   @if (fichaHasDisability()) {
-                    <input pInputText class="ficha-check-input" [ngModel]="fichaDisabilityInfo()" (ngModelChange)="fichaDisabilityInfo.set($event ?? '')" placeholder="Tipo de discapacidad (si se conoce)" />
+                    <input
+                      pInputText
+                      class="ficha-check-input"
+                      [ngModel]="fichaDisabilityInfo()"
+                      (ngModelChange)="fichaDisabilityInfo.set($event ?? '')"
+                      (blur)="onFichaChecklistChange()"
+                      placeholder="Tipo de discapacidad (si se conoce)"
+                    />
                   }
                 </div>
                 <label class="ficha-check-row">
-                  <p-checkbox [binary]="true" [ngModel]="fichaNeedConnectingRooms()" (ngModelChange)="fichaNeedConnectingRooms.set(!!$event)" />
-                  <span>Habitaciones communicante <em>[Hoteles]</em></span>
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedConnectingRooms()" (ngModelChange)="fichaNeedConnectingRooms.set(!!$event); onFichaChecklistChange()" />
+                  <span>Habitaciones communicante</span>
                 </label>
                 <label class="ficha-check-row">
-                  <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyChairs()" (ngModelChange)="fichaNeedBabyChairs.set(!!$event)" />
-                  <span>Sillas para bebés <em>[Vehículo]</em></span>
+                  <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyChairs()" (ngModelChange)="fichaNeedBabyChairs.set(!!$event); onFichaChecklistChange()" />
+                  <span>Sillas para bebés</span>
                 </label>
               </div>
             </div>
@@ -970,10 +959,6 @@
                             @if (compChambresFr) {
                               <p class="ficha-aa-summary-family-fr">{{ compChambresFr }}</p>
                             }
-                            @let specialDateLn = fichaHeaderSpecialDateLine(ficha);
-                            @if (specialDateLn) {
-                              <p class="ficha-aa-summary-special-date-fr">{{ specialDateLn }}</p>
-                            }
                             @let checklistLn = fichaHeaderChecklistLine(ficha);
                             @if (checklistLn) {
                               <p class="ficha-aa-summary-checklist-fr">{{ checklistLn }}</p>
@@ -1081,6 +1066,7 @@
                         <tr
                           cdkDrag
                           cdkDragLockAxis="y"
+                          [cdkDragDisabled]="fichaNameEditDetailId() === d.id"
                           [cdkDragData]="d"
                           [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)"
                           [class.ficha-aa-row-new]="fichaIsAddedDetail(d)"
@@ -1129,14 +1115,19 @@
                             @let svcLines = fichaDetailServiceLines(d);
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
                             @if (fichaNameEditDetailId() === d.id) {
-                              <div class="ficha-name-edit-wrap">
+                              <div
+                                class="ficha-name-edit-wrap"
+                                (mousedown)="$event.stopPropagation()"
+                                (click)="$event.stopPropagation()"
+                              >
                                 @if (d.category === 'room') {
                                   <input
                                     pInputText
                                     class="ficha-name-edit-input"
                                     placeholder="Nombre hotel"
-                                    [value]="fichaNameEditValue()"
-                                    (input)="fichaNameEditValue.set($any($event.target).value)"
+                                    [ngModel]="fichaNameEditValue()"
+                                    (ngModelChange)="fichaNameEditValue.set($event)"
+                                    [disabled]="savingFichaName()"
                                     (keydown.enter)="confirmFichaNameEdit(d, ficha)"
                                     (keydown.escape)="cancelFichaNameEdit()"
                                     autofocus
@@ -1145,8 +1136,9 @@
                                     pInputText
                                     class="ficha-name-edit-input ficha-name-edit-input--room"
                                     placeholder="Tipo de habitación"
-                                    [value]="fichaNameEditValue2()"
-                                    (input)="fichaNameEditValue2.set($any($event.target).value)"
+                                    [ngModel]="fichaNameEditValue2()"
+                                    (ngModelChange)="fichaNameEditValue2.set($event)"
+                                    [disabled]="savingFichaName()"
                                     (keydown.enter)="confirmFichaNameEdit(d, ficha)"
                                     (keydown.escape)="cancelFichaNameEdit()"
                                   />
@@ -1155,8 +1147,9 @@
                                   <input
                                     pInputText
                                     class="ficha-name-edit-input"
-                                    [value]="fichaNameEditValue()"
-                                    (input)="fichaNameEditValue.set($any($event.target).value)"
+                                    [ngModel]="fichaNameEditValue()"
+                                    (ngModelChange)="fichaNameEditValue.set($event)"
+                                    [disabled]="savingFichaName()"
                                     (keydown.enter)="confirmFichaNameEdit(d, ficha)"
                                     (keydown.escape)="cancelFichaNameEdit()"
                                     autofocus
@@ -1168,8 +1161,9 @@
                                   <input
                                     pInputText
                                     class="ficha-name-edit-input"
-                                    [value]="fichaNameEditValue()"
-                                    (input)="fichaNameEditValue.set($any($event.target).value)"
+                                    [ngModel]="fichaNameEditValue()"
+                                    (ngModelChange)="fichaNameEditValue.set($event)"
+                                    [disabled]="savingFichaName()"
                                     (keydown.enter)="confirmFichaNameEdit(d, ficha)"
                                     (keydown.escape)="cancelFichaNameEdit()"
                                     autofocus
@@ -1301,10 +1295,11 @@
                               }
                               @if (canEditFichaCatalogueName()) {
                                 <button
+                                  type="button"
                                   pButton
                                   icon="pi pi-pencil"
                                   class="p-button-rounded p-button-text p-button-sm ficha-name-edit-trigger"
-                                  (click)="startFichaNameEdit(d)"
+                                  (click)="$event.stopPropagation(); startFichaNameEdit(d)"
                                   pTooltip="Editar nombre para futuras fichas"
                                   tooltipPosition="top"
                                 ></button>
