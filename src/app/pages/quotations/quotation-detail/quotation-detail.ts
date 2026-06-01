@@ -583,6 +583,25 @@ export class QuotationDetail implements OnInit {
     });
   }
 
+  /**
+   * Refresca solo las líneas de la versión activa y el resumen de precios,
+   * sin activar `loading` (evita desmontar el DOM y perder la posición de scroll).
+   * Usar tras añadir/eliminar ítems en el tab Agenda.
+   */
+  refreshLines() {
+    const q = this.quotation();
+    const versionId = this.selectedVersionId();
+    if (!q || !versionId) return;
+    this.quotationService.getVersionLines(q.id, versionId).subscribe({
+      next: (resp) => {
+        const arr = Array.isArray(resp) ? resp : (resp as { lines?: QuotationLine[] })?.lines ?? [];
+        this.lines.set(this.sortLinesByDate(arr));
+        this.loadSummary();
+      },
+      error: () => void 0,
+    });
+  }
+
   loadProviders() {
     this.providerService.getVehicles().subscribe(r =>
       this.vehicleOptions.set(r.items)
@@ -719,7 +738,7 @@ export class QuotationDetail implements OnInit {
           this.showAddVehicle.set(false);
           this.saving.set(false);
           this.messageService.add({ severity: 'success', summary: `Vehículo agregado (${dates.length} días)` });
-          this.load(q.id);
+          this.refreshLines();
         },
         error: (err) => {
           this.saving.set(false);
@@ -775,7 +794,7 @@ export class QuotationDetail implements OnInit {
             severity: 'success',
             summary: `Habitación agregada (${dates.length} noches)`,
           });
-          this.load(q.id);
+          this.refreshLines();
         },
         error: (err) => {
           this.saving.set(false);
@@ -811,7 +830,7 @@ export class QuotationDetail implements OnInit {
         this.showAddActivity.set(false);
         this.saving.set(false);
         this.messageService.add({ severity: 'success', summary: 'Actividad agregada' });
-        this.load(q.id);
+        this.refreshLines();
       },
       error: (err) => {
         this.saving.set(false);
