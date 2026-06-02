@@ -106,7 +106,7 @@ html, body {
 .sticky-h-scroll-track {
   position: fixed;
   bottom: 0;
-  z-index: 1100;
+  z-index: 1200;
   overflow-x: auto;
   overflow-y: hidden;
   height: 14px;
@@ -141,4 +141,18 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 11rem;
+}
+
+// Validación de formularios (cotizaciones y diálogos)
+.field-has-error {
+  label {
+    color: var(--p-red-500, #ef4444);
+  }
+
+  .p-inputtext.ng-invalid.ng-dirty,
+  .p-inputtextarea.ng-invalid.ng-dirty,
+  .p-select.ng-invalid.ng-dirty,
+  .p-datepicker.ng-invalid.ng-dirty .p-inputtext {
+    border-color: var(--p-red-500, #ef4444);
+  }
 }

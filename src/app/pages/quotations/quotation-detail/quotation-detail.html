@@ -883,9 +883,13 @@
                 <div
                   class="ficha-aa-generated-table-wrap"
                   appStickyHorizontalScroll
+                  [stickyScrollRefresh]="fichaDetailDragBodyKey() + ':' + fichaAaTableMinWidthPx()"
                   [class.ficha-aa-col-resizing]="fichaAaColResizing()"
                 >
-                  <table class="ficha-aa-generated-table ficha-aa-generated-table--resizable">
+                  <table
+                    class="ficha-aa-generated-table ficha-aa-generated-table--resizable"
+                    [style.min-width.px]="fichaAaTableMinWidthPx()"
+                  >
                     <colgroup>
                       <col class="col-ficha-drag" />
                       <col class="col-ficha-confirmed" />
@@ -1932,7 +1936,7 @@
   [style]="{ width: 'min(440px, 96vw)' }"
 >
   <form [formGroup]="vehicleForm" class="dialog-form">
-    <div class="field">
+    <div class="field" [class.field-has-error]="vehicleForm.get('vehicle')?.invalid && vehicleForm.get('vehicle')?.touched">
       <label>Vehículo *</label>
       <p-select
         formControlName="vehicle"
@@ -1941,7 +1945,7 @@
         [filter]="true"
         filterBy="name,brand"
         placeholder="Buscar vehículo..."
-        styleClass="w-full"
+        [styleClass]="fieldStyleClass(vehicleForm.get('vehicle'))"
         appendTo="body"
         emptyFilterMessage="Sin resultados"
         emptyMessage="Sin opciones"
@@ -1954,26 +1958,29 @@
           <small>{{ v.brand }} · {{ v.seats }} asientos</small>
         </ng-template>
       </p-select>
+      <app-field-error [control]="vehicleForm.get('vehicle')" label="Vehículo" />
     </div>
 
     <div class="field-row">
-      <div class="field">
+      <div class="field" [class.field-has-error]="vehicleForm.get('start_date')?.invalid && vehicleForm.get('start_date')?.touched">
         <label>Fecha inicio *</label>
         <p-datepicker
           formControlName="start_date"
           dateFormat="dd/mm/yy"
-          styleClass="w-full"
+          [styleClass]="fieldStyleClass(vehicleForm.get('start_date'))"
           appendTo="body"
         />
+        <app-field-error [control]="vehicleForm.get('start_date')" label="Fecha inicio" />
       </div>
-      <div class="field">
+      <div class="field" [class.field-has-error]="vehicleForm.get('end_date')?.invalid && vehicleForm.get('end_date')?.touched">
         <label>Fecha fin *</label>
         <p-datepicker
           formControlName="end_date"
           dateFormat="dd/mm/yy"
-          styleClass="w-full"
+          [styleClass]="fieldStyleClass(vehicleForm.get('end_date'))"
           appendTo="body"
         />
+        <app-field-error [control]="vehicleForm.get('end_date')" label="Fecha fin" />
       </div>
     </div>
   </form>
@@ -1992,7 +1999,7 @@
   [style]="{ width: 'min(500px, 96vw)' }"
 >
   <form [formGroup]="roomForm" class="dialog-form">
-    <div class="field">
+    <div class="field" [class.field-has-error]="roomForm.get('hotel')?.invalid && roomForm.get('hotel')?.touched">
       <label>Hotel *</label>
       <p-select
         formControlName="hotel"
@@ -2001,7 +2008,7 @@
         [filter]="true"
         filterBy="name"
         placeholder="Buscar hotel..."
-        styleClass="w-full"
+        [styleClass]="fieldStyleClass(roomForm.get('hotel'))"
         appendTo="body"
       >
         <ng-template let-h pTemplate="selectedItem">
@@ -2021,15 +2028,16 @@
           ></span>
         </ng-template>
       </p-select>
+      <app-field-error [control]="roomForm.get('hotel')" label="Hotel" />
     </div>
-    <div class="field">
+    <div class="field" [class.field-has-error]="roomForm.get('room')?.invalid && roomForm.get('room')?.touched">
       <label>Habitación *</label>
       <p-select
         formControlName="room"
         [options]="roomOptions()"
         optionLabel="name"
         placeholder="Seleccionar habitación"
-        styleClass="w-full"
+        [styleClass]="fieldStyleClass(roomForm.get('room'))"
         [disabled]="roomOptions().length === 0"
         appendTo="body"
       >
@@ -2050,25 +2058,28 @@
           ></span>
         </ng-template>
       </p-select>
+      <app-field-error [control]="roomForm.get('room')" label="Habitación" />
     </div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" [class.field-has-error]="roomForm.get('start_date')?.invalid && roomForm.get('start_date')?.touched">
         <label>Fecha inicio *</label>
         <p-datepicker
           formControlName="start_date"
           dateFormat="dd/mm/yy"
-          styleClass="w-full"
+          [styleClass]="fieldStyleClass(roomForm.get('start_date'))"
           appendTo="body"
         />
+        <app-field-error [control]="roomForm.get('start_date')" label="Fecha inicio" />
       </div>
-      <div class="field">
+      <div class="field" [class.field-has-error]="roomForm.get('end_date')?.invalid && roomForm.get('end_date')?.touched">
         <label>Fecha fin *</label>
         <p-datepicker
           formControlName="end_date"
           dateFormat="dd/mm/yy"
-          styleClass="w-full"
+          [styleClass]="fieldStyleClass(roomForm.get('end_date'))"
           appendTo="body"
         />
+        <app-field-error [control]="roomForm.get('end_date')" label="Fecha fin" />
       </div>
     </div>
     <div class="field-row">
@@ -2110,7 +2121,7 @@
   [style]="{ width: 'min(480px, 96vw)' }"
 >
   <form [formGroup]="activityForm" class="dialog-form">
-    <div class="field">
+    <div class="field" [class.field-has-error]="activityForm.get('activity')?.invalid && activityForm.get('activity')?.touched">
       <label>Actividad *</label>
       <p-select
         formControlName="activity"
@@ -2119,7 +2130,7 @@
         [filter]="true"
         filterBy="name"
         placeholder="Buscar actividad..."
-        styleClass="w-full"
+        [styleClass]="fieldStyleClass(activityForm.get('activity'))"
         appendTo="body"
       >
         <ng-template let-a pTemplate="selectedItem">
@@ -2130,6 +2141,7 @@
           <small>{{ a.province }}</small>
         </ng-template>
       </p-select>
+      <app-field-error [control]="activityForm.get('activity')" label="Actividad" />
     </div>
     <div class="field-row">
       <div class="field">
@@ -2188,14 +2200,15 @@
         <p>Las demás versiones de la cotización no se modifican.</p>
       </div>
     </div>
-    <div class="field">
+    <div class="field" [class.field-has-error]="shiftItineraryForm.get('new_first_date')?.invalid && shiftItineraryForm.get('new_first_date')?.touched">
       <label>Nueva primera fecha *</label>
       <p-datepicker
         formControlName="new_first_date"
         dateFormat="dd/mm/yy"
-        styleClass="w-full"
+        [styleClass]="fieldStyleClass(shiftItineraryForm.get('new_first_date'))"
         appendTo="body"
       />
+      <app-field-error [control]="shiftItineraryForm.get('new_first_date')" label="Nueva primera fecha" />
     </div>
   </form>
   <ng-template pTemplate="footer">
@@ -2369,23 +2382,25 @@
       </div>
     </div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" [class.field-has-error]="calendarForm.get('from_date')?.invalid && calendarForm.get('from_date')?.touched">
         <label>Desde *</label>
         <p-datepicker
           formControlName="from_date"
           dateFormat="dd/mm/yy"
-          styleClass="w-full"
+          [styleClass]="fieldStyleClass(calendarForm.get('from_date'))"
           appendTo="body"
         />
+        <app-field-error [control]="calendarForm.get('from_date')" label="Desde" />
       </div>
-      <div class="field">
+      <div class="field" [class.field-has-error]="calendarForm.get('to_date')?.invalid && calendarForm.get('to_date')?.touched">
         <label>Hasta *</label>
         <p-datepicker
           formControlName="to_date"
           dateFormat="dd/mm/yy"
-          styleClass="w-full"
+          [styleClass]="fieldStyleClass(calendarForm.get('to_date'))"
           appendTo="body"
         />
+        <app-field-error [control]="calendarForm.get('to_date')" label="Hasta" />
       </div>
     </div>
   </form>
@@ -2440,9 +2455,17 @@
   [style]="{ width: 'min(560px, 96vw)' }"
 >
   <form [formGroup]="editForm" class="dialog-form">
-    <div class="field">
+    <div class="field" [class.field-has-error]="editForm.get('name')?.invalid && editForm.get('name')?.touched">
       <label>Nombre *</label>
-      <input pInputText formControlName="name" class="w-full" placeholder="Nombre de la cotización" />
+      <input
+        pInputText
+        formControlName="name"
+        class="w-full"
+        placeholder="Nombre de la cotización"
+        [class.ng-invalid]="editForm.get('name')?.invalid && editForm.get('name')?.touched"
+        [class.ng-dirty]="editForm.get('name')?.touched"
+      />
+      <app-field-error [control]="editForm.get('name')" label="Nombre" />
     </div>
     <div class="field">
       <label>Notas</label>

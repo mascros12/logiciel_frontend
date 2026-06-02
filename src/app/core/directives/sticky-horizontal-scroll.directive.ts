@@ -2,7 +2,10 @@ import {
   AfterViewInit,
   Directive,
   ElementRef,
+  Input,
+  OnChanges,
   OnDestroy,
+  SimpleChanges,
   inject,
 } from '@angular/core';
 
@@ -14,12 +17,16 @@ import {
   selector: '[appStickyHorizontalScroll]',
   standalone: true,
 })
-export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy {
+export class StickyHorizontalScrollDirective implements AfterViewInit, OnChanges, OnDestroy {
   private readonly hostRef = inject(ElementRef<HTMLElement>);
+
+  /** Recalcular al cambiar pestaña, columnas, etc. (p. ej. `[stickyScrollRefresh]="fichaDetailDragBodyKey()"`). */
+  @Input() stickyScrollRefresh: unknown;
 
   private track: HTMLDivElement | null = null;
   private trackInner: HTMLDivElement | null = null;
   private ro: ResizeObserver | null = null;
+  private io: IntersectionObserver | null = null;
   private rafId = 0;
   private syncing = false;
   private visible = false;
@@ -66,6 +73,15 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
       this.ro.observe(table);
     }
 
+    this.io = new IntersectionObserver(() => this.scheduleLayout(), {
+      threshold: [0, 0.01, 0.1],
+    });
+    this.io.observe(host);
+
+    this.scheduleLayout();
+  }
+
+  ngOnChanges(_changes: SimpleChanges): void {
     this.scheduleLayout();
   }
 
@@ -78,6 +94,7 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
     window.removeEventListener('scroll', this.onWindowScroll);
     window.removeEventListener('resize', this.onWindowResize);
     this.ro?.disconnect();
+    this.io?.disconnect();
     this.track?.removeEventListener('scroll', this.onTrackScroll);
     this.track?.removeEventListener('pointerdown', this.onTrackPointerDown);
     this.track?.removeEventListener('pointerup', this.onTrackPointerUp);
@@ -109,14 +126,8 @@ export class StickyHorizontalScrollDirective implements AfterViewInit, OnDestroy
       return false;
     }
     const rect = host.getBoundingClientRect();
-    if (rect.bottom <= 0 || rect.top >= window.innerHeight) {
-      return false;
-    }
-    const edge = window.innerHeight;
-    if (this.visible) {
-      return rect.bottom > edge - 8;
-    }
-    return rect.bottom > edge;
+    // Mientras la tabla sea visible en el viewport, fijar la barra al pie de pantalla.
+    return rect.bottom > 0 && rect.top < window.innerHeight;
   }
 
   private updateContentWidth(host: HTMLElement, track: HTMLDivElement): void {

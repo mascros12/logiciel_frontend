@@ -24,6 +24,22 @@ import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core
 import { SelectModule } from 'primeng/select';
 import { AuthService } from '../../../core/auth/auth.service';
 import { formatQuotationVersionLabel } from '../../../core/utils/quotation-version-label';
+import {
+  apiErrorSummary,
+  fieldStyleClass,
+  validateForm,
+  warnInvalidForm,
+} from '../../../core/utils/form-validation.util';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { AbstractControl } from '@angular/forms';
+
+const CREATE_FORM_LABELS: Record<string, string> = {
+  name: 'Nombre / Familia',
+  arrival_date: 'Fecha de llegada',
+  departure_date: 'Fecha de salida',
+  notes: 'Notas internas',
+  source: 'Origen',
+};
 
 
 @Component({
@@ -34,6 +50,7 @@ import { formatQuotationVersionLabel } from '../../../core/utils/quotation-versi
     InputTextModule, TextareaModule, DatePickerModule, ReactiveFormsModule, FormsModule,
     ToastModule, ConfirmDialogModule, DatePipe, CurrencyPipe,
     SelectModule,
+    FieldErrorComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './quotation-list.html',
@@ -137,21 +154,31 @@ export class QuotationList implements OnInit {
     this.showCreateDialog.set(true);
   }
 
+  fieldStyleClass(control: AbstractControl | null | undefined): string {
+    return fieldStyleClass(control);
+  }
+
   submitCreate() {
-    if (this.createForm.invalid) {
-      this.createForm.markAllAsTouched();
-      if (this.createForm.get('source')?.invalid) {
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Origen obligatorio',
-          detail: 'Seleccione Evaneos o Directo.',
-        });
+    const val = this.createForm.value;
+    const departure = val.departure_date ? new Date(val.departure_date) : null;
+    const arrival = val.arrival_date ? new Date(val.arrival_date) : null;
+    if (arrival && departure && departure < arrival) {
+      this.createForm.get('departure_date')?.setErrors({ dateRangeEnd: true });
+    } else {
+      const depCtrl = this.createForm.get('departure_date');
+      if (depCtrl?.hasError('dateRangeEnd')) {
+        const errs = { ...depCtrl.errors };
+        delete errs['dateRangeEnd'];
+        depCtrl.setErrors(Object.keys(errs).length ? errs : null);
       }
+    }
+
+    const errors = validateForm(this.createForm, CREATE_FORM_LABELS);
+    if (errors.length) {
+      warnInvalidForm(this.messageService, errors);
       return;
     }
     this.creating.set(true);
-  
-    const val = this.createForm.value;
   
     // Paso 1 — crear contacto
     this.contactService.create({
@@ -180,15 +207,21 @@ export class QuotationList implements OnInit {
             this.messageService.add({ severity: 'success', summary: 'Cotización creada' });
             this.router.navigate(['/cotizaciones', q.id]);
           },
-          error: () => {
+          error: (err) => {
             this.creating.set(false);
-            this.messageService.add({ severity: 'error', summary: 'Error al crear cotización' });
+            this.messageService.add({
+              severity: 'error',
+              summary: apiErrorSummary(err, 'Error al crear cotización'),
+            });
           }
         });
       },
-      error: () => {
+      error: (err) => {
         this.creating.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Error al crear contacto' });
+        this.messageService.add({
+          severity: 'error',
+          summary: apiErrorSummary(err, 'Error al crear contacto'),
+        });
       }
     });
   }

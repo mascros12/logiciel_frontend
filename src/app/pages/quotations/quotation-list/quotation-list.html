@@ -211,35 +211,45 @@
 
     <p class="section-label">Datos del viaje</p>
 
-    <div class="field">
+    <div class="field" [class.field-has-error]="createForm.get('name')?.invalid && createForm.get('name')?.touched">
       <label>Nombre / Familia *</label>
-      <input pInputText formControlName="name" class="w-full" placeholder="Familia García - Jun 2026" />
+      <input
+        pInputText
+        formControlName="name"
+        class="w-full"
+        placeholder="Familia García - Jun 2026"
+        [class.ng-invalid]="createForm.get('name')?.invalid && createForm.get('name')?.touched"
+        [class.ng-dirty]="createForm.get('name')?.touched"
+      />
+      <app-field-error [control]="createForm.get('name')" label="Nombre / Familia" />
     </div>
 
     <div class="field-row">
-      <div class="field">
+      <div class="field" [class.field-has-error]="createForm.get('arrival_date')?.invalid && createForm.get('arrival_date')?.touched">
         <label>Fecha de llegada *</label>
-        <p-datepicker 
-            formControlName="arrival_date" 
-            dateFormat="dd/mm/yy" 
-            [showIcon]="true" 
-            styleClass="w-full"
-            appendTo="body" 
+        <p-datepicker
+          formControlName="arrival_date"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [styleClass]="fieldStyleClass(createForm.get('arrival_date'))"
+          appendTo="body"
         />
+        <app-field-error [control]="createForm.get('arrival_date')" label="Fecha de llegada" />
       </div>
-      <div class="field">
+      <div class="field" [class.field-has-error]="createForm.get('departure_date')?.invalid && createForm.get('departure_date')?.touched">
         <label>Fecha de salida *</label>
-        <p-datepicker 
-            formControlName="departure_date" 
-            dateFormat="dd/mm/yy" 
-            [showIcon]="true" 
-            styleClass="w-full"
-            appendTo="body" 
+        <p-datepicker
+          formControlName="departure_date"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [styleClass]="fieldStyleClass(createForm.get('departure_date'))"
+          appendTo="body"
         />
+        <app-field-error [control]="createForm.get('departure_date')" label="Fecha de salida" />
       </div>
     </div>
 
-    <div class="field">
+    <div class="field" [class.field-has-error]="createForm.get('notes')?.invalid && createForm.get('notes')?.touched">
       <label>Notas internas *</label>
       <textarea
         pInputTextarea
@@ -247,18 +257,21 @@
         class="w-full"
         rows="3"
         placeholder="Notas internas de la cotización"
+        [class.ng-invalid]="createForm.get('notes')?.invalid && createForm.get('notes')?.touched"
+        [class.ng-dirty]="createForm.get('notes')?.touched"
       ></textarea>
+      <app-field-error [control]="createForm.get('notes')" label="Notas internas" />
     </div>
 
     <p class="section-label">Datos del contacto</p>
 
     <div class="field">
       <label>Email (Opcional)</label>
-      <input pInputText formControlName="email" class="w-full" placeholder="cliente@email.com" />
+      <input pInputText formControlName="email" type="email" class="w-full" placeholder="cliente@email.com" />
     </div>
 
     <div class="field-row">
-      <div class="field">
+      <div class="field" [class.field-has-error]="createForm.get('source')?.invalid && createForm.get('source')?.touched">
         <label>Origen *</label>
         <p-select
           formControlName="source"
@@ -266,10 +279,10 @@
           optionLabel="label"
           optionValue="value"
           placeholder="Seleccionar"
-          styleClass="w-full"
+          [styleClass]="fieldStyleClass(createForm.get('source'))"
           appendTo="body"
-          [class.ng-invalid]="createForm.get('source')?.invalid && createForm.get('source')?.touched"
         />
+        <app-field-error [control]="createForm.get('source')" label="Origen" />
       </div>
       <div class="field">
         <label>Presupuesto</label>

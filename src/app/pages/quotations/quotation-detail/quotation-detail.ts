@@ -5,7 +5,7 @@ import { Observable, of, forkJoin } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -74,6 +74,38 @@ import {
 } from '../../../core/models/vehicle-ficha-layout';
 import { StickyHorizontalScrollDirective } from '../../../core/directives/sticky-horizontal-scroll.directive';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import {
+  apiErrorSummary,
+  fieldStyleClass,
+  validateForm,
+  warnInvalidForm,
+} from '../../../core/utils/form-validation.util';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+
+const VEHICLE_FORM_LABELS: Record<string, string> = {
+  vehicle: 'Vehículo',
+  start_date: 'Fecha inicio',
+  end_date: 'Fecha fin',
+};
+const ROOM_FORM_LABELS: Record<string, string> = {
+  hotel: 'Hotel',
+  room: 'Habitación',
+  start_date: 'Fecha inicio',
+  end_date: 'Fecha fin',
+};
+const ACTIVITY_FORM_LABELS: Record<string, string> = {
+  activity: 'Actividad',
+};
+const SHIFT_ITINERARY_LABELS: Record<string, string> = {
+  new_first_date: 'Nueva primera fecha',
+};
+const CALENDAR_FORM_LABELS: Record<string, string> = {
+  from_date: 'Desde',
+  to_date: 'Hasta',
+};
+const EDIT_FORM_LABELS: Record<string, string> = {
+  name: 'Nombre',
+};
 
 /** Entrada del desplegable Ficha AA: catálogo maestro hotel / actividad / vehículo. */
 interface FichaAddSourcePickItem {
@@ -148,6 +180,21 @@ const FICHA_AA_MIN_COL_WIDTHS: Record<FichaAaResizableColumn, number> = {
   precioProveedor: 90,
 };
 
+/** Columnas fijas (drag, checkboxes, correo…) en px — deben coincidir con quotation-detail.scss. */
+const FICHA_AA_FIXED_COLS_PX = 36 + 38 + 52 + 88 + 76 + 84;
+
+function computeFichaAaTableMinWidthPx(widths: Record<FichaAaResizableColumn, number>): number {
+  return (
+    FICHA_AA_FIXED_COLS_PX +
+    widths.servicio +
+    widths.fechas +
+    widths.observaciones +
+    widths.nReserva +
+    widths.precioSistema +
+    widths.precioProveedor
+  );
+}
+
 
 @Component({
   selector: 'app-quotation-detail',
@@ -160,6 +207,7 @@ const FICHA_AA_MIN_COL_WIDTHS: Record<FichaAaResizableColumn, number> = {
     ToastModule, SkeletonModule, TooltipModule, ConfirmDialogModule, AutoCompleteModule,
     FormsModule, DatePickerModule, RichTextPipe, DragDropModule, MenuModule,
     StickyHorizontalScrollDirective,
+    FieldErrorComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './quotation-detail.html',
@@ -276,6 +324,8 @@ export class QuotationDetail implements OnInit {
   fichaAaColWidths = signal<Record<FichaAaResizableColumn, number>>({
     ...FICHA_AA_DEFAULT_COL_WIDTHS,
   });
+  /** Ancho mínimo real de la tabla (suma de columnas) para forzar scroll horizontal. */
+  fichaAaTableMinWidthPx = computed(() => computeFichaAaTableMinWidthPx(this.fichaAaColWidths()));
   fichaAaColResizing = signal(false);
   private fichaAaColResize:
     | { key: FichaAaResizableColumn; startX: number; startWidth: number }
@@ -698,21 +748,37 @@ export class QuotationDetail implements OnInit {
   }
 
   // ─── Guardar items ─────────────────────────────────────────
+  fieldStyleClass(control: AbstractControl | null | undefined): string {
+    return fieldStyleClass(control);
+  }
+
+  private rejectInvalidForm(form: FormGroup, labels: Record<string, string>): boolean {
+    const errors = validateForm(form, labels);
+    if (errors.length) {
+      warnInvalidForm(this.messageService, errors);
+      return true;
+    }
+    return false;
+  }
+
   vehicleName(v: any): string {
     return v?.name ?? '';
   }
   submitVehicle() {
-    if (this.vehicleForm.invalid) return;
+    const startDate = new Date(this.vehicleForm.value.start_date);
+    const endDate = new Date(this.vehicleForm.value.end_date);
+    if (
+      this.vehicleForm.value.start_date &&
+      this.vehicleForm.value.end_date &&
+      endDate < startDate
+    ) {
+      this.vehicleForm.get('end_date')?.setErrors({ dateRangeEnd: true });
+    }
+    if (this.rejectInvalidForm(this.vehicleForm, VEHICLE_FORM_LABELS)) return;
+
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
     const vehicle = this.vehicleForm.value.vehicle;
-    const startDate = new Date(this.vehicleForm.value.start_date);
-    const endDate = new Date(this.vehicleForm.value.end_date);
-  
-    if (endDate < startDate) {
-      this.messageService.add({ severity: 'warn', summary: 'La fecha fin debe ser mayor o igual a la fecha inicio' });
-      return;
-    }
   
     // Generar array de fechas del rango
     const dates: string[] = [];
@@ -742,30 +808,29 @@ export class QuotationDetail implements OnInit {
         },
         error: (err) => {
           this.saving.set(false);
-          this.messageService.add({ severity: 'error', summary: err.error?.detail ?? 'Error al agregar vehículo' });
+          this.messageService.add({
+            severity: 'error',
+            summary: apiErrorSummary(err, 'Error al agregar vehículo'),
+          });
         }
       });
     });
   }
 
   submitRoom() {
-    if (this.roomForm.invalid) return;
+    const val = this.roomForm.value;
+    const startDate = val.start_date ? new Date(val.start_date) : null;
+    const endDate = val.end_date ? new Date(val.end_date) : null;
+    if (startDate && endDate && endDate <= startDate) {
+      this.roomForm.get('end_date')?.setErrors({ dateRangeRoom: true });
+    }
+    if (this.rejectInvalidForm(this.roomForm, ROOM_FORM_LABELS)) return;
+    if (!startDate || !endDate) return;
+
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
-    const val = this.roomForm.value;
 
     this.saving.set(true);
-
-    const startDate = new Date(val.start_date);
-    const endDate = new Date(val.end_date);
-    if (endDate <= startDate) {
-      this.saving.set(false);
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'La fecha fin debe ser mayor que la fecha inicio (crea noches excluyendo la última).',
-      });
-      return;
-    }
 
     // Noches: [start, end)
     const dates: string[] = [];
@@ -800,7 +865,7 @@ export class QuotationDetail implements OnInit {
           this.saving.set(false);
           this.messageService.add({
             severity: 'error',
-            summary: err.error?.detail ?? 'Error al agregar habitación',
+            summary: apiErrorSummary(err, 'Error al agregar habitación'),
           });
         },
       });
@@ -808,7 +873,7 @@ export class QuotationDetail implements OnInit {
   }
 
   submitActivity() {
-    if (this.activityForm.invalid) return;
+    if (this.rejectInvalidForm(this.activityForm, ACTIVITY_FORM_LABELS)) return;
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
     const line = this.activeLine()!;
@@ -836,7 +901,7 @@ export class QuotationDetail implements OnInit {
         this.saving.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: err.error?.detail ?? 'Error al agregar actividad'
+          summary: apiErrorSummary(err, 'Error al agregar actividad'),
         });
       }
     });
@@ -1053,7 +1118,7 @@ export class QuotationDetail implements OnInit {
   }
 
   submitEdit() {
-    if (this.editForm.invalid) return;
+    if (this.rejectInvalidForm(this.editForm, EDIT_FORM_LABELS)) return;
     const q = this.quotation()!;
     const raw = this.editForm.value;
     const body: Record<string, unknown> = {
@@ -1097,7 +1162,7 @@ export class QuotationDetail implements OnInit {
               this.saving.set(false);
               this.messageService.add({
                 severity: 'error',
-                summary: err.error?.detail ?? 'Error al actualizar datos del contacto',
+                summary: apiErrorSummary(err, 'Error al actualizar datos del contacto'),
               });
               this.load(q.id);
             },
@@ -1110,7 +1175,7 @@ export class QuotationDetail implements OnInit {
         this.saving.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: err.error?.detail ?? 'Error al guardar',
+          summary: apiErrorSummary(err, 'Error al guardar'),
         });
       },
     });
@@ -1741,7 +1806,7 @@ export class QuotationDetail implements OnInit {
   }
 
   submitShiftItinerary() {
-    if (this.shiftItineraryForm.invalid) return;
+    if (this.rejectInvalidForm(this.shiftItineraryForm, SHIFT_ITINERARY_LABELS)) return;
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
     const raw = this.shiftItineraryForm.value.new_first_date;
@@ -1768,26 +1833,23 @@ export class QuotationDetail implements OnInit {
         this.saving.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: err.error?.detail ?? 'Error al desplazar fechas',
+          summary: apiErrorSummary(err, 'Error al desplazar fechas'),
         });
       },
     });
   }
 
   submitExtendCalendar() {
-    if (this.calendarForm.invalid) return;
-    const q = this.quotation()!;
-    const version = this.selectedVersion()!;
     const raw = this.calendarForm.value;
     const fromD = raw.from_date instanceof Date ? raw.from_date : new Date(raw.from_date);
     const toD = raw.to_date instanceof Date ? raw.to_date : new Date(raw.to_date);
-    if (toD < fromD) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'La fecha fin debe ser mayor o igual a la de inicio',
-      });
-      return;
+    if (raw.from_date && raw.to_date && toD < fromD) {
+      this.calendarForm.get('to_date')?.setErrors({ dateRangeEnd: true });
     }
+    if (this.rejectInvalidForm(this.calendarForm, CALENDAR_FORM_LABELS)) return;
+
+    const q = this.quotation()!;
+    const version = this.selectedVersion()!;
     const from_date = this.toLocalIsoDate(fromD);
     const to_date = this.toLocalIsoDate(toD);
     this.saving.set(true);
@@ -1806,7 +1868,7 @@ export class QuotationDetail implements OnInit {
         this.saving.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: err.error?.detail ?? 'Error al ampliar fechas',
+          summary: apiErrorSummary(err, 'Error al ampliar fechas'),
         });
       },
     });
