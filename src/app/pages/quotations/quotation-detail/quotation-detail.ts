@@ -2532,6 +2532,7 @@ export class QuotationDetail implements OnInit {
         if (!f) return;
         const details = f.details.map((d) => (d.id === detailId ? { ...d, ...updated } : d));
         this.fichaFileAA.set({ ...f, details });
+        this.syncFichaVisibleDetailsList();
         if (patch.observation_extras !== undefined || patch.observations !== undefined) {
           delete this.vehicleFichaObsDraft[detailId];
           delete this.vehicleServiceSubtitleDraft[detailId];
