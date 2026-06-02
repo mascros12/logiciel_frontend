@@ -381,6 +381,8 @@ export class QuotationDetail implements OnInit {
   private vehicleServiceSubtitleDraft: Record<string, string> = {};
   /** Borrador UI para observaciones estructuradas (actividad): pick up + notas */
   private activityFichaObsDraft: Record<string, FileAADetailActivityObsState> = {};
+  /** Borrador UI columna Fechas (actividad) — evita que [ngModel] unidireccional revierta al teclear. */
+  private activityDatesDraft: Record<string, string> = {};
   /** Borrador UI para filas hotel: número de habitaciones + observaciones */
   private hotelFichaObsDraft: Record<string, FileAADetailRoomObsState> = {};
 
@@ -2536,6 +2538,9 @@ export class QuotationDetail implements OnInit {
           delete this.activityFichaObsDraft[detailId];
           delete this.hotelFichaObsDraft[detailId];
         }
+        if (patch.dates !== undefined || patch.date_from !== undefined || patch.date_to !== undefined) {
+          delete this.activityDatesDraft[detailId];
+        }
       },
       error: (err) => {
         this.messageService.add({
@@ -2547,8 +2552,130 @@ export class QuotationDetail implements OnInit {
   }
 
   onFichaDetailDatesBlur(row: FileAADetailRow, target: EventTarget | null): void {
-    const v = target instanceof HTMLInputElement ? target.value : '';
+    const v =
+      target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+        ? target.value
+        : '';
+    if (row.category === 'activity') {
+      this.commitActivityFichaDates(row, v);
+      return;
+    }
     this.patchFileDetail(row.id, { dates: v });
+  }
+
+  ensureActivityDatesDraft(d: FileAADetailRow): string {
+    if (!(d.id in this.activityDatesDraft)) {
+      this.activityDatesDraft[d.id] = d.dates ?? '';
+    }
+    return this.activityDatesDraft[d.id];
+  }
+
+  setActivityDatesDraft(d: FileAADetailRow, value: string): void {
+    this.activityDatesDraft[d.id] = value;
+  }
+
+  private fichaActivityDatesRefYear(d: FileAADetailRow): number {
+    if (d.date_from) {
+      const y = parseInt(d.date_from.slice(0, 4), 10);
+      if (Number.isFinite(y)) return y;
+    }
+    const q = this.quotation();
+    if (q?.from_date) {
+      const y = parseInt(String(q.from_date).slice(0, 4), 10);
+      if (Number.isFinite(y)) return y;
+    }
+    return new Date().getFullYear();
+  }
+
+  private isoFromDm(day: number, month: number, year: number): string {
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  /** Parsea texto d/m de la columna Fechas de actividades → lista ISO ordenada. */
+  private parseFichaActivityDatesCell(raw: string, refYear: number): string[] {
+    const text = raw.trim();
+    if (!text) return [];
+    const isoSet = new Set<string>();
+
+    const addDm = (day: number, month: number) => {
+      if (day < 1 || day > 31 || month < 1 || month > 12) return;
+      isoSet.add(this.isoFromDm(day, month, refYear));
+    };
+
+    for (const line of text.split('\n')) {
+      let ln = line.trim();
+      if (!ln) continue;
+
+      const rangeRe = /(\d{1,2})\/(\d{1,2})\s*-\s*(\d{1,2})\/(\d{1,2})/g;
+      let rangeMatch: RegExpExecArray | null;
+      while ((rangeMatch = rangeRe.exec(ln)) !== null) {
+        const d1 = parseInt(rangeMatch[1], 10);
+        const m1 = parseInt(rangeMatch[2], 10);
+        const d2 = parseInt(rangeMatch[3], 10);
+        const m2 = parseInt(rangeMatch[4], 10);
+        const start = new Date(refYear, m1 - 1, d1);
+        const end = new Date(refYear, m2 - 1, d2);
+        if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+          const from = start <= end ? start : end;
+          const to = start <= end ? end : start;
+          const cur = new Date(from);
+          while (cur <= to) {
+            isoSet.add(this.toLocalIsoDate(cur));
+            cur.setDate(cur.getDate() + 1);
+          }
+        }
+        ln = ln.replace(rangeMatch[0], ' ');
+      }
+
+      const grouped = ln.replace(/\s+/g, '').match(/^([\d,]+)\/(\d{1,2})$/);
+      if (grouped) {
+        const month = parseInt(grouped[2], 10);
+        for (const part of grouped[1].split(',')) {
+          const day = parseInt(part, 10);
+          if (Number.isFinite(day)) addDm(day, month);
+        }
+        continue;
+      }
+
+      const dmRe = /\b(\d{1,2})\/(\d{1,2})\b/g;
+      let m: RegExpExecArray | null;
+      while ((m = dmRe.exec(ln)) !== null) {
+        addDm(parseInt(m[1], 10), parseInt(m[2], 10));
+      }
+    }
+
+    return [...isoSet].sort();
+  }
+
+  commitActivityFichaDates(d: FileAADetailRow, datesCell?: string): void {
+    const trimmed = (datesCell ?? this.activityDatesDraft[d.id] ?? d.dates ?? '').trim();
+    const prev = (d.dates ?? '').trim();
+    if (trimmed === prev && d.date_from && d.date_to) {
+      return;
+    }
+    if (!trimmed) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Fecha obligatoria',
+        detail: 'Indique al menos un día en formato día/mes (p. ej. 15/3).',
+      });
+      return;
+    }
+    const isoList = this.parseFichaActivityDatesCell(trimmed, this.fichaActivityDatesRefYear(d));
+    if (!isoList.length) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Formato no reconocido',
+        detail: 'Use día/mes, p. ej. 15/3 o 15/3, 16/3',
+      });
+      return;
+    }
+    this.patchFileDetail(d.id, {
+      dates: trimmed,
+      date_from: isoList[0],
+      date_to: isoList[isoList.length - 1],
+      days: isoList.length,
+    });
   }
 
   onFichaDetailObservationsBlur(row: FileAADetailRow, target: EventTarget | null): void {
@@ -2562,6 +2689,7 @@ export class QuotationDetail implements OnInit {
     this.vehicleFichaObsDraft = {};
     this.vehicleServiceSubtitleDraft = {};
     this.activityFichaObsDraft = {};
+    this.activityDatesDraft = {};
     this.hotelFichaObsDraft = {};
   }
 

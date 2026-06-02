@@ -1489,8 +1489,10 @@
                                     pInputText
                                     [id]="'aa-adt-' + d.id"
                                     class="ficha-cell-input"
-                                    [ngModel]="d.dates"
-                                    (blur)="onFichaDetailDatesBlur(d, $event.target)"
+                                    placeholder="Ej. 15/3 o 15/3, 16/3"
+                                    [ngModel]="ensureActivityDatesDraft(d)"
+                                    (ngModelChange)="setActivityDatesDraft(d, $event)"
+                                    (blur)="commitActivityFichaDates(d)"
                                   />
                                 </div>
                                 <div class="ficha-obs-block">
