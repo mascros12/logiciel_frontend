@@ -929,6 +929,7 @@ export class QuotationDetail implements OnInit {
         this.showNewVersion.set(false);
         this.selectedVersionId.set(v.id);
         this.recalculateVersion(q.id, v.id, {
+          repriceInherited: false,
           successMessage: `Versión V${v.version_number} creada y recalculada`,
           onDone: () => {
             this.saving.set(false);
@@ -1017,13 +1018,16 @@ export class QuotationDetail implements OnInit {
     quotationId: string,
     versionId: string,
     options?: {
+      repriceInherited?: boolean;
       successMessage?: string;
       onDone?: () => void;
       onError?: () => void;
     }
   ) {
     this.quotationService
-      .recalculate(quotationId, versionId, { reprice_inherited: true })
+      .recalculate(quotationId, versionId, {
+        reprice_inherited: options?.repriceInherited ?? true,
+      })
       .subscribe({
       next: () => {
         if (options?.successMessage) {
