@@ -121,7 +121,7 @@
           </div>
         </p-tabpanel>
 
-        <!-- Temporadas -->
+        <!-- Temporadas (misma estructura que hotel-detail: fechas + acción) -->
         <p-tabpanel value="seasons">
           <div class="vehicle-seasons-wrapper">
             @for (grade of ['low', 'medium', 'high']; track grade) {
@@ -134,16 +134,20 @@
                   <ng-template pTemplate="header">
                     <tr>
                       <th>Fechas</th>
-                      <th>Diario</th>
-                      <th>Semanal</th>
-                      <th style="width:80px">Acción</th>
+                      <th style="width:100px">Acción</th>
                     </tr>
                   </ng-template>
                   <ng-template pTemplate="body" let-s>
                     <tr>
-                      <td>{{ s.start_date | date:'dd/MM/yyyy' }} → {{ s.end_date | date:'dd/MM/yyyy' }}</td>
-                      <td>${{ s.net_daily_price }}</td>
-                      <td>${{ s.net_weekly_price }}</td>
+                      <td class="season-dates-cell">
+                        <span class="season-date-range">
+                          {{ s.start_date | date:'dd/MM/yyyy' }} → {{ s.end_date | date:'dd/MM/yyyy' }}
+                        </span>
+                        <span class="season-prices">
+                          Diario {{ s.net_daily_price | currency:'USD':'symbol':'1.2-2' }}
+                          · Semanal {{ s.net_weekly_price | currency:'USD':'symbol':'1.2-2' }}
+                        </span>
+                      </td>
                       <td>
                         <p-button
                           icon="pi pi-trash"
@@ -157,7 +161,7 @@
                   </ng-template>
                   <ng-template pTemplate="emptymessage">
                     <tr>
-                      <td colspan="4" class="season-empty">Sin temporadas</td>
+                      <td colspan="2" class="season-empty">Sin temporadas</td>
                     </tr>
                   </ng-template>
                 </p-table>

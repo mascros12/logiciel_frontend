@@ -131,13 +131,15 @@
   margin-top: 1.25rem;
 }
 
-// Temporadas
+// Temporadas — alineado con hotel-detail
 .vehicle-seasons-wrapper {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
+  width: 100%;
   max-width: 1100px;
   margin-inline: auto;
+  justify-content: center;
 }
 
 .vehicle-season-card {
@@ -145,6 +147,7 @@
   border: 1px solid var(--p-surface-border);
   border-radius: var(--p-border-radius);
   overflow: hidden;
+  min-width: 0;
 }
 
 .season-card-title {
@@ -156,6 +159,25 @@
   border-bottom: 1px solid var(--p-surface-border);
 }
 
+.season-dates-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.season-date-range {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.season-prices {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+  line-height: 1.35;
+}
+
 .season-datatable {
   width: 100%;
 
@@ -165,18 +187,25 @@
 
   ::ng-deep table {
     width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
   }
 
   ::ng-deep th,
   ::ng-deep td {
-    padding: 0.5rem 0.75rem;
+    padding: 0.6rem 1rem;
+    vertical-align: middle;
   }
 
   ::ng-deep .p-datatable-thead > tr > th {
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--p-text-muted-color);
+  }
+
+  ::ng-deep .p-datatable-thead > tr > th:last-child,
+  ::ng-deep .p-datatable-tbody > tr > td:last-child {
+    width: 100px;
+    text-align: center;
   }
 }
 
