@@ -47,6 +47,7 @@
         <th>Usuario</th>
         <th>Rol</th>
         <th>Estado</th>
+        <th>Firma</th>
         <th>Creado</th>
         <th style="width: 8rem">Acciones</th>
       </tr>
@@ -67,6 +68,13 @@
             <p-tag value="Activo" severity="success" />
           } @else {
             <p-tag value="Inactivo" severity="secondary" />
+          }
+        </td>
+        <td>
+          @if (u.has_firma) {
+            <p-tag value="Personalizada" severity="info" />
+          } @else {
+            <span class="text-muted">Por defecto</span>
           }
         </td>
         <td>{{ u.created_at | date: 'dd/MM/yyyy' }}</td>
@@ -95,7 +103,7 @@
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td colspan="7" class="text-center">No hay usuarios</td></tr>
+      <tr><td colspan="8" class="text-center">No hay usuarios</td></tr>
     </ng-template>
   </p-table>
 </div>
@@ -141,6 +149,38 @@
           inputStyleClass="w-full"
           placeholder="Mínimo 8 caracteres"
         />
+      </div>
+    }
+
+    @if (editing()) {
+      <div class="field firma-field">
+        <label>Firma (correos de reserva)</label>
+        <p class="firma-hint">
+          Si el usuario tiene firma, se usa en los correos al proveedor; si no, la firma por defecto del sistema.
+          La imagen se ajusta al mismo tamaño que la firma estándar.
+        </p>
+        @if (firmaPreviewUrl()) {
+          <div class="firma-preview-wrap">
+            <img [src]="firmaPreviewUrl()!" alt="Vista previa de firma" class="firma-preview" />
+          </div>
+        }
+        <div class="firma-actions">
+          <label class="firma-upload-btn p-button p-button-outlined p-button-sm">
+            <i class="pi pi-upload"></i>
+            <span>{{ firmaPreviewUrl() ? 'Cambiar imagen' : 'Subir firma' }}</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="onFirmaSelected($event)" />
+          </label>
+          @if (firmaPreviewUrl()) {
+            <p-button
+              label="Quitar firma"
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              size="small"
+              (onClick)="removeFirma()"
+            />
+          }
+        </div>
       </div>
     }
   </form>

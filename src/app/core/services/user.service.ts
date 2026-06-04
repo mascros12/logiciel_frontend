@@ -31,4 +31,18 @@ export class UserService {
   updatePassword(id: string, new_password: string) {
     return this.http.patch<User>(`${this.url}/${id}/password`, { new_password });
   }
+
+  getFirma(id: string) {
+    return this.http.get(`${this.url}/${id}/firma`, { responseType: 'blob' });
+  }
+
+  uploadFirma(id: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.put<User>(`${this.url}/${id}/firma`, form);
+  }
+
+  deleteFirma(id: string) {
+    return this.http.delete<User>(`${this.url}/${id}/firma`);
+  }
 }

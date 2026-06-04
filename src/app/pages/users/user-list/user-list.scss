@@ -37,4 +37,44 @@
     flex-direction: column;
     gap: 0.4rem;
   }
+
+  .firma-field {
+    margin-top: 0.25rem;
+  }
+
+  .firma-hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color);
+    line-height: 1.35;
+  }
+
+  .firma-preview-wrap {
+    padding: 0.5rem;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 6px;
+    background: var(--p-surface-50, #fafafa);
+  }
+
+  .firma-preview {
+    display: block;
+    max-width: 520px;
+    width: 100%;
+    height: auto;
+  }
+
+  .firma-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .firma-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    margin: 0;
+  }
 }

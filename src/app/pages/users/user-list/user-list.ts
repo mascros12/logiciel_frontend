@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { DatePipe } from '@angular/common';
@@ -40,7 +40,7 @@ import { UserService } from '../../../core/services/user.service';
   templateUrl: './user-list.html',
   styleUrl: './user-list.scss',
 })
-export class UserList implements OnInit {
+export class UserList implements OnInit, OnDestroy {
   users = signal<User[]>([]);
   loading = signal(false);
   saving = signal(false);
@@ -50,6 +50,9 @@ export class UserList implements OnInit {
   showPasswordDialog = signal(false);
   editing = signal<User | null>(null);
   passwordTarget = signal<User | null>(null);
+  firmaPreviewUrl = signal<string | null>(null);
+  firmaPendingFile = signal<File | null>(null);
+  firmaMarkedForRemoval = signal(false);
 
   form: FormGroup;
   passwordForm: FormGroup;
@@ -87,6 +90,10 @@ export class UserList implements OnInit {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.revokeFirmaPreviewUrl();
+  }
+
   load(): void {
     this.loading.set(true);
     this.userService.getAll().subscribe({
@@ -101,6 +108,7 @@ export class UserList implements OnInit {
   }
 
   openCreate(): void {
+    this.resetFirmaState();
     this.editing.set(null);
     this.form.reset({
       full_name: '',
@@ -115,7 +123,16 @@ export class UserList implements OnInit {
   }
 
   openEdit(user: User): void {
+    this.resetFirmaState();
     this.editing.set(user);
+    if (user.has_firma) {
+      this.userService.getFirma(user.id).subscribe({
+        next: (blob) => {
+          if (this.editing()?.id !== user.id) return;
+          this.firmaPreviewUrl.set(URL.createObjectURL(blob));
+        },
+      });
+    }
     this.form.reset({
       full_name: user.full_name,
       email: user.email,
@@ -169,10 +186,12 @@ export class UserList implements OnInit {
       })
       .subscribe({
         next: () => {
-          this.saving.set(false);
-          this.showDialog.set(false);
-          this.messageService.add({ severity: 'success', summary: 'Usuario actualizado' });
-          this.load();
+          this.persistFirmaForUser(current.id, () => {
+            this.saving.set(false);
+            this.showDialog.set(false);
+            this.messageService.add({ severity: 'success', summary: 'Usuario actualizado' });
+            this.load();
+          });
         },
         error: (err) => {
           this.saving.set(false);
@@ -182,6 +201,85 @@ export class UserList implements OnInit {
           });
         },
       });
+  }
+
+  onFirmaSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Use una imagen PNG o JPEG',
+      });
+      input.value = '';
+      return;
+    }
+    this.revokeFirmaPreviewUrl();
+    this.firmaPendingFile.set(file);
+    this.firmaMarkedForRemoval.set(false);
+    this.firmaPreviewUrl.set(URL.createObjectURL(file));
+    input.value = '';
+  }
+
+  removeFirma(): void {
+    this.revokeFirmaPreviewUrl();
+    this.firmaPendingFile.set(null);
+    this.firmaMarkedForRemoval.set(true);
+  }
+
+  private persistFirmaForUser(userId: string, onDone: () => void): void {
+    const pending = this.firmaPendingFile();
+    const remove = this.firmaMarkedForRemoval();
+    if (!pending && !remove) {
+      onDone();
+      return;
+    }
+    if (remove) {
+      this.userService.deleteFirma(userId).subscribe({
+        next: () => onDone(),
+        error: (err) => {
+          this.saving.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary:
+              typeof err.error?.detail === 'string'
+                ? err.error.detail
+                : 'No se pudo quitar la firma',
+          });
+        },
+      });
+      return;
+    }
+    if (pending) {
+      this.userService.uploadFirma(userId, pending).subscribe({
+        next: () => onDone(),
+        error: (err) => {
+          this.saving.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary:
+              typeof err.error?.detail === 'string'
+                ? err.error.detail
+                : 'No se pudo guardar la firma',
+          });
+        },
+      });
+    }
+  }
+
+  private resetFirmaState(): void {
+    this.revokeFirmaPreviewUrl();
+    this.firmaPendingFile.set(null);
+    this.firmaMarkedForRemoval.set(false);
+  }
+
+  private revokeFirmaPreviewUrl(): void {
+    const url = this.firmaPreviewUrl();
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+    this.firmaPreviewUrl.set(null);
   }
 
   confirmDeactivate(event: Event, user: User): void {

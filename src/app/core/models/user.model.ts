@@ -6,6 +6,7 @@ export interface User {
   full_name: string;
   role: UserRole;
   is_active: boolean;
+  has_firma: boolean;
   created_at: string;
 }
 
