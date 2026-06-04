@@ -1554,7 +1554,8 @@
                                     [id]="'aa-rmq-' + d.id"
                                     class="ficha-cell-input"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).room_quantity"
-                                    (blur)="commitHotelFichaObs(d, $event)"
+                                    (input)="onHotelRoomQuantityInput(d, $event)"
+                                    (change)="commitHotelRoomQuantityObs(d, $event)"
                                   />
                                 </div>
                                 <div class="ficha-obs-block">

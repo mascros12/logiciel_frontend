@@ -3283,6 +3283,23 @@ export class QuotationDetail implements OnInit {
     return Math.trunc(n);
   }
 
+  onHotelRoomQuantityInput(d: FileAADetailRow, event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    this.ensureHotelFichaObsDraft(d).room_quantity = this.parseHotelRoomQuantityInput(target.value);
+  }
+
+  /** Flechas del input number: el valor puede aplicarse después del blur — guardamos en el siguiente tick. */
+  commitHotelRoomQuantityObs(d: FileAADetailRow, event: Event): void {
+    const target = event.target instanceof HTMLInputElement ? event.target : null;
+    setTimeout(() => {
+      if (target) {
+        this.ensureHotelFichaObsDraft(d).room_quantity = this.parseHotelRoomQuantityInput(target.value);
+      }
+      this.commitHotelFichaObs(d);
+    }, 0);
+  }
+
   /** En blur, ngModel puede ir un tick detrás: leemos el input/textarea que perdió el foco. */
   private applyHotelFichaBlurTarget(d: FileAADetailRow, target: EventTarget | null): void {
     if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
@@ -3310,8 +3327,13 @@ export class QuotationDetail implements OnInit {
   }
 
   commitHotelFichaObs(d: FileAADetailRow, event?: Event): void {
-    if (event?.target) {
-      this.applyHotelFichaBlurTarget(d, event.target);
+    const target = event?.target ?? null;
+    // El blur del número de habitaciones lo maneja commitHotelRoomQuantityObs (change).
+    if (target instanceof HTMLInputElement && target.id === `aa-rmq-${d.id}`) {
+      return;
+    }
+    if (target) {
+      this.applyHotelFichaBlurTarget(d, target);
     }
     const row = this.ensureHotelFichaObsDraft(d);
     const room_quantity = this.parseHotelRoomQuantityInput(row.room_quantity);
