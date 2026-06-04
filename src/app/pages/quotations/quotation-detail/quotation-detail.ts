@@ -385,6 +385,8 @@ export class QuotationDetail implements OnInit {
   private activityDatesDraft: Record<string, string> = {};
   /** Borrador UI para filas hotel: número de habitaciones + observaciones */
   private hotelFichaObsDraft: Record<string, FileAADetailRoomObsState> = {};
+  /** Evita que un PATCH lento sobrescriba un cambio más reciente en la misma fila. */
+  private fileDetailPatchSeq: Record<string, number> = {};
 
   /** Diálogo: añadir fila en Ficha AA (nueva vs reemplazo + servicio del itinerario). */
   showFichaAddDetailDialog = signal(false);
@@ -2530,18 +2532,27 @@ export class QuotationDetail implements OnInit {
   patchFileDetail(detailId: string, patch: FileAADetailPatch): void {
     const cur = this.fichaFileAA();
     if (!cur) return;
+    const seq = (this.fileDetailPatchSeq[detailId] ?? 0) + 1;
+    this.fileDetailPatchSeq[detailId] = seq;
     this.quotationService.patchFileAADetail(detailId, patch).subscribe({
       next: (updated) => {
+        if (this.fileDetailPatchSeq[detailId] !== seq) return;
         const f = this.fichaFileAA();
         if (!f) return;
+        const prevRow = f.details.find((d) => d.id === detailId);
+        const mergedRow = prevRow ? ({ ...prevRow, ...updated } as FileAADetailRow) : null;
         const details = f.details.map((d) => (d.id === detailId ? { ...d, ...updated } : d));
         this.fichaFileAA.set({ ...f, details });
         this.syncFichaVisibleDetailsList();
         if (patch.observation_extras !== undefined || patch.observations !== undefined) {
+          if (mergedRow?.category === 'room') {
+            this.hotelFichaObsDraft[detailId] = { ...this.hotelFichaObsFromServer(mergedRow) };
+          } else {
+            delete this.hotelFichaObsDraft[detailId];
+          }
           delete this.vehicleFichaObsDraft[detailId];
           delete this.vehicleServiceSubtitleDraft[detailId];
           delete this.activityFichaObsDraft[detailId];
-          delete this.hotelFichaObsDraft[detailId];
         }
         if (patch.dates !== undefined || patch.date_from !== undefined || patch.date_to !== undefined) {
           delete this.activityDatesDraft[detailId];
@@ -3253,14 +3264,57 @@ export class QuotationDetail implements OnInit {
     return this.hotelFichaObsDraft[d.id];
   }
 
-  commitHotelFichaObs(d: FileAADetailRow): void {
-    const row = this.ensureHotelFichaObsDraft(d);
-    let room_quantity: number | null = null;
-    const rawQty = row.room_quantity as unknown;
-    if (rawQty !== null && rawQty !== undefined && rawQty !== '') {
-      const n = Number(rawQty);
-      room_quantity = Number.isFinite(n) ? n : null;
+  /** Cantidad para la columna Service (borrador en edición o valor guardado). */
+  fichaRoomQuantityDisplay(d: FileAADetailRow): number | null {
+    const draft = this.hotelFichaObsDraft[d.id];
+    if (draft && draft.room_quantity !== null && draft.room_quantity !== undefined) {
+      return draft.room_quantity;
     }
+    const raw = d.observation_extras?.['room_quantity'];
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private parseHotelRoomQuantityInput(raw: unknown): number | null {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 1) return null;
+    return Math.trunc(n);
+  }
+
+  /** En blur, ngModel puede ir un tick detrás: leemos el input/textarea que perdió el foco. */
+  private applyHotelFichaBlurTarget(d: FileAADetailRow, target: EventTarget | null): void {
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+    const row = this.ensureHotelFichaObsDraft(d);
+    const val = target.value;
+    switch (target.id) {
+      case `aa-rmq-${d.id}`:
+        row.room_quantity = this.parseHotelRoomQuantityInput(val);
+        break;
+      case `aa-hent-${d.id}`:
+        row.ficha_entrada = val;
+        break;
+      case `aa-hsal-${d.id}`:
+        row.ficha_salida = val;
+        break;
+      case `aa-hnoc-${d.id}`:
+        row.ficha_noches_texto = val;
+        break;
+      case `aa-rno-${d.id}`:
+        row.notes = val;
+        break;
+      default:
+        break;
+    }
+  }
+
+  commitHotelFichaObs(d: FileAADetailRow, event?: Event): void {
+    if (event?.target) {
+      this.applyHotelFichaBlurTarget(d, event.target);
+    }
+    const row = this.ensureHotelFichaObsDraft(d);
+    const room_quantity = this.parseHotelRoomQuantityInput(row.room_quantity);
     row.room_quantity = room_quantity;
     const prev =
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)

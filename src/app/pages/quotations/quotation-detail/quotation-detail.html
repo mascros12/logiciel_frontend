@@ -1196,7 +1196,7 @@
                                   [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
                                   [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
                                   [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
-                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (ensureHotelFichaObsDraft(d).room_quantity) {{{ ensureHotelFichaObsDraft(d).room_quantity }} }{{ svcLines[1] }}</span></span>
+                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (fichaRoomQuantityDisplay(d); as qty) {{{ qty }} }{{ svcLines[1] }}</span></span>
                               } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
                                 @let vSvcLayout = fichaVehicleServiceLayout(d);
@@ -1321,7 +1321,7 @@
                                     class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_entrada"
-                                    (blur)="commitHotelFichaObs(d)"
+                                    (blur)="commitHotelFichaObs(d, $event)"
                                   ></textarea>
                                 </div>
                                 <div class="ficha-obs-block">
@@ -1332,7 +1332,7 @@
                                     class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_salida"
-                                    (blur)="commitHotelFichaObs(d)"
+                                    (blur)="commitHotelFichaObs(d, $event)"
                                   ></textarea>
                                 </div>
                                 <div class="ficha-obs-block">
@@ -1343,7 +1343,7 @@
                                     class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_noches_texto"
-                                    (blur)="commitHotelFichaObs(d)"
+                                    (blur)="commitHotelFichaObs(d, $event)"
                                   ></textarea>
                                 </div>
                               </div>
@@ -1554,7 +1554,7 @@
                                     [id]="'aa-rmq-' + d.id"
                                     class="ficha-cell-input"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).room_quantity"
-                                    (blur)="commitHotelFichaObs(d)"
+                                    (blur)="commitHotelFichaObs(d, $event)"
                                   />
                                 </div>
                                 <div class="ficha-obs-block">
@@ -1565,7 +1565,7 @@
                                     class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).notes"
-                                    (blur)="commitHotelFichaObs(d)"
+                                    (blur)="commitHotelFichaObs(d, $event)"
                                   ></textarea>
                                 </div>
                               </div>
