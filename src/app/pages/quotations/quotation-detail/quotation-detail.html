@@ -1572,58 +1572,118 @@
                               </div>
                             } @else if (d.category === 'activity') {
                               <div class="ficha-vehicle-obs">
-                                <div class="ficha-activity-pax-row">
-                                  <div class="ficha-activity-pax-cell">
-                                    <label
-                                      class="ficha-activity-pax-label"
-                                      [attr.for]="'aa-aad-' + d.id"
-                                      pTooltip="Adultos"
-                                      tooltipPosition="top"
-                                    >A</label>
-                                    <input
-                                      pInputText
-                                      type="number"
-                                      min="0"
-                                      step="1"
-                                      [id]="'aa-aad-' + d.id"
-                                      class="ficha-cell-input ficha-activity-pax-input"
-                                      [(ngModel)]="ensureActivityFichaObsDraft(d).activity_adults"
-                                      (blur)="commitActivityFichaObs(d)"
-                                    />
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label">Para cobrar</label>
+                                  <div class="ficha-activity-pax-row">
+                                    <div class="ficha-activity-pax-cell">
+                                      <label
+                                        class="ficha-activity-pax-label"
+                                        [attr.for]="'aa-aad-' + d.id"
+                                        pTooltip="Adultos"
+                                        tooltipPosition="top"
+                                      >A</label>
+                                      <input
+                                        pInputText
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        [id]="'aa-aad-' + d.id"
+                                        class="ficha-cell-input ficha-activity-pax-input"
+                                        [(ngModel)]="ensureActivityFichaObsDraft(d).activity_adults"
+                                        (blur)="commitActivityFichaObs(d)"
+                                      />
+                                    </div>
+                                    <div class="ficha-activity-pax-cell">
+                                      <label
+                                        class="ficha-activity-pax-label"
+                                        [attr.for]="'aa-ach-' + d.id"
+                                        pTooltip="Niños"
+                                        tooltipPosition="top"
+                                      >N</label>
+                                      <input
+                                        pInputText
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        [id]="'aa-ach-' + d.id"
+                                        class="ficha-cell-input ficha-activity-pax-input"
+                                        [(ngModel)]="ensureActivityFichaObsDraft(d).activity_children"
+                                        (blur)="commitActivityFichaObs(d)"
+                                      />
+                                    </div>
+                                    <div class="ficha-activity-pax-cell">
+                                      <label
+                                        class="ficha-activity-pax-label"
+                                        [attr.for]="'aa-afr-' + d.id"
+                                        pTooltip="Gratuitos"
+                                        tooltipPosition="top"
+                                      >G</label>
+                                      <input
+                                        pInputText
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        [id]="'aa-afr-' + d.id"
+                                        class="ficha-cell-input ficha-activity-pax-input"
+                                        [(ngModel)]="ensureActivityFichaObsDraft(d).activity_free"
+                                        (blur)="commitActivityFichaObs(d)"
+                                      />
+                                    </div>
                                   </div>
-                                  <div class="ficha-activity-pax-cell">
-                                    <label
-                                      class="ficha-activity-pax-label"
-                                      [attr.for]="'aa-ach-' + d.id"
-                                      pTooltip="Niños"
-                                      tooltipPosition="top"
-                                    >N</label>
-                                    <input
-                                      pInputText
-                                      type="number"
-                                      min="0"
-                                      step="1"
-                                      [id]="'aa-ach-' + d.id"
-                                      class="ficha-cell-input ficha-activity-pax-input"
-                                      [(ngModel)]="ensureActivityFichaObsDraft(d).activity_children"
-                                      (blur)="commitActivityFichaObs(d)"
-                                    />
+                                </div>
+                                <div class="ficha-obs-block">
+                                  <label class="ficha-obs-label">Asistencia</label>
+                                  <div class="ficha-activity-pax-row">
+                                    <div class="ficha-activity-pax-cell">
+                                      <label
+                                        class="ficha-activity-pax-label"
+                                        [attr.for]="'aa-asad-' + d.id"
+                                        pTooltip="Adultos"
+                                        tooltipPosition="top"
+                                      >A</label>
+                                      <input
+                                        pInputText
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        [id]="'aa-asad-' + d.id"
+                                        class="ficha-cell-input ficha-activity-pax-input"
+                                        [(ngModel)]="ensureActivityFichaObsDraft(d).activity_assist_adults"
+                                        (blur)="commitActivityFichaObs(d)"
+                                      />
+                                    </div>
+                                    <div class="ficha-activity-pax-cell">
+                                      <label
+                                        class="ficha-activity-pax-label"
+                                        [attr.for]="'aa-asch-' + d.id"
+                                        pTooltip="Niños"
+                                        tooltipPosition="top"
+                                      >N</label>
+                                      <input
+                                        pInputText
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        [id]="'aa-asch-' + d.id"
+                                        class="ficha-cell-input ficha-activity-pax-input"
+                                        [(ngModel)]="ensureActivityFichaObsDraft(d).activity_assist_children"
+                                        (blur)="commitActivityFichaObs(d)"
+                                      />
+                                    </div>
                                   </div>
-                                  <div class="ficha-activity-pax-cell">
+                                  <div class="ficha-activity-assist-ages">
                                     <label
                                       class="ficha-activity-pax-label"
-                                      [attr.for]="'aa-afr-' + d.id"
-                                      pTooltip="Gratuitos"
+                                      [attr.for]="'aa-asag-' + d.id"
+                                      pTooltip="Edades de los menores"
                                       tooltipPosition="top"
-                                    >G</label>
+                                    >Edad N</label>
                                     <input
                                       pInputText
-                                      type="number"
-                                      min="0"
-                                      step="1"
-                                      [id]="'aa-afr-' + d.id"
-                                      class="ficha-cell-input ficha-activity-pax-input"
-                                      [(ngModel)]="ensureActivityFichaObsDraft(d).activity_free"
+                                      [id]="'aa-asag-' + d.id"
+                                      class="ficha-cell-input ficha-activity-assist-ages-input"
+                                      placeholder="Ej. 6 y 8"
+                                      [(ngModel)]="ensureActivityFichaObsDraft(d).activity_assist_ages"
                                       (blur)="commitActivityFichaObs(d)"
                                     />
                                   </div>

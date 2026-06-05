@@ -113,12 +113,18 @@ export interface FileAADetailActivityObsState {
   pickup_detail: string;
   /** Hora para export Word/PDF (columna Service), texto libre p. ej. «9h30» o «14h00». */
   ficha_horario: string;
-  /** Adultos para el documento al proveedor de actividad (override por fila). */
+  /** Adultos para cobrar (cálculo de total). */
   activity_adults: number | null;
-  /** Menores para el documento al proveedor de actividad (override por fila). */
+  /** Menores para cobrar (cálculo de total). */
   activity_children: number | null;
-  /** Gratuitos para el documento al proveedor de actividad (override por fila). */
+  /** Gratuitos para cobrar (cálculo de total). */
   activity_free: number | null;
+  /** Adultos para asistencia (documento/correo al proveedor). */
+  activity_assist_adults: number | null;
+  /** Menores para asistencia (documento/correo al proveedor). */
+  activity_assist_children: number | null;
+  /** Edades de menores para asistencia, p. ej. «6 y 8». */
+  activity_assist_ages: string;
   notes: string;
 }
 

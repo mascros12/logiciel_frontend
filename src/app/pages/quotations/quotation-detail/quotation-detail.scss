@@ -1268,6 +1268,18 @@
       -moz-appearance: textfield;
     }
 
+    .ficha-activity-assist-ages {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+    }
+
+    .ficha-activity-assist-ages-input {
+      flex: 1;
+      min-width: 0;
+    }
+
     .ficha-obs-label {
       font-size: 0.72rem;
       font-weight: 600;

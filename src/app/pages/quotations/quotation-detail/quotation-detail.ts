@@ -3064,12 +3064,16 @@ export class QuotationDetail implements OnInit {
   private activityFichaObsFromServer(d: FileAADetailRow): FileAADetailActivityObsState {
     const raw = d.observation_extras;
     const notes = typeof d.observations === 'string' ? d.observations : '';
+    const assistDefaults = this.fichaActivityAssistDefaults();
     const def: FileAADetailActivityObsState = {
       pickup_detail: '',
       ficha_horario: '',
       activity_adults: null,
       activity_children: null,
       activity_free: null,
+      activity_assist_adults: assistDefaults.adults,
+      activity_assist_children: assistDefaults.children,
+      activity_assist_ages: assistDefaults.ages,
       notes,
     };
     const toIntOrNull = (v: unknown): number | null => {
@@ -3085,10 +3089,53 @@ export class QuotationDetail implements OnInit {
         activity_adults: toIntOrNull(o['activity_adults']),
         activity_children: toIntOrNull(o['activity_children']),
         activity_free: toIntOrNull(o['activity_free']),
+        activity_assist_adults:
+          'activity_assist_adults' in o
+            ? toIntOrNull(o['activity_assist_adults'])
+            : assistDefaults.adults,
+        activity_assist_children:
+          'activity_assist_children' in o
+            ? toIntOrNull(o['activity_assist_children'])
+            : assistDefaults.children,
+        activity_assist_ages:
+          'activity_assist_ages' in o
+            ? String(o['activity_assist_ages'] ?? '')
+            : assistDefaults.ages,
         notes: String(o['notes'] ?? notes),
       };
     }
     return def;
+  }
+
+  /** Valores por defecto de Asistencia desde la composición familiar de la Ficha AA. */
+  private fichaActivityAssistDefaults(): {
+    adults: number | null;
+    children: number | null;
+    ages: string;
+  } {
+    const ficha = this.fichaFileAA();
+    if (!ficha) {
+      return { adults: null, children: null, ages: '' };
+    }
+    const na = Number(ficha.quantity_adults) || 0;
+    const nc = Number(ficha.quantity_children) || 0;
+    const ageParts = (ficha.children_ages || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return {
+      adults: na > 0 ? na : null,
+      children: nc > 0 ? nc : null,
+      ages: this.joinEsY(ageParts),
+    };
+  }
+
+  /** Une fragmentos con « y » (p. ej. edades «6 y 8»). */
+  private joinEsY(parts: string[]): string {
+    if (!parts.length) return '';
+    if (parts.length === 1) return parts[0];
+    if (parts.length === 2) return `${parts[0]} y ${parts[1]}`;
+    return `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}`;
   }
 
   ensureActivityFichaObsDraft(d: FileAADetailRow): FileAADetailActivityObsState {
@@ -3133,11 +3180,17 @@ export class QuotationDetail implements OnInit {
     const adults = toIntOrNull(row.activity_adults);
     const children = toIntOrNull(row.activity_children);
     const free = toIntOrNull(row.activity_free);
+    const assistAdults = toIntOrNull(row.activity_assist_adults);
+    const assistChildren = toIntOrNull(row.activity_assist_children);
+    const assistAges = String(row.activity_assist_ages ?? '').trim();
     // Reflejamos en el draft el valor normalizado (entero o null) para
     // que el input muestre exactamente lo que se persiste.
     row.activity_adults = adults;
     row.activity_children = children;
     row.activity_free = free;
+    row.activity_assist_adults = assistAdults;
+    row.activity_assist_children = assistChildren;
+    row.activity_assist_ages = assistAges;
     const horarioNorm = this.normalizeFichaHorarioDisplay(String(row.ficha_horario ?? ''));
     row.ficha_horario = horarioNorm;
     const observation_extras = {
@@ -3147,6 +3200,9 @@ export class QuotationDetail implements OnInit {
       activity_adults: adults,
       activity_children: children,
       activity_free: free,
+      activity_assist_adults: assistAdults,
+      activity_assist_children: assistChildren,
+      activity_assist_ages: assistAges || null,
       notes: row.notes,
     };
     const notesTrim = row.notes.trim();
