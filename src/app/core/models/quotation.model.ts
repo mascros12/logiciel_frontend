@@ -32,6 +32,7 @@ interface QuotationActivity {
   grade: string;
   adults: number;
   children: number;
+  free: number;
   net_price: number;
   rack_price: number;
   is_original: boolean;

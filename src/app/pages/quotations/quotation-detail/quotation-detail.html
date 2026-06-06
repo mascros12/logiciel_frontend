@@ -311,7 +311,7 @@
                                   <div class="agenda-service-card__title" [innerHTML]="act.name | richText"></div>
                                 </div>
                                 <div class="agenda-service-card__right">
-                                  <span class="agenda-service-card__qty">{{ act.adults }}A · {{ act.children }}N</span>
+                                  <span class="agenda-service-card__qty">{{ activityPaxLine(act) }}</span>
                                   @if (!act.deleted) {
                                     <p-button icon="pi pi-times" [text]="true" size="small"
                                       styleClass="chip-delete-btn"

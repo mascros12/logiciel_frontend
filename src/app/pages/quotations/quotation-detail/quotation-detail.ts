@@ -1608,6 +1608,11 @@ export class QuotationDetail implements OnInit {
     return { hotel, roomLabel, useFullRichName: false };
   }
 
+  /** Adultos / niños / gratuitos en actividad (esquina de la tarjeta en agenda). */
+  activityPaxLine(act: QuotationLine['activities'][number]): string {
+    return `${act.adults}A · ${act.children}N · ${act.free ?? 0}G`;
+  }
+
   /** Adultos / niños adicionales en habitación (columna derecha). */
   roomExtrasLine(room: QuotationLine['rooms'][number]): string {
     const bits: string[] = [];
@@ -1636,7 +1641,7 @@ export class QuotationDetail implements OnInit {
       parts.push(
         `Actividades: ${acts
           .map((a) => {
-            let s = `${this.stripHtml(a.name)} (${a.adults}A ${a.children}N)`;
+            let s = `${this.stripHtml(a.name)} (${a.adults}A ${a.children}N ${a.free ?? 0}G)`;
             const rec = (a.recommendation || '').trim();
             if (rec) s += ` — ${this.stripHtml(rec)}`;
             return s;
