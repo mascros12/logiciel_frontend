@@ -46,6 +46,7 @@ import {
   FileAADetailVehicleObsState,
   FileAADetailActivityObsState,
   FileAADetailRoomObsState,
+  FichaMergedRoomSlot,
   FileAADetailCreateBody,
 } from '../../../core/models/quotation.model';
 import {
@@ -390,12 +391,14 @@ export class QuotationDetail implements OnInit {
 
   /** Diálogo: añadir fila en Ficha AA (nueva vs reemplazo + servicio del itinerario). */
   showFichaAddDetailDialog = signal(false);
-  fichaAddDetailStep = signal<'kind' | 'pick'>('kind');
+  fichaAddDetailStep = signal<'kind' | 'pick-room' | 'pick'>('kind');
   /** Fila desde la que se abrió el diálogo (solo UI / categoría). */
   fichaAddAnchorRow = signal<FileAADetailRow | null>(null);
   /** Id de esa fila al abrir — no depender del objeto ni del nombre al enviar. */
   fichaAddAnchorDetailId = signal<string | null>(null);
   fichaAddKind = signal<'new' | 'replace' | null>(null);
+  /** Habitación concreta a reemplazar en filas con varias tipologías. */
+  fichaAddReplaceRoomId = signal<string | null>(null);
   fichaAddSourcePickItems = signal<FichaAddSourcePickItem[]>([]);
   fichaAddSelectedPickKey = signal<string | null>(null);
   loadingFichaAddSource = signal(false);
@@ -3292,12 +3295,23 @@ export class QuotationDetail implements OnInit {
     let ficha_entrada = '';
     let ficha_salida = '';
     let ficha_noches_texto = '';
+    let merged_slots: FichaMergedRoomSlot[] | undefined;
+    const merged = this.fichaMergedRoomsFromExtras(d);
+    if (merged.length > 1) {
+      merged_slots = merged.map((slot) => ({
+        room_id: slot.room_id,
+        room_file_aa_name: slot.room_file_aa_name,
+        room_quantity: slot.room_quantity,
+      }));
+    }
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       const o = raw as Record<string, unknown>;
-      const rq = o['room_quantity'];
-      if (rq !== null && rq !== undefined && rq !== '') {
-        const n = Number(rq);
-        room_quantity = Number.isFinite(n) ? n : null;
+      if (merged.length <= 1) {
+        const rq = o['room_quantity'];
+        if (rq !== null && rq !== undefined && rq !== '') {
+          const n = Number(rq);
+          room_quantity = Number.isFinite(n) ? n : null;
+        }
       }
       ficha_entrada = String(o['ficha_entrada'] ?? '');
       ficha_salida = String(o['ficha_salida'] ?? '');
@@ -3315,7 +3329,76 @@ export class QuotationDetail implements OnInit {
       const nd = Number(d.days);
       ficha_noches_texto = Number.isFinite(nd) && nd > 0 ? String(nd) : '';
     }
-    return { room_quantity, ficha_entrada, ficha_salida, ficha_noches_texto, notes };
+    return { room_quantity, merged_slots, ficha_entrada, ficha_salida, ficha_noches_texto, notes };
+  }
+
+  /** Tipologías incluidas en una fila hotel (legacy = una sola). */
+  fichaMergedRoomsFromExtras(d: FileAADetailRow): FichaMergedRoomSlot[] {
+    const raw = d.observation_extras;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const merged = (raw as Record<string, unknown>)['merged_rooms'];
+      if (Array.isArray(merged) && merged.length > 0) {
+        return merged
+          .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+          .map((slot) => {
+            const rq = slot['room_quantity'];
+            let room_quantity: number | null = null;
+            if (rq !== null && rq !== undefined && rq !== '') {
+              const n = Number(rq);
+              room_quantity = Number.isFinite(n) ? n : null;
+            }
+            return {
+              room_id: String(slot['room_id'] ?? ''),
+              room_file_aa_name: String(slot['room_file_aa_name'] ?? '').trim() || undefined,
+              room_quantity,
+            };
+          })
+          .filter((s) => s.room_id.length > 0);
+      }
+    }
+    const roomId = String(d.observation_extras?.['room_id'] ?? '').trim();
+    if (!roomId) return [];
+    const rqRaw = d.observation_extras?.['room_quantity'];
+    let room_quantity: number | null = null;
+    if (rqRaw !== null && rqRaw !== undefined && rqRaw !== '') {
+      const n = Number(rqRaw);
+      room_quantity = Number.isFinite(n) ? n : null;
+    }
+    return [
+      {
+        room_id: roomId,
+        room_file_aa_name: String(d.observation_extras?.['room_file_aa_name'] ?? '').trim() || undefined,
+        room_quantity,
+      },
+    ];
+  }
+
+  fichaHasMultipleRoomTypes(d: FileAADetailRow): boolean {
+    return this.fichaMergedRoomsFromExtras(d).length > 1;
+  }
+
+  fichaMergedRoomLabel(slot: FichaMergedRoomSlot, index: number): string {
+    const name = (slot.room_file_aa_name ?? '').trim();
+    return name || `Hab ${index + 1}`;
+  }
+
+  ensureHotelMergedRoomQtyDraft(d: FileAADetailRow, index: number): number | null {
+    const draft = this.ensureHotelFichaObsDraft(d);
+    if (!draft.merged_slots?.[index]) return null;
+    return draft.merged_slots[index].room_quantity;
+  }
+
+  setHotelMergedRoomQtyDraft(d: FileAADetailRow, index: number, raw: unknown): void {
+    const draft = this.ensureHotelFichaObsDraft(d);
+    if (!draft.merged_slots?.[index]) return;
+    draft.merged_slots[index].room_quantity = this.parseHotelRoomQuantityInput(raw);
+  }
+
+  fichaReplaceRoomOptions(d: FileAADetailRow): { roomId: string; label: string }[] {
+    return this.fichaMergedRoomsFromExtras(d).map((slot, i) => ({
+      roomId: slot.room_id,
+      label: this.fichaMergedRoomLabel(slot, i),
+    }));
   }
 
   ensureHotelFichaObsDraft(d: FileAADetailRow): FileAADetailRoomObsState {
@@ -3327,6 +3410,7 @@ export class QuotationDetail implements OnInit {
 
   /** Cantidad para la columna Service (borrador en edición o valor guardado). */
   fichaRoomQuantityDisplay(d: FileAADetailRow): number | null {
+    if (this.fichaHasMultipleRoomTypes(d)) return null;
     const draft = this.hotelFichaObsDraft[d.id];
     if (draft && draft.room_quantity !== null && draft.room_quantity !== undefined) {
       return draft.room_quantity;
@@ -3393,6 +3477,15 @@ export class QuotationDetail implements OnInit {
     if (target instanceof HTMLInputElement && target.id === `aa-rmq-${d.id}`) {
       return;
     }
+    if (
+      target instanceof HTMLInputElement &&
+      target.id.startsWith(`aa-rmq-${d.id}-`)
+    ) {
+      const idx = Number(target.id.slice(`aa-rmq-${d.id}-`.length));
+      if (Number.isFinite(idx)) {
+        this.setHotelMergedRoomQtyDraft(d, idx, target.value);
+      }
+    }
     if (target) {
       this.applyHotelFichaBlurTarget(d, target);
     }
@@ -3411,13 +3504,31 @@ export class QuotationDetail implements OnInit {
     if (ficha_salida) datesLines.push(`Salida: ${ficha_salida}`);
     if (ficha_noches_texto) datesLines.push(`Noches: ${ficha_noches_texto}`);
     const datesCell = datesLines.join('\n');
-    const observation_extras = {
+    const observation_extras: Record<string, unknown> = {
       ...prev,
-      room_quantity,
       ficha_entrada,
       ficha_salida,
       ficha_noches_texto,
     };
+    const mergedSlots = row.merged_slots;
+    if (mergedSlots && mergedSlots.length > 1) {
+      const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
+      const updatedMerged = mergedSlots.map((slot, i) => {
+        const base =
+          Array.isArray(prevMerged) && prevMerged[i] && typeof prevMerged[i] === 'object'
+            ? { ...(prevMerged[i] as Record<string, unknown>) }
+            : {};
+        return {
+          ...base,
+          room_id: slot.room_id,
+          room_file_aa_name: slot.room_file_aa_name,
+          room_quantity: this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1,
+        };
+      });
+      observation_extras['merged_rooms'] = updatedMerged;
+    } else {
+      observation_extras['room_quantity'] = room_quantity;
+    }
     const notesTrim = row.notes.trim();
     this.patchFileDetail(d.id, {
       observation_extras,
@@ -3477,6 +3588,7 @@ export class QuotationDetail implements OnInit {
     this.fichaAddAnchorDetailId.set(anchor.id);
     this.fichaAddDetailStep.set('kind');
     this.fichaAddKind.set(null);
+    this.fichaAddReplaceRoomId.set(null);
     this.fichaAddSelectedPickKey.set(null);
     this.fichaAddSourcePickItems.set([]);
     this.showFichaAddDetailDialog.set(true);
@@ -3489,6 +3601,7 @@ export class QuotationDetail implements OnInit {
   onFichaAddDetailDialogHide(): void {
     this.fichaAddDetailStep.set('kind');
     this.fichaAddKind.set(null);
+    this.fichaAddReplaceRoomId.set(null);
     this.fichaAddAnchorRow.set(null);
     this.fichaAddAnchorDetailId.set(null);
     this.fichaAddSelectedPickKey.set(null);
@@ -3502,7 +3615,22 @@ export class QuotationDetail implements OnInit {
     const anchor = this.fichaAddAnchorRow();
     const q = this.quotation();
     if (!anchor || !q) return;
+    if (
+      kind === 'replace' &&
+      anchor.category === 'room' &&
+      this.fichaHasMultipleRoomTypes(anchor)
+    ) {
+      this.fichaAddDetailStep.set('pick-room');
+      this.fichaAddReplaceRoomId.set(null);
+      return;
+    }
     this.fichaAddDetailStep.set('pick');
+    this.loadingFichaAddSource.set(true);
+    this.fichaAddSelectedPickKey.set(null);
+    this.loadFichaAddSourcePickItems(anchor);
+  }
+
+  private loadFichaAddSourcePickItems(anchor: FileAADetailRow): void {
     this.loadingFichaAddSource.set(true);
     this.fichaAddSelectedPickKey.set(null);
     const onError = (err: { error?: { detail?: unknown } }, summary: string) => {
@@ -3567,11 +3695,37 @@ export class QuotationDetail implements OnInit {
   }
 
   backFichaAddDetailStep(): void {
+    if (this.fichaAddDetailStep() === 'pick') {
+      const anchor = this.fichaAddAnchorRow();
+      if (
+        this.fichaAddKind() === 'replace' &&
+        anchor?.category === 'room' &&
+        this.fichaHasMultipleRoomTypes(anchor)
+      ) {
+        this.fichaAddDetailStep.set('pick-room');
+        this.fichaAddSelectedPickKey.set(null);
+        this.fichaAddSourcePickItems.set([]);
+        return;
+      }
+    }
+    if (this.fichaAddDetailStep() === 'pick-room') {
+      this.fichaAddDetailStep.set('kind');
+      this.fichaAddKind.set(null);
+      this.fichaAddReplaceRoomId.set(null);
+      return;
+    }
     if (this.fichaAddDetailStep() !== 'pick') return;
     this.fichaAddDetailStep.set('kind');
     this.fichaAddKind.set(null);
     this.fichaAddSelectedPickKey.set(null);
     this.fichaAddSourcePickItems.set([]);
+  }
+
+  continueFichaAddAfterRoomPick(): void {
+    const anchor = this.fichaAddAnchorRow();
+    if (!anchor || !this.fichaAddReplaceRoomId()) return;
+    this.fichaAddDetailStep.set('pick');
+    this.loadFichaAddSourcePickItems(anchor);
   }
 
   submitFichaAddDetailRow(): void {
@@ -3592,7 +3746,14 @@ export class QuotationDetail implements OnInit {
     };
     if (cat === 'room') {
       if (!item.roomId) return;
-      body = { ...base, category: 'room', room_id: item.roomId };
+      body = {
+        ...base,
+        category: 'room',
+        room_id: item.roomId,
+        ...(kind === 'replace' && this.fichaAddReplaceRoomId()
+          ? { replace_room_id: this.fichaAddReplaceRoomId()! }
+          : {}),
+      };
     } else if (cat === 'activity') {
       if (!item.activityId) return;
       body = { ...base, category: 'activity', activity_id: item.activityId };

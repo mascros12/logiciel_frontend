@@ -1074,6 +1074,7 @@
                           [cdkDragData]="d"
                           [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)"
                           [class.ficha-aa-row-new]="fichaIsAddedDetail(d)"
+                          [class.ficha-aa-row-replaced]="d.row_status === 'red'"
                         >
                           <td class="col-ficha-drag">
                             <button
@@ -1115,7 +1116,7 @@
                               />
                             </div>
                           </td>
-                          <td [class.ficha-servicio-reemplazada]="d.row_status === 'red'">
+                          <td>
                             @let svcLines = fichaDetailServiceLines(d);
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
                             @if (fichaNameEditDetailId() === d.id) {
@@ -1196,7 +1197,7 @@
                                   [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
                                   [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
                                   [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
-                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (fichaRoomQuantityDisplay(d); as qty) {{{ qty }} }{{ svcLines[1] }}</span></span>
+                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (!fichaHasMultipleRoomTypes(d)) { @if (fichaRoomQuantityDisplay(d); as qty) {{{ qty }} }}{{ svcLines[1] }} } @else { {{ svcLines[1] }} }</span></span>
                               } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
                                 @let vSvcLayout = fichaVehicleServiceLayout(d);
@@ -1544,20 +1545,41 @@
                               </div>
                             } @else if (d.category === 'room') {
                               <div class="ficha-vehicle-obs">
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-rmq-' + d.id">Número de habitaciones</label>
-                                  <input
-                                    pInputText
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    [id]="'aa-rmq-' + d.id"
-                                    class="ficha-cell-input"
-                                    [(ngModel)]="ensureHotelFichaObsDraft(d).room_quantity"
-                                    (input)="onHotelRoomQuantityInput(d, $event)"
-                                    (change)="commitHotelRoomQuantityObs(d, $event)"
-                                  />
-                                </div>
+                                @if (fichaHasMultipleRoomTypes(d)) {
+                                  @for (slot of ensureHotelFichaObsDraft(d).merged_slots ?? []; track slot.room_id; let ri = $index) {
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label" [attr.for]="'aa-rmq-' + d.id + '-' + ri">
+                                        Número de habitaciones {{ fichaMergedRoomLabel(slot, ri) }}
+                                      </label>
+                                      <input
+                                        pInputText
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        [id]="'aa-rmq-' + d.id + '-' + ri"
+                                        class="ficha-cell-input"
+                                        [ngModel]="ensureHotelMergedRoomQtyDraft(d, ri)"
+                                        (ngModelChange)="setHotelMergedRoomQtyDraft(d, ri, $event)"
+                                        (change)="commitHotelFichaObs(d, $event)"
+                                      />
+                                    </div>
+                                  }
+                                } @else {
+                                  <div class="ficha-obs-block">
+                                    <label class="ficha-obs-label" [attr.for]="'aa-rmq-' + d.id">Número de habitaciones</label>
+                                    <input
+                                      pInputText
+                                      type="number"
+                                      min="1"
+                                      step="1"
+                                      [id]="'aa-rmq-' + d.id"
+                                      class="ficha-cell-input"
+                                      [(ngModel)]="ensureHotelFichaObsDraft(d).room_quantity"
+                                      (input)="onHotelRoomQuantityInput(d, $event)"
+                                      (change)="commitHotelRoomQuantityObs(d, $event)"
+                                    />
+                                  </div>
+                                }
                                 <div class="ficha-obs-block">
                                   <label class="ficha-obs-label" [attr.for]="'aa-rno-' + d.id">Observaciones</label>
                                   <textarea
@@ -1861,7 +1883,7 @@
 <!-- Añadir línea en Ficha AA (nueva / reemplazo) -->
 <p-dialog
   styleClass="ficha-add-detail-dialog"
-  [header]="fichaAddDetailStep() === 'kind' ? 'Añadir línea a la ficha' : 'Elegir servicio del itinerario'"
+  [header]="fichaAddDetailStep() === 'kind' ? 'Añadir línea a la ficha' : (fichaAddDetailStep() === 'pick-room' ? '¿Qué habitación reemplazar?' : 'Elegir servicio del itinerario')"
   [visible]="showFichaAddDetailDialog()"
   (visibleChange)="showFichaAddDetailDialog.set($event)"
   [modal]="true"
@@ -1894,6 +1916,23 @@
         (onClick)="chooseFichaAddKind('replace')"
       />
     </div>
+  } @else if (fichaAddDetailStep() === 'pick-room') {
+    <p class="ficha-add-pick-hint">
+      Esta fila agrupa varias habitaciones del mismo hotel. Elija cuál desea reemplazar.
+    </p>
+    <label class="ficha-add-select-label" for="ficha-add-replace-room-sel">Habitación a reemplazar</label>
+    <p-select
+      inputId="ficha-add-replace-room-sel"
+      [options]="fichaReplaceRoomOptions(fichaAddAnchorRow()!)"
+      [ngModel]="fichaAddReplaceRoomId()"
+      (ngModelChange)="fichaAddReplaceRoomId.set($event)"
+      dataKey="roomId"
+      optionLabel="label"
+      optionValue="roomId"
+      placeholder="Seleccione habitación…"
+      styleClass="w-full"
+      appendTo="body"
+    />
   } @else {
     @if (loadingFichaAddSource()) {
       <p class="ficha-add-loading">Cargando servicios del itinerario…</p>
@@ -1905,7 +1944,7 @@
       </p>
       @if (fichaAddAnchorRow()?.category === 'room') {
         <p class="ficha-add-pick-note">
-          Se copian las <strong>fechas</strong> y las <strong>observaciones</strong> de la fila donde pulsó +. El
+          Se copian las <strong>fechas</strong> y las <strong>observaciones</strong> de la fila donde pulsó +. Si elige otra habitación del <strong>mismo hotel</strong>, se añadirá a la misma fila. El
           <strong>precio sistema</strong> es la suma de tarifas <strong>públicas (rack)</strong> de la habitación
           elegida por cada noche entre la primera y la última fecha de esa fila.
         </p>
@@ -1974,10 +2013,19 @@
     }
   }
   <ng-template pTemplate="footer">
-    @if (fichaAddDetailStep() === 'pick') {
+    @if (fichaAddDetailStep() === 'pick' || fichaAddDetailStep() === 'pick-room') {
       <p-button label="Atrás" [text]="true" icon="pi pi-arrow-left" (onClick)="backFichaAddDetailStep()" />
     }
     <p-button label="Cancelar" [text]="true" (onClick)="closeFichaAddDetailDialog()" />
+    @if (fichaAddDetailStep() === 'pick-room') {
+      <p-button
+        label="Continuar"
+        icon="pi pi-arrow-right"
+        iconPos="right"
+        [disabled]="!fichaAddReplaceRoomId()"
+        (onClick)="continueFichaAddAfterRoomPick()"
+      />
+    }
     @if (fichaAddDetailStep() === 'pick') {
       <p-button
         label="Añadir a la ficha"

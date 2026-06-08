@@ -1096,12 +1096,13 @@
       gap: 0.1rem;
     }
 
-    // Línea «reemplazada» (`d.row_status === 'red'`): fondo blanco, sin
-    // barra lateral. El feedback visual se conserva con el texto en rojo.
-    .ficha-servicio-reemplazada {
+    // Línea sustituida (`d.row_status === 'red'`): texto rojo y tachado.
+    .ficha-aa-row-replaced td {
       background: transparent;
       box-shadow: none;
       color: #991b1b;
+      text-decoration: line-through;
+      text-decoration-color: #991b1b;
 
       .ficha-cat,
       .ficha-name,
@@ -1109,6 +1110,18 @@
       .ficha-room-sep,
       .ficha-room-type {
         color: #991b1b;
+      }
+
+      :is(
+          input,
+          textarea,
+          button,
+          .p-button,
+          .p-checkbox,
+          .p-checkbox-box,
+          .ficha-drag-handle
+        ) {
+        text-decoration: none;
       }
     }
 

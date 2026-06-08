@@ -130,8 +130,16 @@ export interface FileAADetailActivityObsState {
 }
 
 /** Observaciones estructuradas en Ficha AA — filas categoría hotel */
+export interface FichaMergedRoomSlot {
+  room_id: string;
+  room_file_aa_name?: string;
+  room_quantity: number | null;
+}
+
 export interface FileAADetailRoomObsState {
   room_quantity: number | null;
+  /** Cantidades por tipología cuando la fila agrupa varias habitaciones del mismo hotel. */
+  merged_slots?: FichaMergedRoomSlot[];
   /** Entradas (check-in), p. ej. «20/3 y 30/3» */
   ficha_entrada?: string;
   /** Salidas (día de checkout), p. ej. «26/3 y 2/4» */
@@ -243,6 +251,7 @@ export interface FileAADetailCreateBody {
   category: FileAADetailCategory;
   copy_operational_from_detail_id: string;
   mark_anchor_row_red: boolean;
+  replace_room_id?: string;
   room_id?: string;
   activity_id?: string;
   vehicle_id?: string;
