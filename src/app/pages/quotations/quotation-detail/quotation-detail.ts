@@ -1281,8 +1281,18 @@ export class QuotationDetail implements OnInit {
   }
 
   dropFichaDetailRow(event: CdkDragDrop<FileAADetailRow[]>, ficha: FileAAWithDetails): void {
-    if (event.previousIndex === event.currentIndex) return;
+    const dragged = event.item.data as FileAADetailRow;
     const previousVisible = [...this.fichaVisibleDetailsList()];
+    const hotelTarget = this.fichaActivityDropHotelTarget(event, previousVisible, dragged);
+    if (
+      dragged.category === 'activity' &&
+      hotelTarget?.category === 'room' &&
+      !this.fichaActivityMergedIntoHotel(dragged)
+    ) {
+      this.confirmAttachActivityToHotel(dragged, hotelTarget);
+      return;
+    }
+    if (event.previousIndex === event.currentIndex) return;
     const previousDetails = [...(ficha.details ?? [])];
 
     const reorderedVisible = this.fichaVisibleOrderAfterDrop(event, previousVisible);
@@ -1312,6 +1322,72 @@ export class QuotationDetail implements OnInit {
           });
         },
       });
+  }
+
+  private fichaActivityMergedIntoHotel(d: FileAADetailRow): boolean {
+    const raw = d.observation_extras?.['merged_into_hotel_detail_id'];
+    return raw !== null && raw !== undefined && String(raw).trim().length > 0;
+  }
+
+  /** Fila hotel sobre la que se soltó una actividad (vecindad del índice de drop). */
+  private fichaActivityDropHotelTarget(
+    event: CdkDragDrop<FileAADetailRow[]>,
+    list: FileAADetailRow[],
+    dragged: FileAADetailRow,
+  ): FileAADetailRow | null {
+    if (dragged.category !== 'activity') return null;
+    const idx = event.currentIndex;
+    for (const i of [idx, idx - 1, idx + 1]) {
+      if (i < 0 || i >= list.length) continue;
+      const row = list[i];
+      if (row.category === 'room' && row.id !== dragged.id && row.row_status !== 'red') {
+        return row;
+      }
+    }
+    return null;
+  }
+
+  private confirmAttachActivityToHotel(
+    activity: FileAADetailRow,
+    hotel: FileAADetailRow,
+  ): void {
+    const actLabel = this.stripHtml(this.fichaDetailServiceLines(activity)[0] || activity.name || 'Actividad');
+    const hotelLines = this.fichaDetailServiceLines(hotel);
+    const hotelLabel = this.stripHtml(hotelLines[0] || hotel.name || 'Hotel');
+    this.confirmationService.confirm({
+      message: `¿Desea añadir la actividad «${actLabel}» al hotel «${hotelLabel}»? Se agregará a las observaciones del hotel con su fecha, se sumará al precio sistema y la actividad dejará de mostrarse en la tabla y en los documentos Word/PDF.`,
+      header: 'Incorporar actividad al hotel',
+      icon: 'pi pi-question-circle',
+      acceptLabel: 'Sí, añadir',
+      rejectLabel: 'Cancelar',
+      reject: () => this.scheduleFichaDetailDragBodyRemount(),
+      accept: () => {
+        this.fichaDetailReorderSaving.set(true);
+        this.quotationService.attachActivityToHotel(hotel.id, activity.id).subscribe({
+          next: (updated) => {
+            this.fichaFileAA.set(updated);
+            this.syncFichaVisibleDetailsList();
+            delete this.hotelFichaObsDraft[hotel.id];
+            this.scheduleFichaDetailDragBodyRemount();
+            this.fichaDetailReorderSaving.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Actividad incorporada al hotel',
+            });
+          },
+          error: (err) => {
+            this.scheduleFichaDetailDragBodyRemount();
+            this.fichaDetailReorderSaving.set(false);
+            const d = err.error?.detail;
+            this.messageService.add({
+              severity: 'error',
+              summary:
+                typeof d === 'string' ? d : 'No se pudo incorporar la actividad al hotel',
+            });
+          },
+        });
+      },
+    });
   }
 
   lineDateDisplay(iso: string): string {

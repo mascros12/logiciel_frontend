@@ -234,6 +234,12 @@ export function fichaAaDetailVisibleInTable(d: {
   category: string;
   observation_extras?: Record<string, unknown> | null;
 }): boolean {
+  if (d.category === 'activity') {
+    const merged = d.observation_extras?.['merged_into_hotel_detail_id'];
+    if (merged !== null && merged !== undefined && String(merged).trim()) {
+      return false;
+    }
+  }
   if (d.category !== 'vehicle') return true;
   const cat = vehicleCategoryFromExtras(d.observation_extras);
   return !cat || !FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat);
