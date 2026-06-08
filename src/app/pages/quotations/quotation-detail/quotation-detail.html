@@ -1197,7 +1197,14 @@
                                   [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
                                   [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
                                   [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
-                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (!fichaHasMultipleRoomTypes(d)) { @if (fichaRoomQuantityDisplay(d); as qty) {{{ qty }} }}{{ svcLines[1] }} } @else { {{ svcLines[1] }} }</span></span>
+                                ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (!fichaHasMultipleRoomTypes(d)) {
+                                  @if (fichaRoomQuantityDisplay(d); as qty) {
+                                    {{ qty }}
+                                  }
+                                  {{ svcLines[1] }}
+                                } @else {
+                                  {{ svcLines[1] }}
+                                }</span></span>
                               } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
                                 @let vSvcLayout = fichaVehicleServiceLayout(d);
