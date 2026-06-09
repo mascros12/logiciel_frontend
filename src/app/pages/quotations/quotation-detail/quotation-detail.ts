@@ -153,47 +153,63 @@ const VOITURE_LOCATION_VEHICLE_CATEGORIES = [
   'Vuelo Interno',
 ] as const;
 
-type FichaAaResizableColumn =
+type FichaAaColumnKey =
+  | 'drag'
+  | 'confirmed'
+  | 'rowActions'
   | 'servicio'
   | 'fechas'
   | 'observaciones'
+  | 'reserved'
   | 'nReserva'
   | 'precioSistema'
-  | 'precioProveedor';
+  | 'precioProveedor'
+  | 'paid'
+  | 'actions';
 
-const FICHA_AA_COL_WIDTHS_STORAGE_KEY = 'ficha-aa-col-widths-v1';
+interface FichaAaColumnDef {
+  key: FichaAaColumnKey;
+  label: string;
+  defaultWidth: number;
+  minWidth: number;
+  hideable: boolean;
+}
 
-const FICHA_AA_DEFAULT_COL_WIDTHS: Record<FichaAaResizableColumn, number> = {
-  servicio: 240,
-  fechas: 220,
-  observaciones: 280,
-  nReserva: 110,
-  precioSistema: 115,
-  precioProveedor: 115,
-};
+const FICHA_AA_COLUMN_DEFS: FichaAaColumnDef[] = [
+  { key: 'drag', label: 'Reordenar', defaultWidth: 36, minWidth: 28, hideable: false },
+  { key: 'confirmed', label: 'F (confirmado)', defaultWidth: 38, minWidth: 32, hideable: true },
+  { key: 'rowActions', label: '± (añadir/quitar)', defaultWidth: 52, minWidth: 44, hideable: true },
+  { key: 'servicio', label: 'Servicio', defaultWidth: 240, minWidth: 120, hideable: true },
+  { key: 'fechas', label: 'Fechas', defaultWidth: 220, minWidth: 120, hideable: true },
+  { key: 'observaciones', label: 'Observaciones', defaultWidth: 280, minWidth: 140, hideable: true },
+  { key: 'reserved', label: 'Reservado', defaultWidth: 88, minWidth: 64, hideable: true },
+  { key: 'nReserva', label: 'Nº reserva', defaultWidth: 110, minWidth: 80, hideable: true },
+  { key: 'precioSistema', label: 'Precio sistema', defaultWidth: 115, minWidth: 90, hideable: true },
+  { key: 'precioProveedor', label: 'Precio proveedor', defaultWidth: 115, minWidth: 90, hideable: true },
+  { key: 'paid', label: 'Pagado', defaultWidth: 76, minWidth: 56, hideable: true },
+  { key: 'actions', label: 'Acciones', defaultWidth: 96, minWidth: 72, hideable: true },
+];
 
-const FICHA_AA_MIN_COL_WIDTHS: Record<FichaAaResizableColumn, number> = {
-  servicio: 120,
-  fechas: 120,
-  observaciones: 140,
-  nReserva: 80,
-  precioSistema: 90,
-  precioProveedor: 90,
-};
+const FICHA_AA_DEFAULT_COL_WIDTHS: Record<FichaAaColumnKey, number> = Object.fromEntries(
+  FICHA_AA_COLUMN_DEFS.map((c) => [c.key, c.defaultWidth]),
+) as Record<FichaAaColumnKey, number>;
 
-/** Columnas fijas (drag, checkboxes, correo…) en px — deben coincidir con quotation-detail.scss. */
-const FICHA_AA_FIXED_COLS_PX = 36 + 38 + 52 + 88 + 76 + 96;
+const FICHA_AA_MIN_COL_WIDTHS: Record<FichaAaColumnKey, number> = Object.fromEntries(
+  FICHA_AA_COLUMN_DEFS.map((c) => [c.key, c.minWidth]),
+) as Record<FichaAaColumnKey, number>;
 
-function computeFichaAaTableMinWidthPx(widths: Record<FichaAaResizableColumn, number>): number {
-  return (
-    FICHA_AA_FIXED_COLS_PX +
-    widths.servicio +
-    widths.fechas +
-    widths.observaciones +
-    widths.nReserva +
-    widths.precioSistema +
-    widths.precioProveedor
-  );
+const FICHA_AA_COL_SETTINGS_STORAGE_KEY = 'ficha-aa-col-settings-v2';
+/** Migración desde versión anterior (solo 6 columnas redimensionables). */
+const FICHA_AA_COL_WIDTHS_STORAGE_KEY_V1 = 'ficha-aa-col-widths-v1';
+
+function computeFichaAaTableMinWidthPx(
+  widths: Record<FichaAaColumnKey, number>,
+  visible: Partial<Record<FichaAaColumnKey, boolean>>,
+): number {
+  return FICHA_AA_COLUMN_DEFS.reduce((sum, col) => {
+    if (visible[col.key] === false) return sum;
+    return sum + widths[col.key];
+  }, 0);
 }
 
 
@@ -321,16 +337,35 @@ export class QuotationDetail implements OnInit {
   /** Remonta el tbody con CDK tras soltar (evita desfase DOM `<tr>` vs modelo Angular). */
   fichaDetailDragBodyKey = signal(0);
   fichaDetailReorderSaving = signal(false);
-  /** Anchos en px de columnas redimensionables de la tabla Ficha AA. */
-  fichaAaColWidths = signal<Record<FichaAaResizableColumn, number>>({
+  /** Anchos en px de columnas de la tabla Ficha AA. */
+  fichaAaColWidths = signal<Record<FichaAaColumnKey, number>>({
     ...FICHA_AA_DEFAULT_COL_WIDTHS,
   });
-  /** Ancho mínimo real de la tabla (suma de columnas) para forzar scroll horizontal. */
-  fichaAaTableMinWidthPx = computed(() => computeFichaAaTableMinWidthPx(this.fichaAaColWidths()));
+  /** Columnas ocultas en la tabla Ficha AA (persistido en localStorage). */
+  fichaAaColVisible = signal<Partial<Record<FichaAaColumnKey, boolean>>>({});
+  readonly fichaAaColumnPickerDefs = FICHA_AA_COLUMN_DEFS.filter((c) => c.hideable);
+  showFichaAaColumnsDialog = signal(false);
+  /** Ancho mínimo real de la tabla (suma de columnas visibles) para forzar scroll horizontal. */
+  fichaAaTableMinWidthPx = computed(() =>
+    computeFichaAaTableMinWidthPx(this.fichaAaColWidths(), this.fichaAaColVisible()),
+  );
+  fichaAaVisibleColumnCount = computed(() =>
+    FICHA_AA_COLUMN_DEFS.filter((c) => this.fichaAaColumnVisible(c.key)).length,
+  );
+  /** Columnas visibles antes de «Precio sistema» (celda «Totales» en tfoot). */
+  fichaAaTotalsLabelColspan = computed(() =>
+    FICHA_AA_COLUMN_DEFS.filter(
+      (c) =>
+        c.key !== 'precioSistema' &&
+        c.key !== 'precioProveedor' &&
+        c.key !== 'paid' &&
+        c.key !== 'actions' &&
+        this.fichaAaColumnVisible(c.key),
+    ).length,
+  );
   fichaAaColResizing = signal(false);
-  private fichaAaColResize:
-    | { key: FichaAaResizableColumn; startX: number; startWidth: number }
-    | null = null;
+  private fichaAaColResize: { key: FichaAaColumnKey; startX: number; startWidth: number } | null =
+    null;
   fichaAATab = signal<'ficha' | 'config'>('ficha');
   /** Borradores UI de los textos libres que se imprimen al final del Word/PDF
    * (debajo de los virements). Se persisten en `FileAA.observations` /
@@ -1668,14 +1703,33 @@ export class QuotationDetail implements OnInit {
 
   private loadFichaAaColWidths(): void {
     try {
-      const raw = localStorage.getItem(FICHA_AA_COL_WIDTHS_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<Record<FichaAaResizableColumn, number>>;
+      const rawV2 = localStorage.getItem(FICHA_AA_COL_SETTINGS_STORAGE_KEY);
+      if (rawV2) {
+        const parsed = JSON.parse(rawV2) as {
+          widths?: Partial<Record<FichaAaColumnKey, number>>;
+          visible?: Partial<Record<FichaAaColumnKey, boolean>>;
+        };
+        const nextWidths = { ...FICHA_AA_DEFAULT_COL_WIDTHS };
+        for (const col of FICHA_AA_COLUMN_DEFS) {
+          const w = parsed.widths?.[col.key];
+          if (typeof w === 'number' && Number.isFinite(w) && w >= FICHA_AA_MIN_COL_WIDTHS[col.key]) {
+            nextWidths[col.key] = Math.round(w);
+          }
+        }
+        this.fichaAaColWidths.set(nextWidths);
+        if (parsed.visible && typeof parsed.visible === 'object') {
+          this.fichaAaColVisible.set({ ...parsed.visible });
+        }
+        return;
+      }
+      const rawV1 = localStorage.getItem(FICHA_AA_COL_WIDTHS_STORAGE_KEY_V1);
+      if (!rawV1) return;
+      const parsedV1 = JSON.parse(rawV1) as Partial<Record<FichaAaColumnKey, number>>;
       const next = { ...FICHA_AA_DEFAULT_COL_WIDTHS };
-      for (const key of Object.keys(FICHA_AA_DEFAULT_COL_WIDTHS) as FichaAaResizableColumn[]) {
-        const w = parsed[key];
-        if (typeof w === 'number' && Number.isFinite(w) && w >= FICHA_AA_MIN_COL_WIDTHS[key]) {
-          next[key] = Math.round(w);
+      for (const col of FICHA_AA_COLUMN_DEFS) {
+        const w = parsedV1[col.key];
+        if (typeof w === 'number' && Number.isFinite(w) && w >= FICHA_AA_MIN_COL_WIDTHS[col.key]) {
+          next[col.key] = Math.round(w);
         }
       }
       this.fichaAaColWidths.set(next);
@@ -1687,15 +1741,57 @@ export class QuotationDetail implements OnInit {
   private persistFichaAaColWidths(): void {
     try {
       localStorage.setItem(
-        FICHA_AA_COL_WIDTHS_STORAGE_KEY,
-        JSON.stringify(this.fichaAaColWidths()),
+        FICHA_AA_COL_SETTINGS_STORAGE_KEY,
+        JSON.stringify({
+          widths: this.fichaAaColWidths(),
+          visible: this.fichaAaColVisible(),
+        }),
       );
     } catch {
       /* ignore quota / private mode */
     }
   }
 
-  startFichaAaColResize(event: MouseEvent, key: FichaAaResizableColumn): void {
+  fichaAaColWidth(key: FichaAaColumnKey): number {
+    return this.fichaAaColWidths()[key];
+  }
+
+  fichaAaColumnVisible(key: FichaAaColumnKey): boolean {
+    return this.fichaAaColVisible()[key] !== false;
+  }
+
+  setFichaAaColumnVisible(key: FichaAaColumnKey, visible: boolean): void {
+    const def = FICHA_AA_COLUMN_DEFS.find((c) => c.key === key);
+    if (!def?.hideable) return;
+    if (!visible) {
+      const othersVisible = FICHA_AA_COLUMN_DEFS.filter(
+        (c) => c.key !== key && this.fichaAaColumnVisible(c.key),
+      ).length;
+      if (othersVisible === 0) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Columnas',
+          detail: 'Debe permanecer visible al menos una columna.',
+        });
+        return;
+      }
+    }
+    this.fichaAaColVisible.update((state) => ({ ...state, [key]: visible }));
+    this.persistFichaAaColWidths();
+  }
+
+  resetFichaAaColumnLayout(): void {
+    this.fichaAaColWidths.set({ ...FICHA_AA_DEFAULT_COL_WIDTHS });
+    this.fichaAaColVisible.set({});
+    this.persistFichaAaColWidths();
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Columnas',
+      detail: 'Anchos y visibilidad restaurados.',
+    });
+  }
+
+  startFichaAaColResize(event: MouseEvent, key: FichaAaColumnKey): void {
     event.preventDefault();
     event.stopPropagation();
     this.fichaAaColResize = {

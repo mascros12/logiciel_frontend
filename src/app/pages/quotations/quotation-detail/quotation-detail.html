@@ -856,6 +856,12 @@
                 />
                 @if (fichaFileAA()) {
                   <p-button
+                    label="Columnas"
+                    icon="pi pi-table"
+                    [outlined]="true"
+                    (onClick)="showFichaAaColumnsDialog.set(true)"
+                  />
+                  <p-button
                     label="Descargar ODT"
                     icon="pi pi-download"
                     [outlined]="true"
@@ -891,22 +897,64 @@
                     [style.min-width.px]="fichaAaTableMinWidthPx()"
                   >
                     <colgroup>
-                      <col class="col-ficha-drag" />
-                      <col class="col-ficha-confirmed" />
-                      <col class="col-ficha-row-actions" />
-                      <col [style.width.px]="fichaAaColWidths().servicio" />
-                      <col [style.width.px]="fichaAaColWidths().fechas" />
-                      <col [style.width.px]="fichaAaColWidths().observaciones" />
-                      <col class="col-ficha-reserved" />
-                      <col [style.width.px]="fichaAaColWidths().nReserva" />
-                      <col [style.width.px]="fichaAaColWidths().precioSistema" />
-                      <col [style.width.px]="fichaAaColWidths().precioProveedor" />
-                      <col class="col-ficha-paid" />
-                      <col class="col-ficha-actions" />
+                      <col
+                        class="col-ficha-drag"
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('drag')"
+                        [style.width.px]="fichaAaColWidth('drag')"
+                      />
+                      <col
+                        class="col-ficha-confirmed"
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('confirmed')"
+                        [style.width.px]="fichaAaColWidth('confirmed')"
+                      />
+                      <col
+                        class="col-ficha-row-actions"
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('rowActions')"
+                        [style.width.px]="fichaAaColWidth('rowActions')"
+                      />
+                      <col
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('servicio')"
+                        [style.width.px]="fichaAaColWidth('servicio')"
+                      />
+                      <col
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('fechas')"
+                        [style.width.px]="fichaAaColWidth('fechas')"
+                      />
+                      <col
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('observaciones')"
+                        [style.width.px]="fichaAaColWidth('observaciones')"
+                      />
+                      <col
+                        class="col-ficha-reserved"
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('reserved')"
+                        [style.width.px]="fichaAaColWidth('reserved')"
+                      />
+                      <col
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('nReserva')"
+                        [style.width.px]="fichaAaColWidth('nReserva')"
+                      />
+                      <col
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioSistema')"
+                        [style.width.px]="fichaAaColWidth('precioSistema')"
+                      />
+                      <col
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioProveedor')"
+                        [style.width.px]="fichaAaColWidth('precioProveedor')"
+                      />
+                      <col
+                        class="col-ficha-paid"
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('paid')"
+                        [style.width.px]="fichaAaColWidth('paid')"
+                      />
+                      <col
+                        class="col-ficha-actions"
+                        [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')"
+                        [style.width.px]="fichaAaColWidth('actions')"
+                      />
                     </colgroup>
                     <thead>
                       <tr>
-                      <th colspan="12" [style.background-color]="fichaHeaderColor()">
+                      <th [attr.colspan]="fichaAaVisibleColumnCount()" [style.background-color]="fichaHeaderColor()">
                         <button
                         style="width: 100% !important;"
                           type="button"
@@ -934,7 +982,7 @@
                       </th>
                       </tr>
                       <tr class="ficha-aa-table-summary-row">
-                        <td colspan="12" class="ficha-aa-table-summary-cell">
+                        <td [attr.colspan]="fichaAaVisibleColumnCount()" class="ficha-aa-table-summary-cell">
                           @if (q.contact_source) {
                             <span class="ficha-aa-summary-source-fr">{{ q.contact_source }}</span>
                           }
@@ -991,10 +1039,55 @@
                         </td>
                       </tr>
                       <tr>
-                        <th class="col-ficha-drag" scope="col" aria-label="Reordenar filas"></th>
-                        <th class="col-ficha-confirmed" scope="col">F</th>
-                        <th class="col-ficha-row-actions" scope="col" pTooltip="Añadir o quitar línea">±</th>
-                        <th scope="col" class="ficha-col-resizable">
+                        <th
+                          class="col-ficha-drag ficha-col-resizable"
+                          scope="col"
+                          aria-label="Reordenar filas"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('drag')"
+                        >
+                          <span class="ficha-col-header-label" aria-hidden="true"></span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna reordenar"
+                            (mousedown)="startFichaAaColResize($event, 'drag')"
+                          ></span>
+                        </th>
+                        <th
+                          class="col-ficha-confirmed ficha-col-resizable"
+                          scope="col"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('confirmed')"
+                        >
+                          <span class="ficha-col-header-label">F</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna F"
+                            (mousedown)="startFichaAaColResize($event, 'confirmed')"
+                          ></span>
+                        </th>
+                        <th
+                          class="col-ficha-row-actions ficha-col-resizable"
+                          scope="col"
+                          pTooltip="Añadir o quitar línea"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('rowActions')"
+                        >
+                          <span class="ficha-col-header-label">±</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna añadir/quitar"
+                            (mousedown)="startFichaAaColResize($event, 'rowActions')"
+                          ></span>
+                        </th>
+                        <th
+                          scope="col"
+                          class="ficha-col-resizable"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('servicio')"
+                        >
                           <span class="ficha-col-header-label">Servicio</span>
                           <span
                             class="ficha-col-resize-handle"
@@ -1004,7 +1097,11 @@
                             (mousedown)="startFichaAaColResize($event, 'servicio')"
                           ></span>
                         </th>
-                        <th scope="col" class="ficha-col-resizable">
+                        <th
+                          scope="col"
+                          class="ficha-col-resizable"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('fechas')"
+                        >
                           <span class="ficha-col-header-label">Fechas</span>
                           <span
                             class="ficha-col-resize-handle"
@@ -1014,7 +1111,11 @@
                             (mousedown)="startFichaAaColResize($event, 'fechas')"
                           ></span>
                         </th>
-                        <th scope="col" class="ficha-col-resizable ficha-col-obs">
+                        <th
+                          scope="col"
+                          class="ficha-col-resizable ficha-col-obs"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('observaciones')"
+                        >
                           <span class="ficha-col-header-label">Observaciones</span>
                           <span
                             class="ficha-col-resize-handle"
@@ -1024,8 +1125,25 @@
                             (mousedown)="startFichaAaColResize($event, 'observaciones')"
                           ></span>
                         </th>
-                        <th class="col-ficha-reserved" scope="col">Reservado</th>
-                        <th scope="col" class="ficha-col-resizable">
+                        <th
+                          class="col-ficha-reserved ficha-col-resizable"
+                          scope="col"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('reserved')"
+                        >
+                          <span class="ficha-col-header-label">Reservado</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Reservado"
+                            (mousedown)="startFichaAaColResize($event, 'reserved')"
+                          ></span>
+                        </th>
+                        <th
+                          scope="col"
+                          class="ficha-col-resizable"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('nReserva')"
+                        >
                           <span class="ficha-col-header-label">Nº reserva</span>
                           <span
                             class="ficha-col-resize-handle"
@@ -1035,7 +1153,11 @@
                             (mousedown)="startFichaAaColResize($event, 'nReserva')"
                           ></span>
                         </th>
-                        <th class="col-money ficha-col-resizable" scope="col">
+                        <th
+                          class="col-money ficha-col-resizable"
+                          scope="col"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioSistema')"
+                        >
                           <span class="ficha-col-header-label">Precio sistema</span>
                           <span
                             class="ficha-col-resize-handle"
@@ -1045,7 +1167,11 @@
                             (mousedown)="startFichaAaColResize($event, 'precioSistema')"
                           ></span>
                         </th>
-                        <th class="col-money ficha-col-resizable" scope="col">
+                        <th
+                          class="col-money ficha-col-resizable"
+                          scope="col"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioProveedor')"
+                        >
                           <span class="ficha-col-header-label">Precio proveedor</span>
                           <span
                             class="ficha-col-resize-handle"
@@ -1055,8 +1181,34 @@
                             (mousedown)="startFichaAaColResize($event, 'precioProveedor')"
                           ></span>
                         </th>
-                        <th class="col-ficha-paid" scope="col">Pagado</th>
-                        <th class="col-ficha-actions" scope="col">Acciones</th>
+                        <th
+                          class="col-ficha-paid ficha-col-resizable"
+                          scope="col"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('paid')"
+                        >
+                          <span class="ficha-col-header-label">Pagado</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Pagado"
+                            (mousedown)="startFichaAaColResize($event, 'paid')"
+                          ></span>
+                        </th>
+                        <th
+                          class="col-ficha-actions ficha-col-resizable"
+                          scope="col"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')"
+                        >
+                          <span class="ficha-col-header-label">Acciones</span>
+                          <span
+                            class="ficha-col-resize-handle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Redimensionar columna Acciones"
+                            (mousedown)="startFichaAaColResize($event, 'actions')"
+                          ></span>
+                        </th>
                       </tr>
                     </thead>
                     @for (dragBodyKey of [fichaDetailDragBodyKey()]; track dragBodyKey) {
@@ -1076,7 +1228,7 @@
                           [class.ficha-aa-row-new]="fichaIsAddedDetail(d)"
                           [class.ficha-aa-row-replaced]="d.row_status === 'red'"
                         >
-                          <td class="col-ficha-drag">
+                          <td class="col-ficha-drag" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('drag')">
                             <button
                               type="button"
                               class="ficha-drag-handle"
@@ -1087,7 +1239,7 @@
                               <i class="pi pi-bars"></i>
                             </button>
                           </td>
-                          <td class="col-ficha-confirmed">
+                          <td class="col-ficha-confirmed" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('confirmed')">
                             <p-checkbox
                               [binary]="true"
                               [ngModel]="d.confirmed"
@@ -1095,7 +1247,7 @@
                               [inputId]="'aa-conf-' + d.id"
                             />
                           </td>
-                          <td class="col-ficha-row-actions">
+                          <td class="col-ficha-row-actions" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('rowActions')">
                             <div class="ficha-row-actions-btns">
                               <p-button
                                 icon="pi pi-plus"
@@ -1116,7 +1268,7 @@
                               />
                             </div>
                           </td>
-                          <td>
+                          <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('servicio')">
                             @let svcLines = fichaDetailServiceLines(d);
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
                             @if (d.category === 'room' && svcLines.length >= 2) {
@@ -1359,7 +1511,7 @@
                                 ></button>
                               }
                           </td>
-                          <td>
+                          <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('fechas')">
                             @if (d.category === 'room') {
                               <div class="ficha-room-dates-blocks">
                                 <div class="ficha-obs-block">
@@ -1566,7 +1718,7 @@
                               />
                             }
                           </td>
-                          <td class="ficha-col-obs">
+                          <td class="ficha-col-obs" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('observaciones')">
                             @if (d.category === 'vehicle') {
                               <div class="ficha-vehicle-obs">
                                 <div class="ficha-obs-block ficha-obs-block--inline">
@@ -1791,7 +1943,7 @@
                               ></textarea>
                             }
                           </td>
-                          <td class="col-ficha-reserved">
+                          <td class="col-ficha-reserved" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('reserved')">
                             <p-checkbox
                               [binary]="true"
                               [ngModel]="d.reserved"
@@ -1799,7 +1951,7 @@
                               [inputId]="'aa-rsv-' + d.id"
                             />
                           </td>
-                          <td>
+                          <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('nReserva')">
                             <input
                               pInputText
                               class="ficha-cell-input"
@@ -1807,7 +1959,7 @@
                               (blur)="onFichaDetailReservationNoBlur(d, $event.target)"
                             />
                           </td>
-                          <td class="col-money">
+                          <td class="col-money" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioSistema')">
                             <input
                               pInputText
                               class="ficha-cell-input ficha-price-input"
@@ -1815,7 +1967,7 @@
                               readonly
                             />
                           </td>
-                          <td class="col-money">
+                          <td class="col-money" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioProveedor')">
                             <input
                               pInputText
                               class="ficha-cell-input ficha-price-input"
@@ -1823,7 +1975,7 @@
                               (blur)="onFichaDetailProviderBlur(d, $event.target)"
                             />
                           </td>
-                          <td class="col-ficha-paid">
+                          <td class="col-ficha-paid" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('paid')">
                             <p-checkbox
                               [binary]="true"
                               [ngModel]="d.paid"
@@ -1831,7 +1983,7 @@
                               [inputId]="'aa-paid-' + d.id"
                             />
                           </td>
-                          <td class="col-ficha-actions">
+                          <td class="col-ficha-actions" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')">
                             <div class="ficha-actions-cell">
                               @if (canFichaCombineActivity(d) && fichaCombineHotelOptions().length > 0) {
                                 <p-button
@@ -1904,11 +2056,21 @@
                     }
                     <tfoot>
                       <tr class="ficha-aa-totals-row">
-                        <td colspan="8" class="totals-label">Totales</td>
-                        <td class="col-money">{{ fichaTotals().system | currency: 'USD' }}</td>
-                        <td class="col-money">{{ fichaTotals().provider | currency: 'USD' }}</td>
-                        <td></td>
-                        <td></td>
+                        <td [attr.colspan]="fichaAaTotalsLabelColspan()" class="totals-label">Totales</td>
+                        <td
+                          class="col-money"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioSistema')"
+                        >
+                          {{ fichaTotals().system | currency: 'USD' }}
+                        </td>
+                        <td
+                          class="col-money"
+                          [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioProveedor')"
+                        >
+                          {{ fichaTotals().provider | currency: 'USD' }}
+                        </td>
+                        <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('paid')"></td>
+                        <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')"></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1956,6 +2118,43 @@
     </p-tabs>
   </div>
 }
+
+<!-- Columnas visibles / anchos Ficha AA -->
+<p-dialog
+  styleClass="ficha-aa-columns-dialog"
+  header="Columnas de la Ficha AA"
+  [visible]="showFichaAaColumnsDialog()"
+  (visibleChange)="showFichaAaColumnsDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(420px, 96vw)' }"
+>
+  <p class="ficha-add-dialog-hint">
+    Marque las columnas que desea ver. Arrastre el borde derecho del encabezado para cambiar el ancho.
+  </p>
+  <ul class="ficha-aa-columns-picker">
+    @for (col of fichaAaColumnPickerDefs; track col.key) {
+      <li>
+        <p-checkbox
+          [binary]="true"
+          [ngModel]="fichaAaColumnVisible(col.key)"
+          (onChange)="setFichaAaColumnVisible(col.key, $event.checked)"
+          [inputId]="'ficha-aa-col-' + col.key"
+        />
+        <label [for]="'ficha-aa-col-' + col.key">{{ col.label }}</label>
+      </li>
+    }
+  </ul>
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Restaurar anchos"
+      icon="pi pi-refresh"
+      [text]="true"
+      severity="secondary"
+      (onClick)="resetFichaAaColumnLayout()"
+    />
+    <p-button label="Cerrar" (onClick)="showFichaAaColumnsDialog.set(false)" />
+  </ng-template>
+</p-dialog>
 
 <!-- Combinar actividad con hotel -->
 <p-dialog
