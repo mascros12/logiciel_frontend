@@ -1780,6 +1780,7 @@
                                       [(ngModel)]="ensureHotelFichaObsDraft(d).room_quantity"
                                       (input)="onHotelRoomQuantityInput(d, $event)"
                                       (change)="commitHotelRoomQuantityObs(d, $event)"
+                                      (blur)="commitHotelRoomQuantityObs(d, $event)"
                                     />
                                   </div>
                                 }

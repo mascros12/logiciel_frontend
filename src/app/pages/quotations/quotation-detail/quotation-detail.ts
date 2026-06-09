@@ -3751,6 +3751,19 @@ export class QuotationDetail implements OnInit {
         if (room_quantity === null && merged.length === 1) {
           room_quantity = merged[0].room_quantity ?? null;
         }
+        if (room_quantity === null) {
+          const rawMerged = o['merged_rooms'];
+          if (Array.isArray(rawMerged) && rawMerged.length === 1) {
+            const slot = rawMerged[0];
+            if (slot && typeof slot === 'object') {
+              const slotRq = (slot as Record<string, unknown>)['room_quantity'];
+              if (slotRq !== null && slotRq !== undefined && slotRq !== '') {
+                const n = Number(slotRq);
+                room_quantity = Number.isFinite(n) ? n : null;
+              }
+            }
+          }
+        }
       }
       ficha_entrada = String(o['ficha_entrada'] ?? '');
       ficha_salida = String(o['ficha_salida'] ?? '');
@@ -3791,8 +3804,7 @@ export class QuotationDetail implements OnInit {
               room_file_aa_name: String(slot['room_file_aa_name'] ?? '').trim() || undefined,
               room_quantity,
             };
-          })
-          .filter((s) => s.room_id.length > 0);
+          });
       }
     }
     const roomId = String(d.observation_extras?.['room_id'] ?? '').trim();
@@ -3813,6 +3825,8 @@ export class QuotationDetail implements OnInit {
   }
 
   fichaHasMultipleRoomTypes(d: FileAADetailRow): boolean {
+    const raw = d.observation_extras?.['merged_rooms'];
+    if (Array.isArray(raw) && raw.length > 1) return true;
     return this.fichaMergedRoomsFromExtras(d).length > 1;
   }
 
@@ -3883,15 +3897,14 @@ export class QuotationDetail implements OnInit {
     this.hotelFichaPriceRev.update((n) => n + 1);
   }
 
-  /** Flechas del input number: el valor puede aplicarse después del blur — guardamos en el siguiente tick. */
+  /** Guarda cantidad de habitaciones leyendo el input directamente (ngModel puede ir un tick detrás). */
   commitHotelRoomQuantityObs(d: FileAADetailRow, event: Event): void {
     const target = event.target instanceof HTMLInputElement ? event.target : null;
-    setTimeout(() => {
-      if (target) {
-        this.ensureHotelFichaObsDraft(d).room_quantity = this.parseHotelRoomQuantityInput(target.value);
-      }
-      this.commitHotelFichaObs(d);
-    }, 0);
+    if (target) {
+      this.ensureHotelFichaObsDraft(d).room_quantity = this.parseHotelRoomQuantityInput(target.value);
+      this.bumpHotelFichaPriceRev();
+    }
+    this.commitHotelFichaObs(d);
   }
 
   /** En blur, ngModel puede ir un tick detrás: leemos el input/textarea que perdió el foco. */
@@ -3939,75 +3952,9 @@ export class QuotationDetail implements OnInit {
       this.applyHotelFichaBlurTarget(d, target);
     }
     const row = this.ensureHotelFichaObsDraft(d);
-    const room_quantity = this.parseHotelRoomQuantityInput(row.room_quantity);
-    row.room_quantity = room_quantity;
-    const prev =
-      d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
-        ? { ...(d.observation_extras as Record<string, unknown>) }
-        : {};
-    this.backfillHotelRackSnapshotFields(prev, d);
-    const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
-    const ficha_entrada = (row.ficha_entrada ?? '').trim();
-    const ficha_salida = (row.ficha_salida ?? '').trim();
-    const ficha_noches_texto = (row.ficha_noches_texto ?? '').trim();
-    const datesLines: string[] = [];
-    if (ficha_entrada) datesLines.push(`Entrada: ${ficha_entrada}`);
-    if (ficha_salida) datesLines.push(`Salida: ${ficha_salida}`);
-    if (ficha_noches_texto) datesLines.push(`Noches: ${ficha_noches_texto}`);
-    const datesCell = datesLines.join('\n');
-    const observation_extras: Record<string, unknown> = {
-      ...prev,
-      ficha_entrada,
-      ficha_salida,
-      ficha_noches_texto,
-    };
-    const draftSlots =
-      row.merged_slots && row.merged_slots.length > 0
-        ? row.merged_slots
-        : this.fichaMergedRoomsFromExtras(d);
-    if (Array.isArray(prevMerged) && prevMerged.length > 0 && draftSlots.length > 0) {
-      const multiType = draftSlots.length > 1;
-      const updatedMerged = draftSlots.map((slot, i) => {
-        const base =
-          Array.isArray(prevMerged) && prevMerged[i] && typeof prevMerged[i] === 'object'
-            ? { ...(prevMerged[i] as Record<string, unknown>) }
-            : {};
-        this.backfillHotelRackSnapshotFields(base, d, {
-          slotCount: draftSlots.length,
-        });
-        const slotQty = multiType
-          ? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1
-          : room_quantity ?? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1;
-        return {
-          ...base,
-          room_id: slot.room_id,
-          room_file_aa_name: slot.room_file_aa_name,
-          room_quantity: slotQty,
-          ficha_entrada,
-          ficha_salida,
-          ficha_noches_texto,
-        };
-      });
-      observation_extras['merged_rooms'] = updatedMerged;
-      if (!multiType) {
-        observation_extras['room_quantity'] = updatedMerged[0]['room_quantity'];
-      }
-    } else {
-      observation_extras['room_quantity'] = room_quantity;
-      this.backfillHotelRackSnapshotFields(observation_extras, d);
-    }
-    const mergedOut = observation_extras['merged_rooms'];
-    if (Array.isArray(mergedOut) && mergedOut.length === 1) {
-      const slot = mergedOut[0];
-      if (slot && typeof slot === 'object') {
-        for (const key of ['room_rack_per_night', 'rack_nights_base', 'rack_nightly_sum', 'room_quantity'] as const) {
-          const val = (slot as Record<string, unknown>)[key];
-          if (val !== undefined && val !== null && val !== '') {
-            observation_extras[key] = val;
-          }
-        }
-      }
-    }
+    const built = this.buildHotelObservationExtrasFromDraft(d, row);
+    const observation_extras = built.observation_extras;
+    const datesCell = built.datesCell;
     const notesTrim = row.notes.trim();
     const patch: FileAADetailPatch = {
       observation_extras,
@@ -4065,41 +4012,59 @@ export class QuotationDetail implements OnInit {
   /** Construye extras como en commit y calcula precio sin persistir (vista previa). */
   private previewHotelSystemPriceFromDraft(d: FileAADetailRow): number | null {
     const draft = this.hotelFichaObsDraft[d.id] ?? this.hotelFichaObsFromServer(d);
-    const room_quantity = this.parseHotelRoomQuantityInput(draft.room_quantity);
+    const { observation_extras } = this.buildHotelObservationExtrasFromDraft(d, draft);
+    return this.fichaHotelSystemPriceFromExtras(observation_extras, d);
+  }
+
+  /**
+   * Arma ``observation_extras`` y la celda Fechas desde el borrador.
+   * Siempre sincroniza ``merged_rooms`` (incluso con ``room_id`` nulo).
+   */
+  private buildHotelObservationExtrasFromDraft(
+    d: FileAADetailRow,
+    row: FileAADetailRoomObsState,
+  ): { observation_extras: Record<string, unknown>; datesCell: string } {
+    const room_quantity = this.parseHotelRoomQuantityInput(row.room_quantity);
+    row.room_quantity = room_quantity;
     const prev =
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
         ? { ...(d.observation_extras as Record<string, unknown>) }
         : {};
     this.backfillHotelRackSnapshotFields(prev, d);
     const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
-    const ficha_entrada = (draft.ficha_entrada ?? '').trim();
-    const ficha_salida = (draft.ficha_salida ?? '').trim();
-    const ficha_noches_texto = (draft.ficha_noches_texto ?? '').trim();
+    const ficha_entrada = (row.ficha_entrada ?? '').trim();
+    const ficha_salida = (row.ficha_salida ?? '').trim();
+    const ficha_noches_texto = (row.ficha_noches_texto ?? '').trim();
+    const datesLines: string[] = [];
+    if (ficha_entrada) datesLines.push(`Entrada: ${ficha_entrada}`);
+    if (ficha_salida) datesLines.push(`Salida: ${ficha_salida}`);
+    if (ficha_noches_texto) datesLines.push(`Noches: ${ficha_noches_texto}`);
+    const datesCell = datesLines.join('\n');
     const observation_extras: Record<string, unknown> = {
       ...prev,
       ficha_entrada,
       ficha_salida,
       ficha_noches_texto,
     };
-    const draftSlots =
-      draft.merged_slots && draft.merged_slots.length > 0
-        ? draft.merged_slots
-        : this.fichaMergedRoomsFromExtras(d);
-    if (Array.isArray(prevMerged) && prevMerged.length > 0 && draftSlots.length > 0) {
-      const multiType = draftSlots.length > 1;
-      const updatedMerged = draftSlots.map((slot, i) => {
+    if (Array.isArray(prevMerged) && prevMerged.length > 0) {
+      const multiType = prevMerged.length > 1;
+      const updatedMerged = prevMerged.map((item, i) => {
         const base =
-          Array.isArray(prevMerged) && prevMerged[i] && typeof prevMerged[i] === 'object'
-            ? { ...(prevMerged[i] as Record<string, unknown>) }
-            : {};
-        this.backfillHotelRackSnapshotFields(base, d, { slotCount: draftSlots.length });
-        const slotQty = multiType
-          ? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1
-          : room_quantity ?? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1;
+          item && typeof item === 'object' ? { ...(item as Record<string, unknown>) } : {};
+        this.backfillHotelRackSnapshotFields(base, d, { slotCount: prevMerged.length });
+        let slotQty: number;
+        if (multiType) {
+          const draftSlot = row.merged_slots?.[i];
+          slotQty =
+            this.parseHotelRoomQuantityInput(draftSlot?.room_quantity) ??
+            this.parseHotelRoomQuantityInput(base['room_quantity']) ??
+            1;
+        } else {
+          slotQty =
+            room_quantity ?? this.parseHotelRoomQuantityInput(base['room_quantity']) ?? 1;
+        }
         return {
           ...base,
-          room_id: slot.room_id,
-          room_file_aa_name: slot.room_file_aa_name,
           room_quantity: slotQty,
           ficha_entrada,
           ficha_salida,
@@ -4109,12 +4074,29 @@ export class QuotationDetail implements OnInit {
       observation_extras['merged_rooms'] = updatedMerged;
       if (!multiType) {
         observation_extras['room_quantity'] = updatedMerged[0]['room_quantity'];
+      } else {
+        observation_extras['room_quantity'] = updatedMerged.reduce(
+          (sum, slot) => sum + Math.max(1, Number((slot as Record<string, unknown>)['room_quantity']) || 1),
+          0,
+        );
       }
     } else {
       observation_extras['room_quantity'] = room_quantity;
       this.backfillHotelRackSnapshotFields(observation_extras, d);
     }
-    return this.fichaHotelSystemPriceFromExtras(observation_extras, d);
+    const mergedOut = observation_extras['merged_rooms'];
+    if (Array.isArray(mergedOut) && mergedOut.length === 1) {
+      const slot = mergedOut[0];
+      if (slot && typeof slot === 'object') {
+        for (const key of ['room_rack_per_night', 'rack_nights_base', 'rack_nightly_sum', 'room_quantity'] as const) {
+          const val = (slot as Record<string, unknown>)[key];
+          if (val !== undefined && val !== null && val !== '') {
+            observation_extras[key] = val;
+          }
+        }
+      }
+    }
+    return { observation_extras, datesCell };
   }
 
   fichaHasLargePriceGap(detail: FileAADetailRow): boolean {
