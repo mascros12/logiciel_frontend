@@ -1163,13 +1163,22 @@
                                       <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
                                     </span>
                                   } @else if (canEditFichaCatalogueName()) {
-                                    <span class="ficha-room-type ficha-name-clickable" (click)="$event.stopPropagation(); startFichaNameEdit(d, 'room')">@if (fichaRoomQuantityDisplay(d); as qty) {
-                                      {{ qty }}
-                                    }}{{ svcLines[1] }}</span>
+                                    <span
+                                      class="ficha-room-type ficha-name-clickable"
+                                      (click)="$event.stopPropagation(); startFichaNameEdit(d, 'room')"
+                                    >
+                                      @if (fichaRoomQuantityDisplay(d); as qty) {
+                                        {{ qty }}
+                                      }
+                                      {{ svcLines[1] }}
+                                    </span>
                                   } @else {
-                                    <span class="ficha-room-type">@if (fichaRoomQuantityDisplay(d); as qty) {
-                                      {{ qty }}
-                                    }}{{ svcLines[1] }}</span>
+                                    <span class="ficha-room-type">
+                                      @if (fichaRoomQuantityDisplay(d); as qty) {
+                                        {{ qty }}
+                                      }
+                                      {{ svcLines[1] }}
+                                    </span>
                                   }
                                 </span>
                                 @for (act of fichaHotelAttachedActivityDisplay(d); track act.detailId) {
@@ -1182,11 +1191,24 @@
                                       </div>
                                     } @else if (canEditFichaCatalogueName()) {
                                       <div class="ficha-room-attached-activity">
-                                        <span class="ficha-name ficha-name-clickable" (click)="$event.stopPropagation(); startFichaNameEdit(actRow, 'activity')">{{ act.main }}@if (act.time) { <span class="ficha-activity-time">, {{ act.time }}</span>}</span>
+                                        <span
+                                          class="ficha-name ficha-name-clickable"
+                                          (click)="$event.stopPropagation(); startFichaNameEdit(actRow, 'activity')"
+                                        >
+                                          {{ act.main }}
+                                          @if (act.time) {
+                                            <span class="ficha-activity-time">, {{ act.time }}</span>
+                                          }
+                                        </span>
                                       </div>
                                     } @else {
                                       <div class="ficha-room-attached-activity">
-                                        <span class="ficha-name">{{ act.main }}@if (act.time) { <span class="ficha-activity-time">, {{ act.time }}</span>}</span>
+                                        <span class="ficha-name">
+                                          {{ act.main }}
+                                          @if (act.time) {
+                                            <span class="ficha-activity-time">, {{ act.time }}</span>
+                                          }
+                                        </span>
                                       </div>
                                     }
                                   }
@@ -1303,9 +1325,19 @@
                                   <span
                                     class="ficha-name ficha-name-clickable"
                                     (click)="$event.stopPropagation(); startFichaNameEdit(d, 'activity')"
-                                  >{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
+                                  >
+                                    {{ actParts.main }}
+                                    @if (actParts.time) {
+                                      <span class="ficha-activity-time">, {{ actParts.time }}</span>
+                                    }
+                                  </span>
                                 } @else {
-                                  <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
+                                  <span class="ficha-name">
+                                    {{ actParts.main }}
+                                    @if (actParts.time) {
+                                      <span class="ficha-activity-time">, {{ actParts.time }}</span>
+                                    }
+                                  </span>
                                 }
                               } @else {
                                 <span
