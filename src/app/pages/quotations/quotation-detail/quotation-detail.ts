@@ -3928,11 +3928,16 @@ export class QuotationDetail implements OnInit {
       observation_extras['room_quantity'] = room_quantity;
     }
     const notesTrim = row.notes.trim();
-    this.patchFileDetail(d.id, {
+    const patch: FileAADetailPatch = {
       observation_extras,
       observations: notesTrim ? notesTrim : null,
       dates: datesCell,
-    });
+    };
+    const systemTotal = this.fichaHotelSystemPriceFromExtras(observation_extras);
+    if (systemTotal !== null) {
+      patch.total_price = systemTotal;
+    }
+    this.patchFileDetail(d.id, patch);
   }
 
   onFichaDetailReservationNoBlur(row: FileAADetailRow, target: EventTarget | null): void {
@@ -3970,7 +3975,32 @@ export class QuotationDetail implements OnInit {
     const provider = Number(providerRaw);
     if (!Number.isFinite(system) || !Number.isFinite(provider)) return false;
     if (provider <= 0) return false;
-    return Math.abs(system - provider) >= 50;
+    const base = Math.max(Math.abs(system), Math.abs(provider));
+    if (base <= 0) return false;
+    return Math.abs(system - provider) / base >= 0.05;
+  }
+
+  /** Precio sistema hotel: suma rack por noche × cantidad de habitaciones (por tipología). */
+  private fichaHotelSystemPriceFromExtras(
+    observation_extras: Record<string, unknown>,
+  ): number | null {
+    const merged = observation_extras['merged_rooms'];
+    if (Array.isArray(merged) && merged.length > 0) {
+      let sum = 0;
+      for (const item of merged) {
+        if (!item || typeof item !== 'object') return null;
+        const slot = item as Record<string, unknown>;
+        const nightly = this.coerceDecimalLike(slot['rack_nightly_sum']);
+        if (nightly === null) return null;
+        const qty = Math.max(1, Math.floor(Number(slot['room_quantity']) || 1));
+        sum += nightly * qty;
+      }
+      return Number(sum.toFixed(2));
+    }
+    const nightly = this.coerceDecimalLike(observation_extras['rack_nightly_sum']);
+    if (nightly === null) return null;
+    const qty = Math.max(1, Math.floor(Number(observation_extras['room_quantity']) || 1));
+    return Number((nightly * qty).toFixed(2));
   }
 
   /** Fila creada desde "Añadir línea" (nueva o reemplazo): se resalta en verde. */

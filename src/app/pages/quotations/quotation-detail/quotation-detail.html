@@ -2315,8 +2315,9 @@
       @if (fichaAddAnchorRow()?.category === 'room') {
         <p class="ficha-add-pick-note">
           Se copian las <strong>fechas</strong> y las <strong>observaciones</strong> de la fila donde pulsó +. Si elige otra habitación del <strong>mismo hotel</strong>, se añadirá a la misma fila. El
-          <strong>precio sistema</strong> es la suma de tarifas <strong>públicas (rack)</strong> de la habitación
-          elegida por cada noche entre la primera y la última fecha de esa fila.
+          <strong>precio sistema</strong> es la tarifa <strong>pública (rack)</strong> de la habitación en el
+          itinerario, multiplicada por el <strong>número de habitaciones</strong> y por las
+          <strong>noches</strong> entre las fechas de esa fila.
         </p>
       } @else if (fichaAddAnchorRow()?.category === 'activity') {
         <p class="ficha-add-pick-note">
