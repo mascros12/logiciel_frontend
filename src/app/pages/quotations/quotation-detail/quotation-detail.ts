@@ -2893,13 +2893,38 @@ export class QuotationDetail implements OnInit {
     return `Enviado: ${dt.toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' })}`;
   }
 
+  private mergeFichaDetailPatch(
+    row: FileAADetailRow,
+    patch: FileAADetailPatch,
+    server: FileAADetailRow,
+  ): FileAADetailRow {
+    const observation_extras =
+      patch.observation_extras !== undefined
+        ? patch.observation_extras
+        : server.observation_extras ?? row.observation_extras;
+    return {
+      ...row,
+      ...server,
+      ...patch,
+      observation_extras,
+      dates: patch.dates ?? server.dates ?? row.dates,
+      total_price: patch.total_price ?? server.total_price ?? row.total_price,
+      observations:
+        patch.observations !== undefined ? patch.observations : server.observations ?? row.observations,
+      display_service_lines:
+        server.display_service_lines?.length
+          ? server.display_service_lines
+          : row.display_service_lines,
+    } as FileAADetailRow;
+  }
+
   patchFileDetail(detailId: string, patch: FileAADetailPatch): void {
     const cur = this.fichaFileAA();
     if (!cur) return;
-    if (patch.total_price !== undefined) {
-      const details = cur.details.map((d) =>
-        d.id === detailId ? ({ ...d, total_price: patch.total_price ?? d.total_price } as FileAADetailRow) : d,
-      );
+    const prevRow = cur.details.find((d) => d.id === detailId);
+    if (prevRow) {
+      const optimistic = this.mergeFichaDetailPatch(prevRow, patch, prevRow);
+      const details = cur.details.map((d) => (d.id === detailId ? optimistic : d));
       this.fichaFileAA.set({ ...cur, details });
       this.syncFichaVisibleDetailsList();
     }
@@ -2910,25 +2935,14 @@ export class QuotationDetail implements OnInit {
         if (this.fileDetailPatchSeq[detailId] !== seq) return;
         const f = this.fichaFileAA();
         if (!f) return;
-        const prevRow = f.details.find((d) => d.id === detailId);
-        const mergedUpdated = prevRow
-          ? ({
-              ...prevRow,
-              ...updated,
-              display_service_lines:
-                updated.display_service_lines?.length
-                  ? updated.display_service_lines
-                  : prevRow.display_service_lines,
-            } as FileAADetailRow)
-          : (updated as FileAADetailRow);
-        const mergedRow = prevRow ? mergedUpdated : null;
+        const currentRow = f.details.find((d) => d.id === detailId);
+        if (!currentRow) return;
+        const mergedUpdated = this.mergeFichaDetailPatch(currentRow, patch, updated);
         const details = f.details.map((d) => (d.id === detailId ? mergedUpdated : d));
         this.fichaFileAA.set({ ...f, details });
         this.syncFichaVisibleDetailsList();
         if (patch.observation_extras !== undefined || patch.observations !== undefined) {
-          if (mergedRow?.category === 'room') {
-            this.hotelFichaObsDraft[detailId] = { ...this.hotelFichaObsFromServer(mergedRow) };
-          } else {
+          if (mergedUpdated.category !== 'room') {
             delete this.hotelFichaObsDraft[detailId];
           }
           delete this.vehicleFichaObsDraft[detailId];
