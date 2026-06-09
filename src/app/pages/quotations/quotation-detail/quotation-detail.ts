@@ -3907,6 +3907,8 @@ export class QuotationDetail implements OnInit {
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
         ? { ...(d.observation_extras as Record<string, unknown>) }
         : {};
+    this.backfillHotelRackSnapshotFields(prev);
+    const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
     const ficha_entrada = (row.ficha_entrada ?? '').trim();
     const ficha_salida = (row.ficha_salida ?? '').trim();
     const ficha_noches_texto = (row.ficha_noches_texto ?? '').trim();
@@ -3921,7 +3923,6 @@ export class QuotationDetail implements OnInit {
       ficha_salida,
       ficha_noches_texto,
     };
-    const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
     const draftSlots =
       row.merged_slots && row.merged_slots.length > 0
         ? row.merged_slots
@@ -3933,6 +3934,7 @@ export class QuotationDetail implements OnInit {
           Array.isArray(prevMerged) && prevMerged[i] && typeof prevMerged[i] === 'object'
             ? { ...(prevMerged[i] as Record<string, unknown>) }
             : {};
+        this.backfillHotelRackSnapshotFields(base);
         const slotQty = multiType
           ? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1
           : room_quantity ?? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1;
@@ -4006,7 +4008,65 @@ export class QuotationDetail implements OnInit {
     return Math.abs(system - provider) / base >= 0.05;
   }
 
-  /** Precio sistema hotel: suma rack por noche × cantidad de habitaciones (por tipología). */
+  /** Suma noches en texto tipo «3» o «2 y 3». */
+  private parseFichaNochesCount(text: string | null | undefined): number {
+    const raw = (text ?? '').trim();
+    if (!raw) return 0;
+    let total = 0;
+    for (const part of raw.split(/\s+y\s+/i)) {
+      const chunk = part.trim();
+      if (!chunk) continue;
+      const n = parseInt(chunk, 10);
+      if (Number.isFinite(n)) {
+        total += n;
+        continue;
+      }
+      const m = /\d+/.exec(chunk);
+      if (m) total += parseInt(m[0], 10);
+    }
+    return total;
+  }
+
+  /** Congela tarifa/noche y noches base en fichas que solo tenían ``rack_nightly_sum``. */
+  private backfillHotelRackSnapshotFields(extras: Record<string, unknown>): void {
+    if (extras['room_rack_per_night']) return;
+    const sum = this.coerceDecimalLike(extras['rack_nightly_sum']);
+    if (sum === null) return;
+    let base = Number(extras['rack_nights_base']);
+    if (!Number.isFinite(base) || base <= 0) {
+      base = this.parseFichaNochesCount(String(extras['ficha_noches_texto'] ?? ''));
+    }
+    if (base <= 0) base = 1;
+    extras['rack_nights_base'] = base;
+    extras['room_rack_per_night'] = Number((sum / base).toFixed(2));
+  }
+
+  private fichaRoomRackPerNight(extras: Record<string, unknown>): number | null {
+    const explicit = this.coerceDecimalLike(extras['room_rack_per_night']);
+    if (explicit !== null) return explicit;
+    const sum = this.coerceDecimalLike(extras['rack_nightly_sum']);
+    if (sum === null) return null;
+    let base = Number(extras['rack_nights_base']);
+    if (!Number.isFinite(base) || base <= 0) {
+      base = this.parseFichaNochesCount(String(extras['ficha_noches_texto'] ?? ''));
+    }
+    if (base <= 0) base = 1;
+    return Number((sum / base).toFixed(4));
+  }
+
+  private fichaRoomSystemPriceFromSlot(slot: Record<string, unknown>): number | null {
+    const perNight = this.fichaRoomRackPerNight(slot);
+    if (perNight === null) return null;
+    let nights = this.parseFichaNochesCount(String(slot['ficha_noches_texto'] ?? ''));
+    if (nights <= 0) {
+      const base = Number(slot['rack_nights_base']);
+      nights = Number.isFinite(base) && base > 0 ? base : 1;
+    }
+    const qty = Math.max(1, Math.floor(Number(slot['room_quantity']) || 1));
+    return Number((perNight * nights * qty).toFixed(2));
+  }
+
+  /** Precio sistema hotel: rack/noche × noches × cantidad de habitaciones (por tipología). */
   private fichaHotelSystemPriceFromExtras(
     observation_extras: Record<string, unknown>,
   ): number | null {
@@ -4015,18 +4075,13 @@ export class QuotationDetail implements OnInit {
       let sum = 0;
       for (const item of merged) {
         if (!item || typeof item !== 'object') return null;
-        const slot = item as Record<string, unknown>;
-        const nightly = this.coerceDecimalLike(slot['rack_nightly_sum']);
-        if (nightly === null) return null;
-        const qty = Math.max(1, Math.floor(Number(slot['room_quantity']) || 1));
-        sum += nightly * qty;
+        const part = this.fichaRoomSystemPriceFromSlot(item as Record<string, unknown>);
+        if (part === null) return null;
+        sum += part;
       }
       return Number(sum.toFixed(2));
     }
-    const nightly = this.coerceDecimalLike(observation_extras['rack_nightly_sum']);
-    if (nightly === null) return null;
-    const qty = Math.max(1, Math.floor(Number(observation_extras['room_quantity']) || 1));
-    return Number((nightly * qty).toFixed(2));
+    return this.fichaRoomSystemPriceFromSlot(observation_extras);
   }
 
   /** Fila creada desde "Añadir línea" (nueva o reemplazo): se resalta en verde. */
