@@ -1319,21 +1319,6 @@
       letter-spacing: 0.02em;
     }
 
-    .ficha-hotel-stay-dialog-fields {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .ficha-hotel-stay-noches-preview {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 0.65rem;
-      background: #f1f5f9;
-      border-radius: 6px;
-    }
-
     .ficha-obs-block--inline {
       flex-direction: row;
       align-items: center;
@@ -1874,6 +1859,65 @@
     .ficha-add-source-meta {
       font-size: 0.82rem;
       opacity: 0.88;
+    }
+  }
+
+  :host ::ng-deep .p-dialog.ficha-hotel-stay-dialog {
+    .ficha-add-dialog-hint {
+      margin: 0 0 1rem;
+      line-height: 1.45;
+      color: #64748b;
+    }
+
+    .ficha-hotel-stay-dialog-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .ficha-hotel-stay-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .ficha-hotel-stay-field-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .ficha-hotel-stay-noches-preview {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 0.25rem;
+      padding: 0.75rem 1rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+
+    .ficha-hotel-stay-noches-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    .ficha-hotel-stay-noches-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      min-width: 2.5rem;
+    }
+
+    .p-datepicker {
+      width: 100%;
     }
   }
 

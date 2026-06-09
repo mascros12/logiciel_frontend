@@ -2254,8 +2254,8 @@
     Del 1 al 5 de enero son <strong>4 noches</strong>.
   </p>
   <div class="ficha-hotel-stay-dialog-fields">
-    <div class="ficha-obs-block">
-      <label class="ficha-obs-label" for="hotel-stay-entrada">Entrada (check-in)</label>
+    <div class="ficha-hotel-stay-field">
+      <label class="ficha-hotel-stay-field-label" for="hotel-stay-entrada">Entrada (check-in)</label>
       <p-datepicker
         inputId="hotel-stay-entrada"
         [ngModel]="hotelStayEditEntradaDate()"
@@ -2265,8 +2265,8 @@
         appendTo="body"
       />
     </div>
-    <div class="ficha-obs-block">
-      <label class="ficha-obs-label" for="hotel-stay-salida">Salida (checkout)</label>
+    <div class="ficha-hotel-stay-field">
+      <label class="ficha-hotel-stay-field-label" for="hotel-stay-salida">Salida (checkout)</label>
       <p-datepicker
         inputId="hotel-stay-salida"
         [ngModel]="hotelStayEditSalidaDate()"
@@ -2276,9 +2276,9 @@
         appendTo="body"
       />
     </div>
-    <div class="ficha-hotel-stay-noches-preview">
-      <span class="ficha-obs-label">Noches</span>
-      <strong>{{ hotelStayEditNightsPreview() ?? '—' }}</strong>
+    <div class="ficha-hotel-stay-noches-preview" aria-live="polite">
+      <span class="ficha-hotel-stay-noches-label">Noches</span>
+      <span class="ficha-hotel-stay-noches-value">{{ hotelStayEditNightsPreview() ?? '—' }}</span>
     </div>
   </div>
   <ng-template pTemplate="footer">
