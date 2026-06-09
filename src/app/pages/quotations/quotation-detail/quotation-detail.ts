@@ -1434,7 +1434,7 @@ export class QuotationDetail implements OnInit {
     const hotelLines = this.fichaDetailServiceLines(hotel);
     const hotelLabel = this.stripHtml(hotelLines[0] || hotel.name || 'Hotel');
     this.confirmationService.confirm({
-      message: `¿Desea añadir la actividad «${actLabel}» al hotel «${hotelLabel}»? Se agregará a las observaciones del hotel con su fecha, se sumará al precio sistema y la actividad dejará de mostrarse en la tabla y en los documentos Word/PDF.`,
+      message: `¿Desea añadir la actividad «${actLabel}» al hotel «${hotelLabel}»? Se agregará a las observaciones del hotel con su fecha, se sumará al precio sistema del hotel y la actividad dejará de mostrarse en la tabla (en Word/PDF seguirá en línea aparte con Net «---»).`,
       header: 'Incorporar actividad al hotel',
       icon: 'pi pi-question-circle',
       acceptLabel: 'Sí, añadir',
@@ -1562,7 +1562,7 @@ export class QuotationDetail implements OnInit {
       this.fichaDetailServiceLines(hotel)[0] || hotel.name || 'Hotel',
     );
     this.confirmationService.confirm({
-      message: `¿Desea descombinar la actividad «${actLabel}» del hotel «${hotelLabel}»? Se quitará de las observaciones del hotel, se restará del precio sistema y la actividad volverá a mostrarse en la tabla y en los documentos Word/PDF.`,
+      message: `¿Desea descombinar la actividad «${actLabel}» del hotel «${hotelLabel}»? Se quitará de las observaciones del hotel, se restará del precio sistema y la actividad volverá a mostrarse en la tabla con su importe Net en Word/PDF.`,
       header: 'Descombinar actividad del hotel',
       icon: 'pi pi-question-circle',
       acceptLabel: 'Sí, descombinar',
