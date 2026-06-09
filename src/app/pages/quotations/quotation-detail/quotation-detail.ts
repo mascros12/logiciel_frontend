@@ -412,9 +412,9 @@ export class QuotationDetail implements OnInit {
   showFichaColorPicker = signal(false);
 
   /** Edición inline del nombre en Ficha AA (file_aa_name del catálogo). */
-  fichaNameEditDetailId = signal<string | null>(null);
+  /** Clave de edición inline: ``detailId|target`` (hotel, room, room:0, activity, …). */
+  fichaNameEditKey = signal<string | null>(null);
   fichaNameEditValue = signal<string>('');
-  fichaNameEditValue2 = signal<string>('');
   savingFichaName = signal(false);
 
   sourceOptions: { label: string; value: ContactSource }[] = [
@@ -1424,7 +1424,7 @@ export class QuotationDetail implements OnInit {
     });
   }
 
-  private fichaHotelAttachedActivityIds(hotel: FileAADetailRow): string[] {
+  fichaHotelAttachedActivityIds(hotel: FileAADetailRow): string[] {
     const raw = hotel.observation_extras?.['attached_activity_detail_ids'];
     if (!Array.isArray(raw)) return [];
     return raw.map((id) => String(id)).filter((id) => id.trim().length > 0);
@@ -1808,9 +1808,48 @@ export class QuotationDetail implements OnInit {
    * tal cual.
    */
   fichaSplitActivityTimeSuffix(line: string): { main: string; time: string } {
-    const m = /^(.*?),\s*(\d{1,2}h\d{2})\s*$/i.exec(line ?? '');
-    if (!m) return { main: (line ?? '').trim(), time: '' };
+    let stripped = (line ?? '').trim();
+    const provSep = stripped.indexOf(' - ');
+    if (provSep >= 0) stripped = stripped.slice(provSep + 3).trim();
+    const m = /^(.*?),\s*(\d{1,2}h\d{2})\s*$/i.exec(stripped);
+    if (!m) return { main: stripped, time: '' };
     return { main: m[1].trim(), time: m[2].trim() };
+  }
+
+  fichaNameEditKeyFor(detailId: string, target: string): string {
+    return `${detailId}|${target}`;
+  }
+
+  isFichaNameEditing(detailId: string, target: string): boolean {
+    return this.fichaNameEditKey() === this.fichaNameEditKeyFor(detailId, target);
+  }
+
+  fichaNameEditActiveOnRow(detailId: string): boolean {
+    const key = this.fichaNameEditKey();
+    return !!key && key.startsWith(`${detailId}|`);
+  }
+
+  /** Partes «1 bung … et 1 std …» alineadas con ``display_service_lines[1]``. */
+  fichaMergedRoomTypeLineParts(d: FileAADetailRow): string[] {
+    const line = (this.fichaDetailServiceLines(d)[1] ?? '').trim();
+    if (!line) return [];
+    return line.split(' et ').map((p) => p.trim()).filter((p) => p.length > 0);
+  }
+
+  fichaHotelAttachedActivityDisplay(
+    hotel: FileAADetailRow,
+  ): { detailId: string; line: string; main: string; time: string }[] {
+    const ids = this.fichaHotelAttachedActivityIds(hotel);
+    const lines = this.fichaDetailServiceLines(hotel).slice(2);
+    return ids.map((detailId, index) => {
+      const line = lines[index] ?? '';
+      const parts = this.fichaSplitActivityTimeSuffix(line);
+      return { detailId, line, ...parts };
+    });
+  }
+
+  fichaAttachedActivityRow(detailId: string): FileAADetailRow | undefined {
+    return this.fichaFileAA()?.details?.find((row) => row.id === detailId);
   }
 
   parseQuotationRoomDisplay(room: QuotationLine['rooms'][number]): {
@@ -3062,25 +3101,32 @@ export class QuotationDetail implements OnInit {
     );
   }
 
+  private refreshFichaAfterNameEdit(fileId: string): void {
+    this.quotationService.getFileAA(fileId).subscribe({
+      next: (updated) => {
+        this.fichaFileAA.set(updated);
+        this.syncFichaVisibleDetailsList();
+        this.savingFichaName.set(false);
+        this.fichaNameEditKey.set(null);
+      },
+      error: () => {
+        this.savingFichaName.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo recargar la ficha tras guardar el nombre',
+        });
+      },
+    });
+  }
+
   private finishFichaNameEdit(
     d: FileAADetailRow,
     ficha: FileAAWithDetails,
     observation_extras: Record<string, unknown>,
   ): void {
     this.quotationService.patchFileAADetail(d.id, { observation_extras }).subscribe({
-      next: (updated) => {
-        const cur = this.fichaFileAA();
-        if (cur) {
-          const details = cur.details.map((row) => (row.id === d.id ? { ...row, ...updated } : row));
-          this.fichaFileAA.set({ ...cur, details });
-          this.syncFichaVisibleDetailsList();
-        } else {
-          const idx = ficha.details.findIndex((r) => r.id === d.id);
-          if (idx !== -1) ficha.details[idx] = { ...ficha.details[idx], ...updated };
-        }
-        this.savingFichaName.set(false);
-        this.fichaNameEditDetailId.set(null);
-      },
+      next: () => this.refreshFichaAfterNameEdit(ficha.id),
       error: () => {
         this.savingFichaName.set(false);
         this.messageService.add({
@@ -3092,22 +3138,31 @@ export class QuotationDetail implements OnInit {
     });
   }
 
-  startFichaNameEdit(d: FileAADetailRow): void {
+  startFichaNameEdit(d: FileAADetailRow, target: string): void {
     if (!this.canEditFichaCatalogueName()) return;
-    this.fichaNameEditDetailId.set(d.id);
+    this.fichaNameEditKey.set(this.fichaNameEditKeyFor(d.id, target));
     const extras = d.observation_extras as Record<string, unknown> | null | undefined;
-    if (d.category === 'room') {
-      // value = hotel name, value2 = room type
+    if (target === 'hotel') {
       this.fichaNameEditValue.set(
         (extras?.['hotel_file_aa_name'] as string) ||
-        (d.display_service_lines?.[0] ?? '')
+          (d.display_service_lines?.[0] ?? ''),
       );
-      this.fichaNameEditValue2.set(
+      return;
+    }
+    if (target === 'room') {
+      this.fichaNameEditValue.set(
         (extras?.['room_file_aa_name'] as string) ||
-        (d.display_service_lines?.[1] ?? '')
+          (d.display_service_lines?.[1] ?? ''),
       );
-    } else if (d.category === 'vehicle') {
-      // Strip computed days suffix so the user only edits the name
+      return;
+    }
+    if (target.startsWith('room:')) {
+      const index = Number(target.slice('room:'.length));
+      const slot = this.fichaMergedRoomsFromExtras(d)[index];
+      this.fichaNameEditValue.set((slot?.room_file_aa_name ?? '').trim());
+      return;
+    }
+    if (d.category === 'vehicle') {
       const preComputed = (extras?.['vehicle_file_aa_name'] as string) || '';
       if (preComputed) {
         this.fichaNameEditValue.set(preComputed);
@@ -3115,23 +3170,21 @@ export class QuotationDetail implements OnInit {
         const line = d.display_service_lines?.[0] ?? '';
         this.fichaNameEditValue.set(line.replace(/\s*\(\d+\s+jours?\)\s*$/i, '').trim());
       }
-      this.fichaNameEditValue2.set('');
-    } else {
-      const actLine = (d.display_service_lines?.[0] ?? '').trim();
-      const actMain = actLine.includes(' - ') ? actLine.split(' - ').slice(1).join(' - ').trim() : actLine;
-      const actMainNoTime = actMain.replace(/,\s*\d{1,2}h\d{0,2}$/i, '').trim();
-      this.fichaNameEditValue.set(
-        (extras?.['activity_file_aa_name'] as string) || actMainNoTime,
-      );
-      this.fichaNameEditValue2.set('');
+      return;
     }
+    const actLine = (d.display_service_lines?.[0] ?? '').trim();
+    const actMain = actLine.includes(' - ') ? actLine.split(' - ').slice(1).join(' - ').trim() : actLine;
+    const actMainNoTime = actMain.replace(/,\s*\d{1,2}h\d{0,2}$/i, '').trim();
+    this.fichaNameEditValue.set(
+      (extras?.['activity_file_aa_name'] as string) || actMainNoTime,
+    );
   }
 
   cancelFichaNameEdit(): void {
-    this.fichaNameEditDetailId.set(null);
+    this.fichaNameEditKey.set(null);
   }
 
-  confirmFichaNameEdit(d: FileAADetailRow, ficha: FileAAWithDetails): void {
+  confirmFichaNameEdit(d: FileAADetailRow, ficha: FileAAWithDetails, target: string): void {
     if (!this.canEditFichaCatalogueName()) {
       this.messageService.add({
         severity: 'warn',
@@ -3141,9 +3194,7 @@ export class QuotationDetail implements OnInit {
       return;
     }
     const newName = this.fichaNameEditValue().trim();
-    const newName2 = this.fichaNameEditValue2().trim();
-
-    if (!newName && !newName2) {
+    if (!newName) {
       this.cancelFichaNameEdit();
       return;
     }
@@ -3153,31 +3204,61 @@ export class QuotationDetail implements OnInit {
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
         ? { ...(d.observation_extras as Record<string, unknown>) }
         : {};
-
     const ids = this.fichaDetailCatalogueIds(d);
 
-    if (d.category === 'room') {
+    if (target === 'hotel' && d.category === 'room') {
       const hotelUpdate$ =
-        newName && ids.hotelId
+        ids.hotelId
           ? this.cataloguePatchOrSkip(
               this.hotelService.update(ids.hotelId, { file_aa_name: newName }),
               'hotel',
             )
           : of(null);
+      hotelUpdate$.subscribe({
+        next: () => {
+          this.finishFichaNameEdit(d, ficha, { ...prev, hotel_file_aa_name: newName });
+        },
+      });
+      return;
+    }
+
+    if (target === 'room' && d.category === 'room') {
       const roomUpdate$ =
-        newName2 && ids.hotelId && ids.roomId
+        ids.hotelId && ids.roomId
           ? this.cataloguePatchOrSkip(
-              this.hotelService.updateRoom(ids.hotelId, ids.roomId, { file_aa_name: newName2 }),
+              this.hotelService.updateRoom(ids.hotelId, ids.roomId, { file_aa_name: newName }),
               'habitación',
             )
           : of(null);
-      forkJoin([hotelUpdate$, roomUpdate$]).subscribe({
+      roomUpdate$.subscribe({
         next: () => {
-          const updated_extras = {
-            ...prev,
-            ...(newName ? { hotel_file_aa_name: newName } : {}),
-            ...(newName2 ? { room_file_aa_name: newName2 } : {}),
-          };
+          this.finishFichaNameEdit(d, ficha, { ...prev, room_file_aa_name: newName });
+        },
+      });
+      return;
+    }
+
+    if (target.startsWith('room:') && d.category === 'room') {
+      const index = Number(target.slice('room:'.length));
+      const slot = this.fichaMergedRoomsFromExtras(d)[index];
+      const roomId = slot?.room_id;
+      const roomUpdate$ =
+        ids.hotelId && roomId
+          ? this.cataloguePatchOrSkip(
+              this.hotelService.updateRoom(ids.hotelId, roomId, { file_aa_name: newName }),
+              'habitación',
+            )
+          : of(null);
+      roomUpdate$.subscribe({
+        next: () => {
+          const rawMerged = Array.isArray(prev['merged_rooms'])
+            ? (prev['merged_rooms'] as Record<string, unknown>[]).map((item) => ({ ...item }))
+            : [];
+          if (rawMerged[index]) {
+            rawMerged[index] = { ...rawMerged[index], room_file_aa_name: newName };
+          }
+          const updated_extras: Record<string, unknown> = { ...prev, merged_rooms: rawMerged };
+          if (index === 0) updated_extras['room_file_aa_name'] = newName;
           this.finishFichaNameEdit(d, ficha, updated_extras);
         },
       });
@@ -3195,7 +3276,7 @@ export class QuotationDetail implements OnInit {
       next: () => {
         if (!obsKey) {
           this.savingFichaName.set(false);
-          this.fichaNameEditDetailId.set(null);
+          this.fichaNameEditKey.set(null);
           return;
         }
         this.finishFichaNameEdit(d, ficha, { ...prev, [obsKey]: newName });

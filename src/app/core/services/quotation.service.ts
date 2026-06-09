@@ -161,6 +161,10 @@ export class QuotationService {
     return this.http.get<FileAAWithDetails>(`${this.url}/${quotationId}/file-aa/version/${versionId}`);
   }
 
+  getFileAA(fileId: string) {
+    return this.http.get<FileAAWithDetails>(`${this.url}/file-aa/${fileId}`);
+  }
+
   patchFileAADetail(detailId: string, body: FileAADetailPatch) {
     return this.http.patch<FileAADetailRow>(`${this.url}/details/${detailId}`, body);
   }

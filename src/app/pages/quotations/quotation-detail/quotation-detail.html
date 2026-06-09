@@ -1070,7 +1070,7 @@
                         <tr
                           cdkDrag
                           cdkDragLockAxis="y"
-                          [cdkDragDisabled]="fichaNameEditDetailId() === d.id"
+                          [cdkDragDisabled]="fichaNameEditActiveOnRow(d.id)"
                           [cdkDragData]="d"
                           [class.ficha-aa-row-warning]="fichaHasLargePriceGap(d)"
                           [class.ficha-aa-row-new]="fichaIsAddedDetail(d)"
@@ -1119,101 +1119,96 @@
                           <td>
                             @let svcLines = fichaDetailServiceLines(d);
                             <span class="ficha-cat">{{ fichaCategoryLabel(d.category) }}</span>
-                            @if (fichaNameEditDetailId() === d.id) {
-                              <div
-                                class="ficha-name-edit-wrap"
-                                (mousedown)="$event.stopPropagation()"
-                                (click)="$event.stopPropagation()"
-                              >
-                                @if (d.category === 'room') {
-                                  <input
-                                    pInputText
-                                    class="ficha-name-edit-input"
-                                    placeholder="Nombre hotel"
-                                    [ngModel]="fichaNameEditValue()"
-                                    (ngModelChange)="fichaNameEditValue.set($event)"
-                                    [disabled]="savingFichaName()"
-                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
-                                    (keydown.escape)="cancelFichaNameEdit()"
-                                    autofocus
-                                  />
-                                  <input
-                                    pInputText
-                                    class="ficha-name-edit-input ficha-name-edit-input--room"
-                                    placeholder="Tipo de habitación"
-                                    [ngModel]="fichaNameEditValue2()"
-                                    (ngModelChange)="fichaNameEditValue2.set($event)"
-                                    [disabled]="savingFichaName()"
-                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
-                                    (keydown.escape)="cancelFichaNameEdit()"
-                                  />
-                                } @else if (d.category === 'vehicle') {
-                                  @let vSuffix = fichaSplitVehicleJoursSuffix(fichaDetailServiceLines(d)[0]).suffix;
-                                  <input
-                                    pInputText
-                                    class="ficha-name-edit-input"
-                                    [ngModel]="fichaNameEditValue()"
-                                    (ngModelChange)="fichaNameEditValue.set($event)"
-                                    [disabled]="savingFichaName()"
-                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
-                                    (keydown.escape)="cancelFichaNameEdit()"
-                                    autofocus
-                                  />
-                                  @if (vSuffix) {
-                                    <span class="ficha-name-edit-days"><strong>{{ vSuffix }}</strong></span>
-                                  }
-                                } @else {
-                                  <input
-                                    pInputText
-                                    class="ficha-name-edit-input"
-                                    [ngModel]="fichaNameEditValue()"
-                                    (ngModelChange)="fichaNameEditValue.set($event)"
-                                    [disabled]="savingFichaName()"
-                                    (keydown.enter)="confirmFichaNameEdit(d, ficha)"
-                                    (keydown.escape)="cancelFichaNameEdit()"
-                                    autofocus
-                                  />
-                                }
-                                <button
-                                  pButton
-                                  icon="pi pi-check"
-                                  class="p-button-sm p-button-success ficha-name-edit-btn"
-                                  [loading]="savingFichaName()"
-                                  (click)="confirmFichaNameEdit(d, ficha)"
-                                  pTooltip="Guardar nombre"
-                                ></button>
-                                <button
-                                  pButton
-                                  icon="pi pi-times"
-                                  class="p-button-sm p-button-text ficha-name-edit-btn"
-                                  (click)="cancelFichaNameEdit()"
-                                  pTooltip="Cancelar"
-                                ></button>
-                              </div>
-                            } @else {
-                              @if (d.category === 'room' && svcLines.length >= 2) {
-                                <div class="ficha-room-service-cell">
-                                  <span
-                                    class="ficha-name ficha-name-room-two"
-                                    [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
-                                    [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
-                                    [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
-                                  ><span class="ficha-room-hotel">{{ svcLines[0] }}</span><span class="ficha-room-sep">,&nbsp;</span><span class="ficha-room-type">@if (!fichaHasMultipleRoomTypes(d)) {
-                                    @if (fichaRoomQuantityDisplay(d); as qty) {
-                                      {{ qty }}
-                                    }
-                                    {{ svcLines[1] }}
+                            @if (d.category === 'room' && svcLines.length >= 2) {
+                              <div class="ficha-room-service-cell">
+                                <span
+                                  class="ficha-name ficha-name-room-two"
+                                  [class.pick-gama-high]="fichaRoomHotelGama(d) === 'high'"
+                                  [class.pick-gama-medium]="fichaRoomHotelGama(d) === 'medium'"
+                                  [class.pick-gama-low]="fichaRoomHotelGama(d) === 'low'"
+                                >
+                                  @if (isFichaNameEditing(d.id, 'hotel')) {
+                                    <span class="ficha-name-inline-edit" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                                      <input pInputText class="ficha-name-edit-input" placeholder="Nombre hotel" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(d, ficha, 'hotel')" (keydown.escape)="cancelFichaNameEdit()" autofocus />
+                                      <button pButton icon="pi pi-check" class="p-button-sm p-button-success ficha-name-edit-btn" [loading]="savingFichaName()" (click)="confirmFichaNameEdit(d, ficha, 'hotel')"></button>
+                                      <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
+                                    </span>
+                                  } @else if (canEditFichaCatalogueName()) {
+                                    <span class="ficha-room-hotel ficha-name-clickable" (click)="$event.stopPropagation(); startFichaNameEdit(d, 'hotel')">{{ svcLines[0] }}</span>
                                   } @else {
-                                    {{ svcLines[1] }}
-                                  }</span></span>
-                                  @for (actLine of svcLines.slice(2); track $index) {
-                                    @let actParts = fichaSplitActivityTimeSuffix(actLine);
-                                    <div class="ficha-room-attached-activity">
-                                      <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
-                                    </div>
+                                    <span class="ficha-room-hotel">{{ svcLines[0] }}</span>
                                   }
-                                </div>
-                              } @else if (d.category === 'vehicle') {
+                                  <span class="ficha-room-sep">,&nbsp;</span>
+                                  @if (fichaHasMultipleRoomTypes(d)) {
+                                    @for (part of fichaMergedRoomTypeLineParts(d); track $index; let i = $index; let last = $last) {
+                                      @if (isFichaNameEditing(d.id, 'room:' + i)) {
+                                        <span class="ficha-name-inline-edit" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                                          <input pInputText class="ficha-name-edit-input ficha-name-edit-input--room" placeholder="Tipo de habitación" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(d, ficha, 'room:' + i)" (keydown.escape)="cancelFichaNameEdit()" autofocus />
+                                          <button pButton icon="pi pi-check" class="p-button-sm p-button-success ficha-name-edit-btn" [loading]="savingFichaName()" (click)="confirmFichaNameEdit(d, ficha, 'room:' + i)"></button>
+                                          <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
+                                        </span>
+                                      } @else if (canEditFichaCatalogueName()) {
+                                        <span class="ficha-room-type ficha-name-clickable" (click)="$event.stopPropagation(); startFichaNameEdit(d, 'room:' + i)">{{ part }}</span>
+                                      } @else {
+                                        <span class="ficha-room-type">{{ part }}</span>
+                                      }
+                                      @if (!last) {
+                                        <span class="ficha-room-sep-et"> et </span>
+                                      }
+                                    }
+                                  } @else if (isFichaNameEditing(d.id, 'room')) {
+                                    <span class="ficha-name-inline-edit" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                                      <input pInputText class="ficha-name-edit-input ficha-name-edit-input--room" placeholder="Tipo de habitación" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(d, ficha, 'room')" (keydown.escape)="cancelFichaNameEdit()" autofocus />
+                                      <button pButton icon="pi pi-check" class="p-button-sm p-button-success ficha-name-edit-btn" [loading]="savingFichaName()" (click)="confirmFichaNameEdit(d, ficha, 'room')"></button>
+                                      <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
+                                    </span>
+                                  } @else if (canEditFichaCatalogueName()) {
+                                    <span class="ficha-room-type ficha-name-clickable" (click)="$event.stopPropagation(); startFichaNameEdit(d, 'room')">@if (fichaRoomQuantityDisplay(d); as qty) {
+                                      {{ qty }}
+                                    }}{{ svcLines[1] }}</span>
+                                  } @else {
+                                    <span class="ficha-room-type">@if (fichaRoomQuantityDisplay(d); as qty) {
+                                      {{ qty }}
+                                    }}{{ svcLines[1] }}</span>
+                                  }
+                                </span>
+                                @for (act of fichaHotelAttachedActivityDisplay(d); track act.detailId) {
+                                  @if (fichaAttachedActivityRow(act.detailId); as actRow) {
+                                    @if (isFichaNameEditing(act.detailId, 'activity')) {
+                                      <div class="ficha-name-inline-edit" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                                        <input pInputText class="ficha-name-edit-input" placeholder="Nombre actividad" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(actRow, ficha, 'activity')" (keydown.escape)="cancelFichaNameEdit()" autofocus />
+                                        <button pButton icon="pi pi-check" class="p-button-sm p-button-success ficha-name-edit-btn" [loading]="savingFichaName()" (click)="confirmFichaNameEdit(actRow, ficha, 'activity')"></button>
+                                        <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
+                                      </div>
+                                    } @else if (canEditFichaCatalogueName()) {
+                                      <div class="ficha-room-attached-activity">
+                                        <span class="ficha-name ficha-name-clickable" (click)="$event.stopPropagation(); startFichaNameEdit(actRow, 'activity')">{{ act.main }}@if (act.time) { <span class="ficha-activity-time">, {{ act.time }}</span>}</span>
+                                      </div>
+                                    } @else {
+                                      <div class="ficha-room-attached-activity">
+                                        <span class="ficha-name">{{ act.main }}@if (act.time) { <span class="ficha-activity-time">, {{ act.time }}</span>}</span>
+                                      </div>
+                                    }
+                                  }
+                                }
+                              </div>
+                            } @else if (isFichaNameEditing(d.id, 'vehicle')) {
+                              <div class="ficha-name-edit-wrap" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                                @let vSuffix = fichaSplitVehicleJoursSuffix(fichaDetailServiceLines(d)[0]).suffix;
+                                <input pInputText class="ficha-name-edit-input" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(d, ficha, 'vehicle')" (keydown.escape)="cancelFichaNameEdit()" autofocus />
+                                @if (vSuffix) {
+                                  <span class="ficha-name-edit-days"><strong>{{ vSuffix }}</strong></span>
+                                }
+                                <button pButton icon="pi pi-check" class="p-button-sm p-button-success ficha-name-edit-btn" [loading]="savingFichaName()" (click)="confirmFichaNameEdit(d, ficha, 'vehicle')"></button>
+                                <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
+                              </div>
+                            } @else if (isFichaNameEditing(d.id, 'activity')) {
+                              <div class="ficha-name-edit-wrap" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                                <input pInputText class="ficha-name-edit-input" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(d, ficha, 'activity')" (keydown.escape)="cancelFichaNameEdit()" autofocus />
+                                <button pButton icon="pi pi-check" class="p-button-sm p-button-success ficha-name-edit-btn" [loading]="savingFichaName()" (click)="confirmFichaNameEdit(d, ficha, 'activity')"></button>
+                                <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
+                              </div>
+                            } @else if (d.category === 'vehicle') {
                                 @let vehParts = fichaSplitVehicleJoursSuffix(svcLines[0]);
                                 @let vSvcLayout = fichaVehicleServiceLayout(d);
                                 <div class="ficha-vehicle-service-cell">
@@ -1304,7 +1299,14 @@
                                 </div>
                               } @else if (d.category === 'activity') {
                                 @let actParts = fichaSplitActivityTimeSuffix(svcLines[0]);
-                                <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
+                                @if (canEditFichaCatalogueName()) {
+                                  <span
+                                    class="ficha-name ficha-name-clickable"
+                                    (click)="$event.stopPropagation(); startFichaNameEdit(d, 'activity')"
+                                  >{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
+                                } @else {
+                                  <span class="ficha-name">{{ actParts.main }}@if (actParts.time) { <span class="ficha-activity-time">, {{ actParts.time }}</span>}</span>
+                                }
                               } @else {
                                 <span
                                   class="ficha-name"
@@ -1313,18 +1315,17 @@
                                   [class.pick-gama-low]="d.category === 'room' && fichaRoomHotelGama(d) === 'low'"
                                 >{{ svcLines[0] }}</span>
                               }
-                              @if (canEditFichaCatalogueName()) {
+                              @if (canEditFichaCatalogueName() && d.category === 'vehicle' && !fichaNameEditActiveOnRow(d.id)) {
                                 <button
                                   type="button"
                                   pButton
                                   icon="pi pi-pencil"
                                   class="p-button-rounded p-button-text p-button-sm ficha-name-edit-trigger"
-                                  (click)="$event.stopPropagation(); startFichaNameEdit(d)"
+                                  (click)="$event.stopPropagation(); startFichaNameEdit(d, 'vehicle')"
                                   pTooltip="Editar nombre para futuras fichas"
                                   tooltipPosition="top"
                                 ></button>
                               }
-                            }
                           </td>
                           <td>
                             @if (d.category === 'room') {
