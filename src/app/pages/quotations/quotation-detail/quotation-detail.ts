@@ -2896,6 +2896,13 @@ export class QuotationDetail implements OnInit {
   patchFileDetail(detailId: string, patch: FileAADetailPatch): void {
     const cur = this.fichaFileAA();
     if (!cur) return;
+    if (patch.total_price !== undefined) {
+      const details = cur.details.map((d) =>
+        d.id === detailId ? ({ ...d, total_price: patch.total_price ?? d.total_price } as FileAADetailRow) : d,
+      );
+      this.fichaFileAA.set({ ...cur, details });
+      this.syncFichaVisibleDetailsList();
+    }
     const seq = (this.fileDetailPatchSeq[detailId] ?? 0) + 1;
     this.fileDetailPatchSeq[detailId] = seq;
     this.quotationService.patchFileAADetail(detailId, patch).subscribe({
@@ -3907,7 +3914,7 @@ export class QuotationDetail implements OnInit {
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
         ? { ...(d.observation_extras as Record<string, unknown>) }
         : {};
-    this.backfillHotelRackSnapshotFields(prev);
+    this.backfillHotelRackSnapshotFields(prev, d);
     const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
     const ficha_entrada = (row.ficha_entrada ?? '').trim();
     const ficha_salida = (row.ficha_salida ?? '').trim();
@@ -3934,7 +3941,9 @@ export class QuotationDetail implements OnInit {
           Array.isArray(prevMerged) && prevMerged[i] && typeof prevMerged[i] === 'object'
             ? { ...(prevMerged[i] as Record<string, unknown>) }
             : {};
-        this.backfillHotelRackSnapshotFields(base);
+        this.backfillHotelRackSnapshotFields(base, d, {
+          slotCount: draftSlots.length,
+        });
         const slotQty = multiType
           ? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1
           : room_quantity ?? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1;
@@ -3961,7 +3970,7 @@ export class QuotationDetail implements OnInit {
       observations: notesTrim ? notesTrim : null,
       dates: datesCell,
     };
-    const systemTotal = this.fichaHotelSystemPriceFromExtras(observation_extras);
+    const systemTotal = this.fichaHotelSystemPriceFromExtras(observation_extras, d);
     if (systemTotal !== null) {
       patch.total_price = systemTotal;
     }
@@ -4027,10 +4036,38 @@ export class QuotationDetail implements OnInit {
     return total;
   }
 
-  /** Congela tarifa/noche y noches base en fichas que solo tenían ``rack_nightly_sum``. */
-  private backfillHotelRackSnapshotFields(extras: Record<string, unknown>): void {
+  /**
+   * Congela tarifa/noche a partir de ``rack_nightly_sum`` o, en fichas antiguas,
+   * del ``total_price`` actual del detalle (antes de editar noches/cantidad).
+   */
+  private backfillHotelRackSnapshotFields(
+    extras: Record<string, unknown>,
+    detail?: FileAADetailRow,
+    opts?: { slotCount?: number },
+  ): void {
     if (extras['room_rack_per_night']) return;
-    const sum = this.coerceDecimalLike(extras['rack_nightly_sum']);
+    let sum = this.coerceDecimalLike(extras['rack_nightly_sum']);
+    if (sum === null && detail) {
+      const total = Number(detail.total_price);
+      if (Number.isFinite(total) && total > 0) {
+        const slotCount = opts?.slotCount && opts.slotCount > 0 ? opts.slotCount : 1;
+        const share = total / slotCount;
+        let nights = this.parseFichaNochesCount(String(extras['ficha_noches_texto'] ?? ''));
+        if (nights <= 0 && detail.dates) {
+          nights = this.parseFichaNochesCount(
+            this.parseFichaHotelDatesCell(detail.dates).ficha_noches_texto,
+          );
+        }
+        if (nights <= 0 && detail.days) nights = Math.max(1, Number(detail.days));
+        if (nights <= 0) nights = 1;
+        const qty = Math.max(1, Math.floor(Number(extras['room_quantity']) || 1));
+        const perNight = share / (nights * qty);
+        extras['rack_nights_base'] = nights;
+        extras['room_rack_per_night'] = Number(perNight.toFixed(2));
+        extras['rack_nightly_sum'] = Number((perNight * nights).toFixed(2));
+        return;
+      }
+    }
     if (sum === null) return;
     let base = Number(extras['rack_nights_base']);
     if (!Number.isFinite(base) || base <= 0) {
@@ -4069,19 +4106,27 @@ export class QuotationDetail implements OnInit {
   /** Precio sistema hotel: rack/noche × noches × cantidad de habitaciones (por tipología). */
   private fichaHotelSystemPriceFromExtras(
     observation_extras: Record<string, unknown>,
+    detail?: FileAADetailRow,
   ): number | null {
-    const merged = observation_extras['merged_rooms'];
+    const working = { ...observation_extras };
+    const merged = working['merged_rooms'];
     if (Array.isArray(merged) && merged.length > 0) {
       let sum = 0;
+      let any = false;
       for (const item of merged) {
-        if (!item || typeof item !== 'object') return null;
-        const part = this.fichaRoomSystemPriceFromSlot(item as Record<string, unknown>);
-        if (part === null) return null;
-        sum += part;
+        if (!item || typeof item !== 'object') continue;
+        const slot = { ...(item as Record<string, unknown>) };
+        this.backfillHotelRackSnapshotFields(slot, detail, { slotCount: merged.length });
+        const part = this.fichaRoomSystemPriceFromSlot(slot);
+        if (part !== null) {
+          sum += part;
+          any = true;
+        }
       }
-      return Number(sum.toFixed(2));
+      return any ? Number(sum.toFixed(2)) : null;
     }
-    return this.fichaRoomSystemPriceFromSlot(observation_extras);
+    this.backfillHotelRackSnapshotFields(working, detail);
+    return this.fichaRoomSystemPriceFromSlot(working);
   }
 
   /** Fila creada desde "Añadir línea" (nueva o reemplazo): se resalta en verde. */
