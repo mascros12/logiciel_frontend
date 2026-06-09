@@ -1359,6 +1359,16 @@
       line-height: 1.3;
     }
 
+    .ficha-room-service-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .ficha-room-attached-activity {
+      line-height: 1.3;
+    }
+
     .ficha-room-hotel {
       font-size: 1em;
       font-weight: 500;
