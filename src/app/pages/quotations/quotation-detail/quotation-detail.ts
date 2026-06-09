@@ -2904,8 +2904,18 @@ export class QuotationDetail implements OnInit {
         const f = this.fichaFileAA();
         if (!f) return;
         const prevRow = f.details.find((d) => d.id === detailId);
-        const mergedRow = prevRow ? ({ ...prevRow, ...updated } as FileAADetailRow) : null;
-        const details = f.details.map((d) => (d.id === detailId ? { ...d, ...updated } : d));
+        const mergedUpdated = prevRow
+          ? ({
+              ...prevRow,
+              ...updated,
+              display_service_lines:
+                updated.display_service_lines?.length
+                  ? updated.display_service_lines
+                  : prevRow.display_service_lines,
+            } as FileAADetailRow)
+          : (updated as FileAADetailRow);
+        const mergedRow = prevRow ? mergedUpdated : null;
+        const details = f.details.map((d) => (d.id === detailId ? mergedUpdated : d));
         this.fichaFileAA.set({ ...f, details });
         this.syncFichaVisibleDetailsList();
         if (patch.observation_extras !== undefined || patch.observations !== undefined) {
@@ -3710,6 +3720,9 @@ export class QuotationDetail implements OnInit {
           const n = Number(rq);
           room_quantity = Number.isFinite(n) ? n : null;
         }
+        if (room_quantity === null && merged.length === 1) {
+          room_quantity = merged[0].room_quantity ?? null;
+        }
       }
       ficha_entrada = String(o['ficha_entrada'] ?? '');
       ficha_salida = String(o['ficha_salida'] ?? '');
@@ -3908,22 +3921,35 @@ export class QuotationDetail implements OnInit {
       ficha_salida,
       ficha_noches_texto,
     };
-    const mergedSlots = row.merged_slots;
-    if (mergedSlots && mergedSlots.length > 1) {
-      const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
-      const updatedMerged = mergedSlots.map((slot, i) => {
+    const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
+    const draftSlots =
+      row.merged_slots && row.merged_slots.length > 0
+        ? row.merged_slots
+        : this.fichaMergedRoomsFromExtras(d);
+    if (Array.isArray(prevMerged) && prevMerged.length > 0 && draftSlots.length > 0) {
+      const multiType = draftSlots.length > 1;
+      const updatedMerged = draftSlots.map((slot, i) => {
         const base =
           Array.isArray(prevMerged) && prevMerged[i] && typeof prevMerged[i] === 'object'
             ? { ...(prevMerged[i] as Record<string, unknown>) }
             : {};
+        const slotQty = multiType
+          ? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1
+          : room_quantity ?? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1;
         return {
           ...base,
           room_id: slot.room_id,
           room_file_aa_name: slot.room_file_aa_name,
-          room_quantity: this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1,
+          room_quantity: slotQty,
+          ficha_entrada,
+          ficha_salida,
+          ficha_noches_texto,
         };
       });
       observation_extras['merged_rooms'] = updatedMerged;
+      if (!multiType) {
+        observation_extras['room_quantity'] = updatedMerged[0]['room_quantity'];
+      }
     } else {
       observation_extras['room_quantity'] = room_quantity;
     }
