@@ -1514,42 +1514,74 @@
                           <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('fechas')">
                             @if (d.category === 'room') {
                               <div class="ficha-room-dates-blocks">
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-hent-' + d.id">Entrada</label>
-                                  <textarea
-                                    pInputTextarea
-                                    [id]="'aa-hent-' + d.id"
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_entrada"
-                                    (ngModelChange)="onHotelFichaDraftChange(d)"
-                                    (blur)="commitHotelFichaObs(d, $event)"
-                                  ></textarea>
-                                </div>
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-hsal-' + d.id">Salida</label>
-                                  <textarea
-                                    pInputTextarea
-                                    [id]="'aa-hsal-' + d.id"
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_salida"
-                                    (ngModelChange)="onHotelFichaDraftChange(d)"
-                                    (blur)="commitHotelFichaObs(d, $event)"
-                                  ></textarea>
-                                </div>
-                                <div class="ficha-obs-block">
-                                  <label class="ficha-obs-label" [attr.for]="'aa-hnoc-' + d.id">Noches</label>
-                                  <textarea
-                                    pInputTextarea
-                                    [id]="'aa-hnoc-' + d.id"
-                                    class="ficha-cell-input ficha-obs-textarea"
-                                    rows="2"
-                                    [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_noches_texto"
-                                    (ngModelChange)="onHotelFichaDraftChange(d)"
-                                    (blur)="commitHotelFichaObs(d, $event)"
-                                  ></textarea>
-                                </div>
+                                @if (fichaHotelRoomsHaveDifferentStays(d)) {
+                                  @for (slot of ensureHotelFichaObsDraft(d).merged_slots ?? []; track $index; let ri = $index) {
+                                    <div class="ficha-hotel-stay-room-block">
+                                      <span class="ficha-hotel-stay-room-label">{{ fichaMergedRoomLabel(slot, ri) }}</span>
+                                      <div class="ficha-obs-block">
+                                        <span class="ficha-obs-label">Entrada</span>
+                                        <div class="ficha-hotel-date-chips">
+                                          @for (seg of hotelStaySegmentsDisplay(d, ri); track $index; let si = $index) {
+                                            @if (si > 0) { <span class="ficha-date-sep"> y </span> }
+                                            <button
+                                              type="button"
+                                              class="ficha-date-chip"
+                                              (click)="openHotelStayEditDialog(d, si, ri)"
+                                            >{{ formatIsoDateDm(seg.entrada_iso) }}</button>
+                                          }
+                                        </div>
+                                      </div>
+                                      <div class="ficha-obs-block">
+                                        <span class="ficha-obs-label">Salida</span>
+                                        <div class="ficha-hotel-date-chips">
+                                          @for (seg of hotelStaySegmentsDisplay(d, ri); track $index; let si = $index) {
+                                            @if (si > 0) { <span class="ficha-date-sep"> y </span> }
+                                            <button
+                                              type="button"
+                                              class="ficha-date-chip"
+                                              (click)="openHotelStayEditDialog(d, si, ri)"
+                                            >{{ formatIsoDateDm(seg.salida_iso) }}</button>
+                                          }
+                                        </div>
+                                      </div>
+                                      <div class="ficha-obs-block">
+                                        <span class="ficha-obs-label">Noches</span>
+                                        <span class="ficha-hotel-noches-readonly">{{ hotelNochesDisplay(d, ri) }}</span>
+                                      </div>
+                                    </div>
+                                  }
+                                } @else {
+                                  <div class="ficha-obs-block">
+                                    <span class="ficha-obs-label">Entrada</span>
+                                    <div class="ficha-hotel-date-chips">
+                                      @for (seg of hotelStaySegmentsDisplay(d, null); track $index; let si = $index) {
+                                        @if (si > 0) { <span class="ficha-date-sep"> y </span> }
+                                        <button
+                                          type="button"
+                                          class="ficha-date-chip"
+                                          (click)="openHotelStayEditDialog(d, si, null)"
+                                        >{{ formatIsoDateDm(seg.entrada_iso) }}</button>
+                                      }
+                                    </div>
+                                  </div>
+                                  <div class="ficha-obs-block">
+                                    <span class="ficha-obs-label">Salida</span>
+                                    <div class="ficha-hotel-date-chips">
+                                      @for (seg of hotelStaySegmentsDisplay(d, null); track $index; let si = $index) {
+                                        @if (si > 0) { <span class="ficha-date-sep"> y </span> }
+                                        <button
+                                          type="button"
+                                          class="ficha-date-chip"
+                                          (click)="openHotelStayEditDialog(d, si, null)"
+                                        >{{ formatIsoDateDm(seg.salida_iso) }}</button>
+                                      }
+                                    </div>
+                                  </div>
+                                  <div class="ficha-obs-block">
+                                    <span class="ficha-obs-label">Noches</span>
+                                    <span class="ficha-hotel-noches-readonly">{{ hotelNochesDisplay(d, null) }}</span>
+                                  </div>
+                                }
                               </div>
                             } @else if (d.category === 'vehicle') {
                               @switch (fichaVehicleDatesLayout(d)) {
@@ -2204,6 +2236,54 @@
       [disabled]="!fichaCombineSelectedHotelId() || fichaCombineHotelOptions().length === 0"
       (onClick)="submitFichaCombine()"
     />
+  </ng-template>
+</p-dialog>
+
+<!-- Editar pareja entrada/salida (hotel) -->
+<p-dialog
+  styleClass="ficha-hotel-stay-dialog"
+  [header]="hotelStayEditDialogTitle()"
+  [visible]="showHotelStayEditDialog()"
+  (visibleChange)="showHotelStayEditDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(420px, 96vw)' }"
+  (onHide)="onHotelStayEditDialogHide()"
+>
+  <p class="ficha-add-dialog-hint">
+    La <strong>salida</strong> es el día de checkout (no se cuenta como noche).
+    Del 1 al 5 de enero son <strong>4 noches</strong>.
+  </p>
+  <div class="ficha-hotel-stay-dialog-fields">
+    <div class="ficha-obs-block">
+      <label class="ficha-obs-label" for="hotel-stay-entrada">Entrada (check-in)</label>
+      <p-datepicker
+        inputId="hotel-stay-entrada"
+        [ngModel]="hotelStayEditEntradaDate()"
+        (ngModelChange)="hotelStayEditEntradaDate.set($event)"
+        dateFormat="dd/mm/yy"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+    <div class="ficha-obs-block">
+      <label class="ficha-obs-label" for="hotel-stay-salida">Salida (checkout)</label>
+      <p-datepicker
+        inputId="hotel-stay-salida"
+        [ngModel]="hotelStayEditSalidaDate()"
+        (ngModelChange)="hotelStayEditSalidaDate.set($event)"
+        dateFormat="dd/mm/yy"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+    <div class="ficha-hotel-stay-noches-preview">
+      <span class="ficha-obs-label">Noches</span>
+      <strong>{{ hotelStayEditNightsPreview() ?? '—' }}</strong>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showHotelStayEditDialog.set(false)" />
+    <p-button label="Guardar" icon="pi pi-check" (onClick)="confirmHotelStayEditDialog()" />
   </ng-template>
 </p-dialog>
 

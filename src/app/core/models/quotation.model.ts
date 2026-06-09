@@ -130,21 +130,31 @@ export interface FileAADetailActivityObsState {
 }
 
 /** Observaciones estructuradas en Ficha AA — filas categoría hotel */
+/** Una estadía: entrada (check-in) y salida (día de checkout; la última noche es la víspera). */
+export interface FichaHotelStaySegment {
+  entrada_iso: string;
+  salida_iso: string;
+}
+
 export interface FichaMergedRoomSlot {
   room_id: string;
   room_file_aa_name?: string;
   room_quantity: number | null;
+  /** Estadías de esta tipología (puede diferir entre habitaciones de la misma fila). */
+  stay_segments?: FichaHotelStaySegment[];
 }
 
 export interface FileAADetailRoomObsState {
   room_quantity: number | null;
   /** Cantidades por tipología cuando la fila agrupa varias habitaciones del mismo hotel. */
   merged_slots?: FichaMergedRoomSlot[];
-  /** Entradas (check-in), p. ej. «20/3 y 30/3» */
+  /** Estadías compartidas (una tipología o varias con las mismas fechas). */
+  stay_segments?: FichaHotelStaySegment[];
+  /** Entradas (check-in), p. ej. «20/3 y 30/3» — derivado de ``stay_segments``. */
   ficha_entrada?: string;
-  /** Salidas (día de checkout), p. ej. «26/3 y 2/4» */
+  /** Salidas (día de checkout), p. ej. «26/3 y 2/4» — derivado de ``stay_segments``. */
   ficha_salida?: string;
-  /** Noches por estadía, p. ej. «6 y 3» */
+  /** Noches por estadía, p. ej. «6 y 3» — calculado, no editable. */
   ficha_noches_texto?: string;
   notes: string;
 }

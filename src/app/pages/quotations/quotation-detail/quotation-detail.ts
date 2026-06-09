@@ -46,6 +46,7 @@ import {
   FileAADetailVehicleObsState,
   FileAADetailActivityObsState,
   FileAADetailRoomObsState,
+  FichaHotelStaySegment,
   FichaMergedRoomSlot,
   FileAADetailCreateBody,
 } from '../../../core/models/quotation.model';
@@ -428,6 +429,13 @@ export class QuotationDetail implements OnInit {
 
   /** Diálogo: añadir fila en Ficha AA (nueva vs reemplazo + servicio del itinerario). */
   showFichaAddDetailDialog = signal(false);
+  /** Modal: editar pareja entrada/salida de una estadía hotel. */
+  showHotelStayEditDialog = signal(false);
+  hotelStayEditDetailId = signal<string | null>(null);
+  hotelStayEditRoomIndex = signal<number | null>(null);
+  hotelStayEditSegmentIndex = signal(0);
+  hotelStayEditEntradaDate = signal<Date | null>(null);
+  hotelStayEditSalidaDate = signal<Date | null>(null);
   fichaAddDetailStep = signal<'kind' | 'pick-room' | 'pick'>('kind');
   /** Fila desde la que se abrió el diálogo (solo UI / categoría). */
   fichaAddAnchorRow = signal<FileAADetailRow | null>(null);
@@ -3701,6 +3709,309 @@ export class QuotationDetail implements OnInit {
     return `${y}-${mo}-${da}`;
   }
 
+  hotelStayEditNightsPreview = computed(() => {
+    const ent = this.hotelStayEditEntradaDate();
+    const sal = this.hotelStayEditSalidaDate();
+    if (!ent || !sal) return null;
+    const entIso = this.dateToIso(ent);
+    const salIso = this.dateToIso(sal);
+    if (!entIso || !salIso) return null;
+    return this.hotelStayNights(entIso, salIso);
+  });
+
+  private fichaHotelRefYear(d: FileAADetailRow): number {
+    if (d.date_from) {
+      const y = parseInt(d.date_from.slice(0, 4), 10);
+      if (Number.isFinite(y)) return y;
+    }
+    const q = this.quotation();
+    if (q?.from_date) {
+      const y = parseInt(String(q.from_date).slice(0, 4), 10);
+      if (Number.isFinite(y)) return y;
+    }
+    return new Date().getFullYear();
+  }
+
+  private splitFichaYText(text: string | null | undefined): string[] {
+    return (text ?? '')
+      .split(/\s+y\s+/i)
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }
+
+  private parseFichaDmToIso(dm: string, refYear: number): string | null {
+    const m = /^(\d{1,2})\/(\d{1,2})$/.exec((dm ?? '').trim());
+    if (!m) return null;
+    const day = Number(m[1]);
+    const month = Number(m[2]);
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+    return `${refYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  private isoToDate(iso: string | null | undefined): Date | null {
+    if (!iso) return null;
+    const dt = new Date(`${iso}T12:00:00`);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+
+  private dateToIso(dt: Date | null | undefined): string | null {
+    if (!dt || Number.isNaN(dt.getTime())) return null;
+    const y = dt.getFullYear();
+    const mo = String(dt.getMonth() + 1).padStart(2, '0');
+    const da = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${da}`;
+  }
+
+  /** Noches entre entrada (inclusive) y salida (checkout, exclusiva). */
+  private hotelStayNights(entrada_iso: string, salida_iso: string): number {
+    const a = new Date(`${entrada_iso}T12:00:00`);
+    const b = new Date(`${salida_iso}T12:00:00`);
+    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 0;
+    const diff = Math.round((b.getTime() - a.getTime()) / 86_400_000);
+    return Math.max(0, diff);
+  }
+
+  private parseHotelStaySegments(
+    entradaText: string,
+    salidaText: string,
+    d: FileAADetailRow,
+    slotExtras?: Record<string, unknown>,
+  ): FichaHotelStaySegment[] {
+    const refYear = this.fichaHotelRefYear(d);
+    const entParts = this.splitFichaYText(entradaText);
+    const salParts = this.splitFichaYText(salidaText);
+    const count = Math.max(entParts.length, salParts.length);
+    const segments: FichaHotelStaySegment[] = [];
+    for (let i = 0; i < count; i++) {
+      const entIso = this.parseFichaDmToIso(entParts[i] ?? entParts[0] ?? '', refYear);
+      const salIso = this.parseFichaDmToIso(salParts[i] ?? salParts[0] ?? '', refYear);
+      if (entIso && salIso && salIso > entIso) {
+        segments.push({ entrada_iso: entIso, salida_iso: salIso });
+      }
+    }
+    if (segments.length > 0) return segments;
+
+    const rawIso = slotExtras?.['room_dates_iso'];
+    if (Array.isArray(rawIso) && rawIso.length > 0) {
+      const nights = rawIso
+        .map((x) => String(x).trim())
+        .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x))
+        .sort();
+      if (nights.length > 0) {
+        return [{ entrada_iso: nights[0], salida_iso: this.isoAddDays(nights[nights.length - 1], 1) }];
+      }
+    }
+
+    const df = String(slotExtras?.['date_from'] ?? d.date_from ?? '').trim();
+    const dt = String(slotExtras?.['date_to'] ?? d.date_to ?? '').trim();
+    if (df && dt) {
+      return [{ entrada_iso: df, salida_iso: this.isoAddDays(dt, 1) }];
+    }
+    return [];
+  }
+
+  private segmentsToFichaFields(segments: FichaHotelStaySegment[]): {
+    ficha_entrada: string;
+    ficha_salida: string;
+    ficha_noches_texto: string;
+  } {
+    const ent: string[] = [];
+    const sal: string[] = [];
+    const noc: string[] = [];
+    for (const seg of segments) {
+      ent.push(this.formatIsoDateDm(seg.entrada_iso));
+      sal.push(this.formatIsoDateDm(seg.salida_iso));
+      noc.push(String(this.hotelStayNights(seg.entrada_iso, seg.salida_iso)));
+    }
+    const join = (parts: string[]) => (parts.length <= 1 ? (parts[0] ?? '') : parts.join(' y '));
+    return {
+      ficha_entrada: join(ent),
+      ficha_salida: join(sal),
+      ficha_noches_texto: join(noc),
+    };
+  }
+
+  private segmentsToRoomDatesIso(segments: FichaHotelStaySegment[]): string[] {
+    const isos: string[] = [];
+    for (const seg of segments) {
+      let cur = seg.entrada_iso;
+      while (cur < seg.salida_iso) {
+        isos.push(cur);
+        cur = this.isoAddDays(cur, 1);
+      }
+    }
+    return [...new Set(isos)].sort();
+  }
+
+  private joinFichaYFields(parts: string[]): string {
+    const cleaned = parts.map((p) => p.trim()).filter(Boolean);
+    if (!cleaned.length) return '';
+    return cleaned.length === 1 ? cleaned[0] : cleaned.join(' y ');
+  }
+
+  fichaHotelRoomsHaveDifferentStays(d: FileAADetailRow): boolean {
+    const raw = d.observation_extras?.['merged_rooms'];
+    if (!Array.isArray(raw) || raw.length <= 1) return false;
+    const sigs = new Set<string>();
+    for (const item of raw) {
+      if (!item || typeof item !== 'object') continue;
+      const o = item as Record<string, unknown>;
+      sigs.add(`${String(o['ficha_entrada'] ?? '')}|${String(o['ficha_salida'] ?? '')}`);
+    }
+    return sigs.size > 1;
+  }
+
+  private getHotelStaySegmentsFromDraft(d: FileAADetailRow, roomIndex: number | null): FichaHotelStaySegment[] {
+    const draft = this.ensureHotelFichaObsDraft(d);
+    if (roomIndex !== null && draft.merged_slots?.[roomIndex]) {
+      const slot = draft.merged_slots[roomIndex];
+      if (!slot.stay_segments?.length) {
+        const raw = d.observation_extras?.['merged_rooms'];
+        const slotExtras =
+          Array.isArray(raw) && raw[roomIndex] && typeof raw[roomIndex] === 'object'
+            ? (raw[roomIndex] as Record<string, unknown>)
+            : undefined;
+        slot.stay_segments = this.parseHotelStaySegments(
+          String(slotExtras?.['ficha_entrada'] ?? draft.ficha_entrada ?? ''),
+          String(slotExtras?.['ficha_salida'] ?? draft.ficha_salida ?? ''),
+          d,
+          slotExtras,
+        );
+      }
+      return slot.stay_segments;
+    }
+    if (!draft.stay_segments?.length) {
+      draft.stay_segments = this.parseHotelStaySegments(
+        draft.ficha_entrada ?? '',
+        draft.ficha_salida ?? '',
+        d,
+        d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+          ? (d.observation_extras as Record<string, unknown>)
+          : undefined,
+      );
+    }
+    return draft.stay_segments;
+  }
+
+  hotelStaySegmentsDisplay(d: FileAADetailRow, roomIndex: number | null = null): FichaHotelStaySegment[] {
+    return this.getHotelStaySegmentsFromDraft(d, roomIndex);
+  }
+
+  hotelNochesDisplay(d: FileAADetailRow, roomIndex: number | null = null): string {
+    const segments = this.getHotelStaySegmentsFromDraft(d, roomIndex);
+    const parts = segments.map((s) => String(this.hotelStayNights(s.entrada_iso, s.salida_iso)));
+    return this.joinFichaYFields(parts);
+  }
+
+  hotelStayEditDialogTitle(): string {
+    const detailId = this.hotelStayEditDetailId();
+    const ficha = this.fichaFileAA();
+    const row = ficha?.details.find((r) => r.id === detailId);
+    const ri = this.hotelStayEditRoomIndex();
+    const si = this.hotelStayEditSegmentIndex();
+    let label = 'Editar estadía';
+    if (row && ri !== null && this.fichaHotelRoomsHaveDifferentStays(row)) {
+      const slot = this.ensureHotelFichaObsDraft(row).merged_slots?.[ri];
+      if (slot) label = `${label} — ${this.fichaMergedRoomLabel(slot, ri)}`;
+    }
+    if (si > 0) label = `${label} (${si + 1})`;
+    return label;
+  }
+
+  openHotelStayEditDialog(d: FileAADetailRow, segmentIndex: number, roomIndex: number | null = null): void {
+    const segments = this.getHotelStaySegmentsFromDraft(d, roomIndex);
+    const seg = segments[segmentIndex];
+    if (!seg) return;
+    this.hotelStayEditDetailId.set(d.id);
+    this.hotelStayEditRoomIndex.set(roomIndex);
+    this.hotelStayEditSegmentIndex.set(segmentIndex);
+    this.hotelStayEditEntradaDate.set(this.isoToDate(seg.entrada_iso));
+    this.hotelStayEditSalidaDate.set(this.isoToDate(seg.salida_iso));
+    this.showHotelStayEditDialog.set(true);
+  }
+
+  onHotelStayEditDialogHide(): void {
+    this.hotelStayEditDetailId.set(null);
+    this.hotelStayEditRoomIndex.set(null);
+    this.hotelStayEditSegmentIndex.set(0);
+    this.hotelStayEditEntradaDate.set(null);
+    this.hotelStayEditSalidaDate.set(null);
+  }
+
+  confirmHotelStayEditDialog(): void {
+    const detailId = this.hotelStayEditDetailId();
+    const ficha = this.fichaFileAA();
+    const row = ficha?.details.find((r) => r.id === detailId);
+    if (!row) {
+      this.showHotelStayEditDialog.set(false);
+      return;
+    }
+    const entIso = this.dateToIso(this.hotelStayEditEntradaDate());
+    const salIso = this.dateToIso(this.hotelStayEditSalidaDate());
+    if (!entIso || !salIso) {
+      this.messageService.add({ severity: 'warn', summary: 'Indique entrada y salida' });
+      return;
+    }
+    if (salIso <= entIso) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'La salida debe ser posterior a la entrada',
+        detail: 'La salida es el día de checkout; del 1 al 5 de enero son 4 noches.',
+      });
+      return;
+    }
+    const draft = this.ensureHotelFichaObsDraft(row);
+    const ri = this.hotelStayEditRoomIndex();
+    const si = this.hotelStayEditSegmentIndex();
+    const segments =
+      ri !== null && draft.merged_slots?.[ri]
+        ? (draft.merged_slots[ri].stay_segments ??= this.getHotelStaySegmentsFromDraft(row, ri))
+        : (draft.stay_segments ??= this.getHotelStaySegmentsFromDraft(row, null));
+    if (!segments[si]) {
+      this.showHotelStayEditDialog.set(false);
+      return;
+    }
+    segments[si] = { entrada_iso: entIso, salida_iso: salIso };
+    this.syncHotelFichaDateTextsFromSegments(draft, ri);
+    this.bumpHotelFichaPriceRev();
+    this.showHotelStayEditDialog.set(false);
+    this.commitHotelFichaObs(row);
+  }
+
+  private syncHotelFichaDateTextsFromSegments(
+    draft: FileAADetailRoomObsState,
+    roomIndex: number | null,
+  ): void {
+    if (roomIndex !== null && draft.merged_slots?.[roomIndex]?.stay_segments) {
+      const fields = this.segmentsToFichaFields(draft.merged_slots[roomIndex].stay_segments!);
+      draft.merged_slots[roomIndex].stay_segments = [...draft.merged_slots[roomIndex].stay_segments!];
+      if (!this.fichaHotelRoomsHaveDifferentStaysFromDraft(draft)) {
+        draft.ficha_entrada = fields.ficha_entrada;
+        draft.ficha_salida = fields.ficha_salida;
+        draft.ficha_noches_texto = fields.ficha_noches_texto;
+      }
+      return;
+    }
+    if (draft.stay_segments?.length) {
+      const fields = this.segmentsToFichaFields(draft.stay_segments);
+      draft.ficha_entrada = fields.ficha_entrada;
+      draft.ficha_salida = fields.ficha_salida;
+      draft.ficha_noches_texto = fields.ficha_noches_texto;
+    }
+  }
+
+  private fichaHotelRoomsHaveDifferentStaysFromDraft(draft: FileAADetailRoomObsState): boolean {
+    const slots = draft.merged_slots;
+    if (!slots || slots.length <= 1) return false;
+    const sigs = new Set<string>();
+    for (const slot of slots) {
+      const segs = slot.stay_segments ?? [];
+      const fields = this.segmentsToFichaFields(segs);
+      sigs.add(`${fields.ficha_entrada}|${fields.ficha_salida}`);
+    }
+    return sigs.size > 1;
+  }
+
   /** Parsea líneas «Entrada: … / Salida: … / Noches: …» generadas al exportar o desde API. */
   private parseFichaHotelDatesCell(dates: string | null | undefined): {
     ficha_entrada: string;
@@ -3781,7 +4092,51 @@ export class QuotationDetail implements OnInit {
       const nd = Number(d.days);
       ficha_noches_texto = Number.isFinite(nd) && nd > 0 ? String(nd) : '';
     }
-    return { room_quantity, merged_slots, ficha_entrada, ficha_salida, ficha_noches_texto, notes };
+
+    const extrasObj =
+      raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : undefined;
+    const differentStays = this.fichaHotelRoomsHaveDifferentStays(d);
+    const rawMergedArr = extrasObj?.['merged_rooms'];
+    if (Array.isArray(rawMergedArr) && rawMergedArr.length > 0 && (merged.length > 1 || differentStays)) {
+      merged_slots = rawMergedArr.map((item, i) => {
+        const slotObj = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+        const m = merged[i] ?? merged[0];
+        const stay_segments = this.parseHotelStaySegments(
+          String(slotObj['ficha_entrada'] ?? ficha_entrada),
+          String(slotObj['ficha_salida'] ?? ficha_salida),
+          d,
+          slotObj,
+        );
+        return {
+          room_id: String(slotObj['room_id'] ?? m?.room_id ?? ''),
+          room_file_aa_name:
+            String(slotObj['room_file_aa_name'] ?? m?.room_file_aa_name ?? '').trim() || undefined,
+          room_quantity: m?.room_quantity ?? null,
+          stay_segments,
+        };
+      });
+    }
+
+    const stay_segments = this.parseHotelStaySegments(
+      ficha_entrada,
+      ficha_salida,
+      d,
+      extrasObj,
+    );
+    if (stay_segments.length > 0) {
+      const fields = this.segmentsToFichaFields(stay_segments);
+      ficha_noches_texto = fields.ficha_noches_texto;
+    }
+
+    return {
+      room_quantity,
+      merged_slots,
+      stay_segments,
+      ficha_entrada,
+      ficha_salida,
+      ficha_noches_texto,
+      notes,
+    };
   }
 
   /** Tipologías incluidas en una fila hotel (legacy = una sola). */
@@ -3916,15 +4271,6 @@ export class QuotationDetail implements OnInit {
       case `aa-rmq-${d.id}`:
         row.room_quantity = this.parseHotelRoomQuantityInput(val);
         break;
-      case `aa-hent-${d.id}`:
-        row.ficha_entrada = val;
-        break;
-      case `aa-hsal-${d.id}`:
-        row.ficha_salida = val;
-        break;
-      case `aa-hnoc-${d.id}`:
-        row.ficha_noches_texto = val;
-        break;
       case `aa-rno-${d.id}`:
         row.notes = val;
         break;
@@ -4032,22 +4378,23 @@ export class QuotationDetail implements OnInit {
         : {};
     this.backfillHotelRackSnapshotFields(prev, d);
     const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
-    const ficha_entrada = (row.ficha_entrada ?? '').trim();
-    const ficha_salida = (row.ficha_salida ?? '').trim();
-    const ficha_noches_texto = (row.ficha_noches_texto ?? '').trim();
+    const differentStays = this.fichaHotelRoomsHaveDifferentStays(d);
+    const rowSegments = row.stay_segments?.length
+      ? row.stay_segments
+      : this.parseHotelStaySegments(row.ficha_entrada ?? '', row.ficha_salida ?? '', d, prev);
+    const rowFields = this.segmentsToFichaFields(rowSegments);
     const datesLines: string[] = [];
-    if (ficha_entrada) datesLines.push(`Entrada: ${ficha_entrada}`);
-    if (ficha_salida) datesLines.push(`Salida: ${ficha_salida}`);
-    if (ficha_noches_texto) datesLines.push(`Noches: ${ficha_noches_texto}`);
+    if (rowFields.ficha_entrada) datesLines.push(`Entrada: ${rowFields.ficha_entrada}`);
+    if (rowFields.ficha_salida) datesLines.push(`Salida: ${rowFields.ficha_salida}`);
+    if (rowFields.ficha_noches_texto) datesLines.push(`Noches: ${rowFields.ficha_noches_texto}`);
     const datesCell = datesLines.join('\n');
-    const observation_extras: Record<string, unknown> = {
-      ...prev,
-      ficha_entrada,
-      ficha_salida,
-      ficha_noches_texto,
-    };
+    const observation_extras: Record<string, unknown> = { ...prev };
+
     if (Array.isArray(prevMerged) && prevMerged.length > 0) {
       const multiType = prevMerged.length > 1;
+      const entTexts: string[] = [];
+      const salTexts: string[] = [];
+      const nocTexts: string[] = [];
       const updatedMerged = prevMerged.map((item, i) => {
         const base =
           item && typeof item === 'object' ? { ...(item as Record<string, unknown>) } : {};
@@ -4063,15 +4410,41 @@ export class QuotationDetail implements OnInit {
           slotQty =
             room_quantity ?? this.parseHotelRoomQuantityInput(base['room_quantity']) ?? 1;
         }
+        const slotSegments =
+          differentStays && row.merged_slots?.[i]?.stay_segments?.length
+            ? row.merged_slots[i].stay_segments!
+            : rowSegments;
+        const slotFields = this.segmentsToFichaFields(slotSegments);
+        entTexts.push(slotFields.ficha_entrada);
+        salTexts.push(slotFields.ficha_salida);
+        nocTexts.push(slotFields.ficha_noches_texto);
+        const roomDatesIso = this.segmentsToRoomDatesIso(slotSegments);
+        const dateFrom = roomDatesIso[0] ?? String(base['date_from'] ?? d.date_from ?? '');
+        const dateTo = roomDatesIso.length
+          ? this.isoAddDays(roomDatesIso[roomDatesIso.length - 1], 0)
+          : String(base['date_to'] ?? d.date_to ?? '');
         return {
           ...base,
           room_quantity: slotQty,
-          ficha_entrada,
-          ficha_salida,
-          ficha_noches_texto,
+          ficha_entrada: slotFields.ficha_entrada,
+          ficha_salida: slotFields.ficha_salida,
+          ficha_noches_texto: slotFields.ficha_noches_texto,
+          room_dates_iso: roomDatesIso,
+          date_from: dateFrom,
+          date_to: dateTo,
         };
       });
       observation_extras['merged_rooms'] = updatedMerged;
+      observation_extras['ficha_entrada'] = differentStays
+        ? this.joinFichaYFields(entTexts)
+        : rowFields.ficha_entrada;
+      observation_extras['ficha_salida'] = differentStays
+        ? this.joinFichaYFields(salTexts)
+        : rowFields.ficha_salida;
+      observation_extras['ficha_noches_texto'] = differentStays
+        ? this.joinFichaYFields(nocTexts)
+        : rowFields.ficha_noches_texto;
+      observation_extras['room_dates_iso'] = this.segmentsToRoomDatesIso(rowSegments);
       if (!multiType) {
         observation_extras['room_quantity'] = updatedMerged[0]['room_quantity'];
       } else {
@@ -4081,7 +4454,11 @@ export class QuotationDetail implements OnInit {
         );
       }
     } else {
+      observation_extras['ficha_entrada'] = rowFields.ficha_entrada;
+      observation_extras['ficha_salida'] = rowFields.ficha_salida;
+      observation_extras['ficha_noches_texto'] = rowFields.ficha_noches_texto;
       observation_extras['room_quantity'] = room_quantity;
+      observation_extras['room_dates_iso'] = this.segmentsToRoomDatesIso(rowSegments);
       this.backfillHotelRackSnapshotFields(observation_extras, d);
     }
     const mergedOut = observation_extras['merged_rooms'];
