@@ -1475,6 +1475,23 @@ export class QuotationDetail implements OnInit {
     return raw.map((id) => String(id)).filter((id) => id.trim().length > 0);
   }
 
+  /** Suma precio sistema de actividades fusionadas en esta fila hotel. */
+  fichaHotelAttachedActivitiesTotal(hotel: FileAADetailRow): number {
+    const ids = this.fichaHotelAttachedActivityIds(hotel);
+    if (!ids.length) return 0;
+    const ficha = this.fichaFileAA();
+    if (!ficha) return 0;
+    let sum = 0;
+    for (const id of ids) {
+      const act = ficha.details.find((r) => r.id === id);
+      if (act) {
+        const n = Number(act.total_price ?? 0);
+        if (Number.isFinite(n)) sum += n;
+      }
+    }
+    return sum;
+  }
+
   canFichaDetachFromHotel(hotel: FileAADetailRow): boolean {
     return (
       hotel.category === 'room' &&
@@ -4307,9 +4324,10 @@ export class QuotationDetail implements OnInit {
       observations: notesTrim ? notesTrim : null,
       dates: datesCell,
     };
-    const systemTotal = this.fichaHotelSystemPriceFromExtras(observation_extras, d);
-    if (systemTotal !== null) {
-      patch.total_price = systemTotal;
+    const hotelOnly = this.fichaHotelSystemPriceFromExtras(observation_extras, d);
+    const attached = this.fichaHotelAttachedActivitiesTotal(d);
+    if (hotelOnly !== null) {
+      patch.total_price = Number((hotelOnly + attached).toFixed(2));
     }
     this.patchFileDetail(d.id, patch);
   }
@@ -4342,15 +4360,16 @@ export class QuotationDetail implements OnInit {
     return String(v);
   }
 
-  /** Precio sistema en vivo para filas hotel (borrador + tarifa rack congelada). */
+  /** Precio sistema en vivo para filas hotel (rack + actividades fusionadas). */
   fichaHotelSystemPriceDisplay(d: FileAADetailRow): string {
     this.hotelFichaPriceRev();
     if (d.category !== 'room') {
       return this.fichaDetailPriceDisplay(d.total_price);
     }
+    const attached = this.fichaHotelAttachedActivitiesTotal(d);
     const preview = this.previewHotelSystemPriceFromDraft(d);
     if (preview !== null) {
-      return this.fichaDetailPriceDisplay(preview);
+      return this.fichaDetailPriceDisplay(Number((preview + attached).toFixed(2)));
     }
     return this.fichaDetailPriceDisplay(d.total_price);
   }
