@@ -902,7 +902,7 @@
                       <col [style.width.px]="fichaAaColWidths().precioSistema" />
                       <col [style.width.px]="fichaAaColWidths().precioProveedor" />
                       <col class="col-ficha-paid" />
-                      <col class="col-ficha-email" />
+                      <col class="col-ficha-actions" />
                     </colgroup>
                     <thead>
                       <tr>
@@ -1056,7 +1056,7 @@
                           ></span>
                         </th>
                         <th class="col-ficha-paid" scope="col">Pagado</th>
-                        <th class="col-ficha-email" scope="col" pTooltip="Enviar solicitud por correo al proveedor">Correo</th>
+                        <th class="col-ficha-actions" scope="col">Acciones</th>
                       </tr>
                     </thead>
                     @for (dragBodyKey of [fichaDetailDragBodyKey()]; track dragBodyKey) {
@@ -1790,43 +1790,59 @@
                               [inputId]="'aa-paid-' + d.id"
                             />
                           </td>
-                          <td class="col-ficha-email">
-                            @if (d.category === 'vehicle' || d.category === 'activity' || d.category === 'room') {
-                              @if (d.row_status === 'red') {
-                                <span
-                                  class="text-muted"
-                                  pTooltip="No se puede enviar correo a una fila sustituida (marcada en rojo)."
-                                  tooltipPosition="top"
-                                >—</span>
-                              } @else if (d.supplier_email_sent_at) {
-                                <span
-                                  class="ficha-email-sent"
-                                  [pTooltip]="fichaSupplierEmailSentTooltip(d)"
-                                  tooltipPosition="top"
-                                >
-                                  <i class="pi pi-check-circle ficha-email-sent__icon" aria-hidden="true"></i>
-                                  <span class="ficha-email-sent__label">Enviado</span>
-                                </span>
-                              } @else if (!d.send_email) {
+                          <td class="col-ficha-actions">
+                            <div class="ficha-actions-cell">
+                              @if (canFichaCombineActivity(d) && fichaCombineHotelOptions().length > 0) {
                                 <p-button
-                                  icon="pi pi-send"
+                                  icon="pi pi-link"
                                   [text]="true"
                                   [rounded]="true"
                                   size="small"
-                                  [loading]="sendingFichaEmailDetailId() === d.id"
-                                  pTooltip="Enviar al proveedor (Word y PDF de la línea)"
-                                  (onClick)="sendSupplierReservationEmail(d)"
-                                />
-                              } @else {
-                                <span
-                                  class="text-muted"
-                                  pTooltip="Esta fila no admite envío de correo."
+                                  severity="secondary"
+                                  pTooltip="Combinar con un hotel"
                                   tooltipPosition="top"
-                                >—</span>
+                                  [disabled]="fichaDetailReorderSaving()"
+                                  (onClick)="openFichaCombineDialog(d)"
+                                />
                               }
-                            } @else {
-                              <span class="text-muted">—</span>
-                            }
+                              @if (d.category === 'vehicle' || d.category === 'activity' || d.category === 'room') {
+                                @if (d.row_status === 'red') {
+                                  <span
+                                    class="text-muted"
+                                    pTooltip="No disponible en fila sustituida"
+                                    tooltipPosition="top"
+                                  >—</span>
+                                } @else if (d.supplier_email_sent_at) {
+                                  <span
+                                    class="ficha-email-sent"
+                                    [pTooltip]="fichaSupplierEmailSentTooltip(d)"
+                                    tooltipPosition="top"
+                                  >
+                                    <i class="pi pi-check-circle ficha-email-sent__icon" aria-hidden="true"></i>
+                                    <span class="ficha-email-sent__label">Enviado</span>
+                                  </span>
+                                } @else if (!d.send_email) {
+                                  <p-button
+                                    icon="pi pi-send"
+                                    [text]="true"
+                                    [rounded]="true"
+                                    size="small"
+                                    [loading]="sendingFichaEmailDetailId() === d.id"
+                                    pTooltip="Enviar al proveedor (Word y PDF de la línea)"
+                                    tooltipPosition="top"
+                                    (onClick)="sendSupplierReservationEmail(d)"
+                                  />
+                                } @else {
+                                  <span
+                                    class="text-muted"
+                                    pTooltip="Esta fila no admite envío de correo"
+                                    tooltipPosition="top"
+                                  >—</span>
+                                }
+                              } @else {
+                                <span class="text-muted">—</span>
+                              }
+                            </div>
                           </td>
                         </tr>
                       }
@@ -1886,6 +1902,53 @@
     </p-tabs>
   </div>
 }
+
+<!-- Combinar actividad con hotel -->
+<p-dialog
+  styleClass="ficha-combine-dialog"
+  header="Combinar actividad con hotel"
+  [visible]="showFichaCombineDialog()"
+  (visibleChange)="showFichaCombineDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(520px, 96vw)' }"
+  (onHide)="onFichaCombineDialogHide()"
+>
+  @if (fichaCombineActivityRow(); as activity) {
+    <p class="ficha-add-dialog-hint">
+      Actividad:
+      <strong>{{ fichaCombineActivityLabel() }}</strong>
+    </p>
+    @if (fichaCombineHotelOptions().length === 0) {
+      <p class="ficha-add-empty">No hay filas de hotel disponibles en esta ficha.</p>
+    } @else {
+      <p class="ficha-add-pick-hint">Seleccione el hotel con el que desea combinar esta actividad.</p>
+      <label class="ficha-add-select-label" for="ficha-combine-hotel-sel">Hotel</label>
+      <p-select
+        inputId="ficha-combine-hotel-sel"
+        [options]="fichaCombineHotelOptions()"
+        [ngModel]="fichaCombineSelectedHotelId()"
+        (ngModelChange)="fichaCombineSelectedHotelId.set($event)"
+        dataKey="id"
+        optionLabel="label"
+        optionValue="id"
+        placeholder="Seleccione hotel…"
+        styleClass="w-full"
+        appendTo="body"
+        [filter]="true"
+        filterBy="label"
+      />
+    }
+  }
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showFichaCombineDialog.set(false)" />
+    <p-button
+      label="Continuar"
+      icon="pi pi-check"
+      [disabled]="!fichaCombineSelectedHotelId() || fichaCombineHotelOptions().length === 0"
+      (onClick)="submitFichaCombine()"
+    />
+  </ng-template>
+</p-dialog>
 
 <!-- Añadir línea en Ficha AA (nueva / reemplazo) -->
 <p-dialog

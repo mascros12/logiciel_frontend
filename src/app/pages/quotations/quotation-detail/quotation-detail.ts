@@ -182,7 +182,7 @@ const FICHA_AA_MIN_COL_WIDTHS: Record<FichaAaResizableColumn, number> = {
 };
 
 /** Columnas fijas (drag, checkboxes, correo…) en px — deben coincidir con quotation-detail.scss. */
-const FICHA_AA_FIXED_COLS_PX = 36 + 38 + 52 + 88 + 76 + 84;
+const FICHA_AA_FIXED_COLS_PX = 36 + 38 + 52 + 88 + 76 + 96;
 
 function computeFichaAaTableMinWidthPx(widths: Record<FichaAaResizableColumn, number>): number {
   return (
@@ -403,6 +403,9 @@ export class QuotationDetail implements OnInit {
   fichaAddSelectedPickKey = signal<string | null>(null);
   loadingFichaAddSource = signal(false);
   savingFichaAddDetail = signal(false);
+  showFichaCombineDialog = signal(false);
+  fichaCombineActivityRow = signal<FileAADetailRow | null>(null);
+  fichaCombineSelectedHotelId = signal<string | null>(null);
   showFichaColorPicker = signal(false);
 
   /** Edición inline del nombre en Ficha AA (file_aa_name del catálogo). */
@@ -1281,18 +1284,8 @@ export class QuotationDetail implements OnInit {
   }
 
   dropFichaDetailRow(event: CdkDragDrop<FileAADetailRow[]>, ficha: FileAAWithDetails): void {
-    const dragged = event.item.data as FileAADetailRow;
-    const previousVisible = [...this.fichaVisibleDetailsList()];
-    const hotelTarget = this.fichaActivityDropHotelTarget(event, previousVisible, dragged);
-    if (
-      dragged.category === 'activity' &&
-      hotelTarget?.category === 'room' &&
-      !this.fichaActivityMergedIntoHotel(dragged)
-    ) {
-      this.confirmAttachActivityToHotel(dragged, hotelTarget);
-      return;
-    }
     if (event.previousIndex === event.currentIndex) return;
+    const previousVisible = [...this.fichaVisibleDetailsList()];
     const previousDetails = [...(ficha.details ?? [])];
 
     const reorderedVisible = this.fichaVisibleOrderAfterDrop(event, previousVisible);
@@ -1329,22 +1322,60 @@ export class QuotationDetail implements OnInit {
     return raw !== null && raw !== undefined && String(raw).trim().length > 0;
   }
 
-  /** Fila hotel sobre la que se soltó una actividad (vecindad del índice de drop). */
-  private fichaActivityDropHotelTarget(
-    event: CdkDragDrop<FileAADetailRow[]>,
-    list: FileAADetailRow[],
-    dragged: FileAADetailRow,
-  ): FileAADetailRow | null {
-    if (dragged.category !== 'activity') return null;
-    const idx = event.currentIndex;
-    for (const i of [idx, idx - 1, idx + 1]) {
-      if (i < 0 || i >= list.length) continue;
-      const row = list[i];
-      if (row.category === 'room' && row.id !== dragged.id && row.row_status !== 'red') {
-        return row;
-      }
-    }
-    return null;
+  canFichaCombineActivity(d: FileAADetailRow): boolean {
+    return (
+      d.category === 'activity' &&
+      d.row_status !== 'red' &&
+      !this.fichaActivityMergedIntoHotel(d)
+    );
+  }
+
+  fichaCombineHotelOptions(): { id: string; label: string }[] {
+    const f = this.fichaFileAA();
+    if (!f) return [];
+    return (f.details ?? [])
+      .filter(
+        (row) =>
+          row.category === 'room' &&
+          row.row_status !== 'red' &&
+          fichaAaDetailVisibleInTable(row),
+      )
+      .map((row) => ({
+        id: row.id,
+        label: this.stripHtml(
+          this.fichaDetailServiceLines(row).join(' · ') || row.name || 'Hotel',
+        ),
+      }));
+  }
+
+  openFichaCombineDialog(activity: FileAADetailRow): void {
+    if (!this.canFichaCombineActivity(activity)) return;
+    this.fichaCombineActivityRow.set(activity);
+    this.fichaCombineSelectedHotelId.set(null);
+    this.showFichaCombineDialog.set(true);
+  }
+
+  onFichaCombineDialogHide(): void {
+    this.fichaCombineActivityRow.set(null);
+    this.fichaCombineSelectedHotelId.set(null);
+  }
+
+  submitFichaCombine(): void {
+    const activity = this.fichaCombineActivityRow();
+    const hotelId = this.fichaCombineSelectedHotelId();
+    if (!activity || !hotelId) return;
+    const hotel = this.fichaFileAA()?.details?.find((row) => row.id === hotelId);
+    if (!hotel || hotel.category !== 'room') return;
+    this.showFichaCombineDialog.set(false);
+    this.confirmAttachActivityToHotel(activity, hotel);
+  }
+
+  fichaCombineActivityLabel(): string {
+    const activity = this.fichaCombineActivityRow();
+    if (!activity) return '';
+    return this.stripHtml(
+      this.fichaDetailServiceLines(activity)[0] || activity.name || 'Actividad',
+    );
   }
 
   private confirmAttachActivityToHotel(
