@@ -1805,6 +1805,19 @@
                                   (onClick)="openFichaCombineDialog(d)"
                                 />
                               }
+                              @if (canFichaDetachFromHotel(d)) {
+                                <p-button
+                                  icon="pi pi-undo"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  size="small"
+                                  severity="warn"
+                                  pTooltip="Descombinar actividad incorporada"
+                                  tooltipPosition="top"
+                                  [disabled]="fichaDetailReorderSaving()"
+                                  (onClick)="onFichaDetachClick(d)"
+                                />
+                              }
                               @if (d.category === 'vehicle' || d.category === 'activity' || d.category === 'room') {
                                 @if (d.row_status === 'red') {
                                   <span
@@ -1946,6 +1959,53 @@
       icon="pi pi-check"
       [disabled]="!fichaCombineSelectedHotelId() || fichaCombineHotelOptions().length === 0"
       (onClick)="submitFichaCombine()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Descombinar actividad de hotel -->
+<p-dialog
+  styleClass="ficha-combine-dialog"
+  header="Descombinar actividad del hotel"
+  [visible]="showFichaDetachDialog()"
+  (visibleChange)="showFichaDetachDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(520px, 96vw)' }"
+  (onHide)="onFichaDetachDialogHide()"
+>
+  @if (fichaDetachHotelRow(); as hotel) {
+    <p class="ficha-add-dialog-hint">
+      Hotel:
+      <strong>{{ fichaDetachHotelLabel() }}</strong>
+    </p>
+    @if (fichaHotelAttachedActivityOptions(hotel).length === 0) {
+      <p class="ficha-add-empty">No hay actividades incorporadas en este hotel.</p>
+    } @else {
+      <p class="ficha-add-pick-hint">Seleccione la actividad que desea descombinar.</p>
+      <label class="ficha-add-select-label" for="ficha-detach-activity-sel">Actividad</label>
+      <p-select
+        inputId="ficha-detach-activity-sel"
+        [options]="fichaHotelAttachedActivityOptions(hotel)"
+        [ngModel]="fichaDetachSelectedActivityId()"
+        (ngModelChange)="fichaDetachSelectedActivityId.set($event)"
+        dataKey="id"
+        optionLabel="label"
+        optionValue="id"
+        placeholder="Seleccione actividad…"
+        styleClass="w-full"
+        appendTo="body"
+        [filter]="true"
+        filterBy="label"
+      />
+    }
+  }
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showFichaDetachDialog.set(false)" />
+    <p-button
+      label="Continuar"
+      icon="pi pi-check"
+      [disabled]="!fichaDetachSelectedActivityId()"
+      (onClick)="submitFichaDetach()"
     />
   </ng-template>
 </p-dialog>
