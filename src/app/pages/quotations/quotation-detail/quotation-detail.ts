@@ -423,6 +423,8 @@ export class QuotationDetail implements OnInit {
   private hotelFichaObsDraft: Record<string, FileAADetailRoomObsState> = {};
   /** Evita que un PATCH lento sobrescriba un cambio más reciente en la misma fila. */
   private fileDetailPatchSeq: Record<string, number> = {};
+  /** Fuerza refresco de la columna «Precio sistema» al editar noches/cantidad en hotel. */
+  private hotelFichaPriceRev = signal(0);
 
   /** Diálogo: añadir fila en Ficha AA (nueva vs reemplazo + servicio del itinerario). */
   showFichaAddDetailDialog = signal(false);
@@ -2901,16 +2903,16 @@ export class QuotationDetail implements OnInit {
     const observation_extras =
       patch.observation_extras !== undefined
         ? patch.observation_extras
-        : server.observation_extras ?? row.observation_extras;
+        : row.observation_extras ?? server.observation_extras;
     return {
       ...row,
       ...server,
       ...patch,
       observation_extras,
-      dates: patch.dates ?? server.dates ?? row.dates,
-      total_price: patch.total_price ?? server.total_price ?? row.total_price,
+      dates: patch.dates ?? row.dates ?? server.dates,
+      total_price: patch.total_price ?? row.total_price ?? server.total_price,
       observations:
-        patch.observations !== undefined ? patch.observations : server.observations ?? row.observations,
+        patch.observations !== undefined ? patch.observations : row.observations ?? server.observations,
       display_service_lines:
         server.display_service_lines?.length
           ? server.display_service_lines
@@ -2954,6 +2956,11 @@ export class QuotationDetail implements OnInit {
         }
       },
       error: (err) => {
+        if (prevRow) {
+          const details = cur.details.map((d) => (d.id === detailId ? prevRow : d));
+          this.fichaFileAA.set({ ...cur, details });
+          this.syncFichaVisibleDetailsList();
+        }
         this.messageService.add({
           severity: 'error',
           summary: typeof err.error?.detail === 'string' ? err.error.detail : 'No se pudo guardar el cambio',
@@ -3824,6 +3831,7 @@ export class QuotationDetail implements OnInit {
     const draft = this.ensureHotelFichaObsDraft(d);
     if (!draft.merged_slots?.[index]) return;
     draft.merged_slots[index].room_quantity = this.parseHotelRoomQuantityInput(raw);
+    this.bumpHotelFichaPriceRev();
   }
 
   fichaReplaceRoomOptions(d: FileAADetailRow): { roomId: string; label: string }[] {
@@ -3864,6 +3872,15 @@ export class QuotationDetail implements OnInit {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
     this.ensureHotelFichaObsDraft(d).room_quantity = this.parseHotelRoomQuantityInput(target.value);
+    this.bumpHotelFichaPriceRev();
+  }
+
+  onHotelFichaDraftChange(d: FileAADetailRow): void {
+    this.bumpHotelFichaPriceRev();
+  }
+
+  private bumpHotelFichaPriceRev(): void {
+    this.hotelFichaPriceRev.update((n) => n + 1);
   }
 
   /** Flechas del input number: el valor puede aplicarse después del blur — guardamos en el siguiente tick. */
@@ -3977,6 +3994,19 @@ export class QuotationDetail implements OnInit {
       }
     } else {
       observation_extras['room_quantity'] = room_quantity;
+      this.backfillHotelRackSnapshotFields(observation_extras, d);
+    }
+    const mergedOut = observation_extras['merged_rooms'];
+    if (Array.isArray(mergedOut) && mergedOut.length === 1) {
+      const slot = mergedOut[0];
+      if (slot && typeof slot === 'object') {
+        for (const key of ['room_rack_per_night', 'rack_nights_base', 'rack_nightly_sum', 'room_quantity'] as const) {
+          const val = (slot as Record<string, unknown>)[key];
+          if (val !== undefined && val !== null && val !== '') {
+            observation_extras[key] = val;
+          }
+        }
+      }
     }
     const notesTrim = row.notes.trim();
     const patch: FileAADetailPatch = {
@@ -4017,6 +4047,74 @@ export class QuotationDetail implements OnInit {
   fichaDetailPriceDisplay(v: number | string | null | undefined): string {
     if (v === null || v === undefined || v === '') return '';
     return String(v);
+  }
+
+  /** Precio sistema en vivo para filas hotel (borrador + tarifa rack congelada). */
+  fichaHotelSystemPriceDisplay(d: FileAADetailRow): string {
+    this.hotelFichaPriceRev();
+    if (d.category !== 'room') {
+      return this.fichaDetailPriceDisplay(d.total_price);
+    }
+    const preview = this.previewHotelSystemPriceFromDraft(d);
+    if (preview !== null) {
+      return this.fichaDetailPriceDisplay(preview);
+    }
+    return this.fichaDetailPriceDisplay(d.total_price);
+  }
+
+  /** Construye extras como en commit y calcula precio sin persistir (vista previa). */
+  private previewHotelSystemPriceFromDraft(d: FileAADetailRow): number | null {
+    const draft = this.hotelFichaObsDraft[d.id] ?? this.hotelFichaObsFromServer(d);
+    const room_quantity = this.parseHotelRoomQuantityInput(draft.room_quantity);
+    const prev =
+      d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
+        ? { ...(d.observation_extras as Record<string, unknown>) }
+        : {};
+    this.backfillHotelRackSnapshotFields(prev, d);
+    const prevMerged = (prev['merged_rooms'] as unknown[]) ?? [];
+    const ficha_entrada = (draft.ficha_entrada ?? '').trim();
+    const ficha_salida = (draft.ficha_salida ?? '').trim();
+    const ficha_noches_texto = (draft.ficha_noches_texto ?? '').trim();
+    const observation_extras: Record<string, unknown> = {
+      ...prev,
+      ficha_entrada,
+      ficha_salida,
+      ficha_noches_texto,
+    };
+    const draftSlots =
+      draft.merged_slots && draft.merged_slots.length > 0
+        ? draft.merged_slots
+        : this.fichaMergedRoomsFromExtras(d);
+    if (Array.isArray(prevMerged) && prevMerged.length > 0 && draftSlots.length > 0) {
+      const multiType = draftSlots.length > 1;
+      const updatedMerged = draftSlots.map((slot, i) => {
+        const base =
+          Array.isArray(prevMerged) && prevMerged[i] && typeof prevMerged[i] === 'object'
+            ? { ...(prevMerged[i] as Record<string, unknown>) }
+            : {};
+        this.backfillHotelRackSnapshotFields(base, d, { slotCount: draftSlots.length });
+        const slotQty = multiType
+          ? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1
+          : room_quantity ?? this.parseHotelRoomQuantityInput(slot.room_quantity) ?? 1;
+        return {
+          ...base,
+          room_id: slot.room_id,
+          room_file_aa_name: slot.room_file_aa_name,
+          room_quantity: slotQty,
+          ficha_entrada,
+          ficha_salida,
+          ficha_noches_texto,
+        };
+      });
+      observation_extras['merged_rooms'] = updatedMerged;
+      if (!multiType) {
+        observation_extras['room_quantity'] = updatedMerged[0]['room_quantity'];
+      }
+    } else {
+      observation_extras['room_quantity'] = room_quantity;
+      this.backfillHotelRackSnapshotFields(observation_extras, d);
+    }
+    return this.fichaHotelSystemPriceFromExtras(observation_extras, d);
   }
 
   fichaHasLargePriceGap(detail: FileAADetailRow): boolean {

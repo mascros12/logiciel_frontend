@@ -1522,6 +1522,7 @@
                                     class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_entrada"
+                                    (ngModelChange)="onHotelFichaDraftChange(d)"
                                     (blur)="commitHotelFichaObs(d, $event)"
                                   ></textarea>
                                 </div>
@@ -1533,6 +1534,7 @@
                                     class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_salida"
+                                    (ngModelChange)="onHotelFichaDraftChange(d)"
                                     (blur)="commitHotelFichaObs(d, $event)"
                                   ></textarea>
                                 </div>
@@ -1544,6 +1546,7 @@
                                     class="ficha-cell-input ficha-obs-textarea"
                                     rows="2"
                                     [(ngModel)]="ensureHotelFichaObsDraft(d).ficha_noches_texto"
+                                    (ngModelChange)="onHotelFichaDraftChange(d)"
                                     (blur)="commitHotelFichaObs(d, $event)"
                                   ></textarea>
                                 </div>
@@ -1963,7 +1966,7 @@
                             <input
                               pInputText
                               class="ficha-cell-input ficha-price-input"
-                              [value]="fichaDetailPriceDisplay(d.total_price)"
+                              [value]="fichaHotelSystemPriceDisplay(d)"
                               readonly
                             />
                           </td>
