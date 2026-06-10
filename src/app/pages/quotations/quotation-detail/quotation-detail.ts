@@ -3,7 +3,7 @@ import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, forkJoin } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
@@ -253,6 +253,10 @@ export class QuotationDetail implements OnInit {
     return role === 'admin' || role === 'operaciones' || role === 'comercial';
   });
   activeTab = signal<'agenda' | 'cotizacion' | 'fileaa'>('agenda');
+  /** Tab principal restaurado desde `?tab=` (no aplicar atajos automáticos de rol). */
+  private tabRestoredFromUrl = false;
+  /** Sub-tab Ficha AA restaurado desde `?fichaTab=`. */
+  private fichaTabRestoredFromUrl = false;
 
   // Versión seleccionada para ver
   selectedVersionId = signal<string | null>(null);
@@ -483,6 +487,7 @@ export class QuotationDetail implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private quotationService: QuotationService,
     private providerService: ProviderService,
     private auth: AuthService,
@@ -569,9 +574,45 @@ export class QuotationDetail implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;
+    this.restoreTabsFromRoute();
     this.loadFichaAaColWidths();
     this.load(id);
     this.loadProviders();
+  }
+
+  private restoreTabsFromRoute(): void {
+    const tab = this.route.snapshot.queryParamMap.get('tab');
+    if (tab === 'agenda' || tab === 'fileaa') {
+      this.tabRestoredFromUrl = true;
+      this.activeTab.set(tab);
+    } else if (tab === 'cotizacion' && this.canViewQuotationBreakdown()) {
+      this.tabRestoredFromUrl = true;
+      this.activeTab.set('cotizacion');
+    }
+
+    const fichaTab = this.route.snapshot.queryParamMap.get('fichaTab');
+    if (fichaTab === 'ficha' || fichaTab === 'config') {
+      this.fichaTabRestoredFromUrl = true;
+      this.fichaAATab.set(fichaTab);
+    }
+  }
+
+  private syncTabToRoute(tab: 'agenda' | 'cotizacion' | 'fileaa'): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private syncFichaTabToRoute(fichaTab: 'ficha' | 'config'): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { fichaTab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   /** Fechas de agenda siempre en orden cronológico (API puede variar el orden). */
@@ -612,7 +653,9 @@ export class QuotationDetail implements OnInit {
 
   setActiveTab(value: string | number | undefined): void {
     if (value === 'agenda' || value === 'cotizacion' || value === 'fileaa') {
+      if (value === 'cotizacion' && !this.canViewQuotationBreakdown()) return;
       this.activeTab.set(value);
+      this.syncTabToRoute(value);
       if (value === 'fileaa') {
         const q = this.quotation();
         if (q) this.loadFileAA(q.id);
@@ -2300,7 +2343,10 @@ export class QuotationDetail implements OnInit {
   }
 
   setFichaAATab(value: unknown): void {
-    if (value === 'ficha' || value === 'config') this.fichaAATab.set(value);
+    if (value === 'ficha' || value === 'config') {
+      this.fichaAATab.set(value);
+      this.syncFichaTabToRoute(value);
+    }
   }
 
   onFichaChecklistChange(): void {
@@ -2810,10 +2856,13 @@ export class QuotationDetail implements OnInit {
         this.hydrateChecklistFromFicha(loaded);
         this.applyChecklistToFicha(loaded);
         this.hydrateFichaFreeTextDrafts(loaded);
-        this.fichaAATab.set('ficha');
+        if (!this.fichaTabRestoredFromUrl) {
+          this.fichaAATab.set('ficha');
+        }
         // Para operaciones, al entrar con Ficha AA existente abrir directamente ese tab.
-        if (this.isOperaciones() && this.activeTab() === 'agenda') {
+        if (this.isOperaciones() && this.activeTab() === 'agenda' && !this.tabRestoredFromUrl) {
           this.activeTab.set('fileaa');
+          this.syncTabToRoute('fileaa');
         }
       },
       error: (err) => {
