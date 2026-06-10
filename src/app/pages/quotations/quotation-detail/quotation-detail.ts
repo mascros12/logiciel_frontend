@@ -448,6 +448,7 @@ export class QuotationDetail implements OnInit {
   fichaAddKind = signal<'new' | 'replace' | null>(null);
   /** Habitación concreta a reemplazar en filas con varias tipologías. */
   fichaAddReplaceRoomId = signal<string | null>(null);
+  fichaAddReplaceRoomSlotIndex = signal<number | null>(null);
   fichaAddSourcePickItems = signal<FichaAddSourcePickItem[]>([]);
   fichaAddSelectedPickKey = signal<string | null>(null);
   loadingFichaAddSource = signal(false);
@@ -2040,6 +2041,33 @@ export class QuotationDetail implements OnInit {
     const line = (this.fichaDetailServiceLines(d)[1] ?? '').trim();
     if (!line) return [];
     return line.split(' et ').map((p) => p.trim()).filter((p) => p.length > 0);
+  }
+
+  fichaMergedRoomPartLabel(slot: FichaMergedRoomSlot, includeQuantity: boolean): string {
+    const tipo = (slot.room_file_aa_name ?? '').trim();
+    if (!tipo) return '';
+    if (!includeQuantity) return tipo;
+    const qty = slot.room_quantity;
+    if (qty === null || qty === undefined || !Number.isFinite(qty) || qty < 1) {
+      return tipo;
+    }
+    return `${qty} ${tipo}`;
+  }
+
+  /** Partes de tipología con color (heredada vs reemplazo). */
+  fichaMergedRoomTypeParts(d: FileAADetailRow): { text: string; isReplacement: boolean }[] {
+    const rooms = this.fichaMergedRoomsFromExtras(d);
+    if (!rooms.length) {
+      return this.fichaMergedRoomTypeLineParts(d).map((text) => ({
+        text,
+        isReplacement: false,
+      }));
+    }
+    const includeQty = rooms.length > 1;
+    return rooms.map((slot) => ({
+      text: this.fichaMergedRoomPartLabel(slot, includeQty),
+      isReplacement: Boolean(slot.is_replacement),
+    }));
   }
 
   fichaHotelAttachedActivityDisplay(
@@ -4267,6 +4295,7 @@ export class QuotationDetail implements OnInit {
               room_id: String(slot['room_id'] ?? ''),
               room_file_aa_name: String(slot['room_file_aa_name'] ?? '').trim() || undefined,
               room_quantity,
+              is_replacement: Boolean(slot['is_replacement']),
             };
           });
       }
@@ -4312,10 +4341,10 @@ export class QuotationDetail implements OnInit {
     this.bumpHotelFichaPriceRev();
   }
 
-  fichaReplaceRoomOptions(d: FileAADetailRow): { roomId: string; label: string }[] {
+  fichaReplaceRoomOptions(d: FileAADetailRow): { slotIndex: number; label: string }[] {
     return this.fichaMergedRoomsFromExtras(d).map((slot, i) => ({
-      roomId: slot.room_id,
-      label: this.fichaMergedRoomLabel(slot, i),
+      slotIndex: i,
+      label: this.fichaMergedRoomPartLabel(slot, true) || this.fichaMergedRoomLabel(slot, i),
     }));
   }
 
@@ -4716,7 +4745,15 @@ export class QuotationDetail implements OnInit {
     const raw = detail.observation_extras;
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
     const anchorId = String((raw as Record<string, unknown>)['sort_after_detail_id'] ?? '').trim();
-    return anchorId.length > 0;
+    if (!anchorId.length) return false;
+    if (
+      detail.category === 'room' &&
+      this.fichaHasMultipleRoomTypes(detail) &&
+      this.fichaMergedRoomsFromExtras(detail).some((s) => s.is_replacement)
+    ) {
+      return false;
+    }
+    return true;
   }
 
   openFichaAddDetailDialog(anchor: FileAADetailRow): void {
@@ -4725,6 +4762,7 @@ export class QuotationDetail implements OnInit {
     this.fichaAddDetailStep.set('kind');
     this.fichaAddKind.set(null);
     this.fichaAddReplaceRoomId.set(null);
+    this.fichaAddReplaceRoomSlotIndex.set(null);
     this.fichaAddSelectedPickKey.set(null);
     this.fichaAddSourcePickItems.set([]);
     this.showFichaAddDetailDialog.set(true);
@@ -4738,6 +4776,7 @@ export class QuotationDetail implements OnInit {
     this.fichaAddDetailStep.set('kind');
     this.fichaAddKind.set(null);
     this.fichaAddReplaceRoomId.set(null);
+    this.fichaAddReplaceRoomSlotIndex.set(null);
     this.fichaAddAnchorRow.set(null);
     this.fichaAddAnchorDetailId.set(null);
     this.fichaAddSelectedPickKey.set(null);
@@ -4758,6 +4797,7 @@ export class QuotationDetail implements OnInit {
     ) {
       this.fichaAddDetailStep.set('pick-room');
       this.fichaAddReplaceRoomId.set(null);
+      this.fichaAddReplaceRoomSlotIndex.set(null);
       return;
     }
     this.fichaAddDetailStep.set('pick');
@@ -4848,6 +4888,7 @@ export class QuotationDetail implements OnInit {
       this.fichaAddDetailStep.set('kind');
       this.fichaAddKind.set(null);
       this.fichaAddReplaceRoomId.set(null);
+      this.fichaAddReplaceRoomSlotIndex.set(null);
       return;
     }
     if (this.fichaAddDetailStep() !== 'pick') return;
@@ -4857,9 +4898,22 @@ export class QuotationDetail implements OnInit {
     this.fichaAddSourcePickItems.set([]);
   }
 
+  onFichaReplaceRoomSlotPick(slotIndex: number | null): void {
+    this.fichaAddReplaceRoomSlotIndex.set(slotIndex);
+    if (slotIndex === null) {
+      this.fichaAddReplaceRoomId.set(null);
+      return;
+    }
+    const anchor = this.fichaAddAnchorRow();
+    if (!anchor) return;
+    const slot = this.fichaMergedRoomsFromExtras(anchor)[slotIndex];
+    const rid = (slot?.room_id ?? '').trim();
+    this.fichaAddReplaceRoomId.set(rid || null);
+  }
+
   continueFichaAddAfterRoomPick(): void {
     const anchor = this.fichaAddAnchorRow();
-    if (!anchor || !this.fichaAddReplaceRoomId()) return;
+    if (!anchor || this.fichaAddReplaceRoomSlotIndex() === null) return;
     this.fichaAddDetailStep.set('pick');
     this.loadFichaAddSourcePickItems(anchor);
   }
@@ -4886,8 +4940,13 @@ export class QuotationDetail implements OnInit {
         ...base,
         category: 'room',
         room_id: item.roomId,
-        ...(kind === 'replace' && this.fichaAddReplaceRoomId()
-          ? { replace_room_id: this.fichaAddReplaceRoomId()! }
+        ...(kind === 'replace' && this.fichaAddReplaceRoomSlotIndex() !== null
+          ? {
+              replace_room_slot_index: this.fichaAddReplaceRoomSlotIndex()!,
+              ...(this.fichaAddReplaceRoomId()
+                ? { replace_room_id: this.fichaAddReplaceRoomId()! }
+                : {}),
+            }
           : {}),
       };
     } else if (cat === 'activity') {

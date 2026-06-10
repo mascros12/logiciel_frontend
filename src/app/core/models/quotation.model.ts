@@ -140,6 +140,8 @@ export interface FichaMergedRoomSlot {
   room_id: string;
   room_file_aa_name?: string;
   room_quantity: number | null;
+  /** Tipología añadida por reemplazo parcial en fila agrupada (verde en UI). */
+  is_replacement?: boolean;
   /** Estadías de esta tipología (puede diferir entre habitaciones de la misma fila). */
   stay_segments?: FichaHotelStaySegment[];
 }
@@ -262,6 +264,7 @@ export interface FileAADetailCreateBody {
   copy_operational_from_detail_id: string;
   mark_anchor_row_red: boolean;
   replace_room_id?: string;
+  replace_room_slot_index?: number;
   room_id?: string;
   activity_id?: string;
   vehicle_id?: string;

@@ -1292,7 +1292,7 @@
                                   }
                                   <span class="ficha-room-sep">,&nbsp;</span>
                                   @if (fichaHasMultipleRoomTypes(d)) {
-                                    @for (part of fichaMergedRoomTypeLineParts(d); track $index; let i = $index; let last = $last) {
+                                    @for (part of fichaMergedRoomTypeParts(d); track $index; let i = $index; let last = $last) {
                                       @if (isFichaNameEditing(d.id, 'room:' + i)) {
                                         <span class="ficha-name-inline-edit" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
                                           <input pInputText class="ficha-name-edit-input ficha-name-edit-input--room" placeholder="Tipo de habitación" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(d, ficha, 'room:' + i)" (keydown.escape)="cancelFichaNameEdit()" autofocus />
@@ -1300,9 +1300,16 @@
                                           <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
                                         </span>
                                       } @else if (canEditFichaCatalogueName()) {
-                                        <span class="ficha-room-type ficha-name-clickable" (click)="$event.stopPropagation(); startFichaNameEdit(d, 'room:' + i)">{{ part }}</span>
+                                        <span
+                                          class="ficha-room-type ficha-name-clickable"
+                                          [class.ficha-room-type-replacement]="part.isReplacement"
+                                          (click)="$event.stopPropagation(); startFichaNameEdit(d, 'room:' + i)"
+                                        >{{ part.text }}</span>
                                       } @else {
-                                        <span class="ficha-room-type">{{ part }}</span>
+                                        <span
+                                          class="ficha-room-type"
+                                          [class.ficha-room-type-replacement]="part.isReplacement"
+                                        >{{ part.text }}</span>
                                       }
                                       @if (!last) {
                                         <span class="ficha-room-sep-et"> et </span>
@@ -2378,11 +2385,11 @@
     <p-select
       inputId="ficha-add-replace-room-sel"
       [options]="fichaReplaceRoomOptions(fichaAddAnchorRow()!)"
-      [ngModel]="fichaAddReplaceRoomId()"
-      (ngModelChange)="fichaAddReplaceRoomId.set($event)"
-      dataKey="roomId"
+      [ngModel]="fichaAddReplaceRoomSlotIndex()"
+      (ngModelChange)="onFichaReplaceRoomSlotPick($event)"
+      dataKey="slotIndex"
       optionLabel="label"
-      optionValue="roomId"
+      optionValue="slotIndex"
       placeholder="Seleccione habitación…"
       styleClass="w-full"
       appendTo="body"
@@ -2477,7 +2484,7 @@
         label="Continuar"
         icon="pi pi-arrow-right"
         iconPos="right"
-        [disabled]="!fichaAddReplaceRoomId()"
+        [disabled]="fichaAddReplaceRoomSlotIndex() === null"
         (onClick)="continueFichaAddAfterRoomPick()"
       />
     }
