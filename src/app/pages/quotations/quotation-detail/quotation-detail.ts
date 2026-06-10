@@ -1362,6 +1362,36 @@ export class QuotationDetail implements OnInit {
     return `${y}-${m}-${day}`;
   }
 
+  /**
+   * Normaliza un valor del datepicker a mediodía local.
+   * Evita desfases al parsear cadenas ISO (`YYYY-MM-DD` = UTC) en zonas distintas.
+   */
+  private coerceLocalCalendarDate(value: unknown): Date | null {
+    if (value == null || value === '') return null;
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) return null;
+      return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12, 0, 0, 0);
+    }
+    if (typeof value === 'string') {
+      const iso = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) {
+        return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 12, 0, 0, 0);
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return new Date(
+        parsed.getFullYear(),
+        parsed.getMonth(),
+        parsed.getDate(),
+        12,
+        0,
+        0,
+        0,
+      );
+    }
+    return null;
+  }
+
   openOrganizeItinerary() {
     const ls = this.lines();
     if (!ls.length) {
@@ -2262,8 +2292,8 @@ export class QuotationDetail implements OnInit {
     if (this.rejectInvalidForm(this.shiftItineraryForm, SHIFT_ITINERARY_LABELS)) return;
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
-    const raw = this.shiftItineraryForm.value.new_first_date;
-    const d = raw instanceof Date ? raw : new Date(raw);
+    const d = this.coerceLocalCalendarDate(this.shiftItineraryForm.value.new_first_date);
+    if (!d) return;
     const new_first_date = this.toLocalIsoDate(d);
     this.saving.set(true);
     this.quotationService.shiftItineraryDates(q.id, version.id, { new_first_date }).subscribe({
@@ -2294,12 +2324,13 @@ export class QuotationDetail implements OnInit {
 
   submitExtendCalendar() {
     const raw = this.calendarForm.value;
-    const fromD = raw.from_date instanceof Date ? raw.from_date : new Date(raw.from_date);
-    const toD = raw.to_date instanceof Date ? raw.to_date : new Date(raw.to_date);
-    if (raw.from_date && raw.to_date && toD < fromD) {
+    const fromD = this.coerceLocalCalendarDate(raw.from_date);
+    const toD = this.coerceLocalCalendarDate(raw.to_date);
+    if (fromD && toD && toD < fromD) {
       this.calendarForm.get('to_date')?.setErrors({ dateRangeEnd: true });
     }
     if (this.rejectInvalidForm(this.calendarForm, CALENDAR_FORM_LABELS)) return;
+    if (!fromD || !toD) return;
 
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
@@ -2315,7 +2346,8 @@ export class QuotationDetail implements OnInit {
           summary: 'Itinerario actualizado',
           detail: 'Se añadieron los días faltantes en esta versión.',
         });
-        this.load(q.id);
+        this.refreshLines();
+        this.refreshQuotationMetadata();
       },
       error: (err) => {
         this.saving.set(false);
