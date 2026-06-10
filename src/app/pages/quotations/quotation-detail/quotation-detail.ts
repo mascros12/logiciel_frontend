@@ -710,6 +710,16 @@ export class QuotationDetail implements OnInit {
     });
   }
 
+  /** Actualiza cabecera y fechas de la cotización sin activar `loading` global. */
+  private refreshQuotationMetadata(): void {
+    const q = this.quotation();
+    if (!q) return;
+    this.quotationService.getById(q.id).subscribe({
+      next: (updated) => this.quotation.set(updated),
+      error: () => void 0,
+    });
+  }
+
   loadProviders() {
     this.providerService.getVehicles().subscribe(r =>
       this.vehicleOptions.set(r.items)
@@ -2092,9 +2102,10 @@ export class QuotationDetail implements OnInit {
             if (this.showOrganizeItinerary()) {
               this.organizeDraftLines.set([...s]);
             }
+            this.loadSummary();
+            this.refreshQuotationMetadata();
           },
         });
-        this.load(q.id);
       },
       error: (err) => {
         this.saving.set(false);
@@ -5368,33 +5379,30 @@ export class QuotationDetail implements OnInit {
   }
 
   deleteVehicle(id: string) {
-    const q = this.quotation()!;
     this.quotationService.deleteVehicle(id).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Vehículo eliminado' });
-        this.load(q.id);
+        this.refreshLines();
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error al eliminar' }),
     });
   }
   
   deleteRoom(id: string) {
-    const q = this.quotation()!;
     this.quotationService.deleteRoom(id).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Habitación eliminada' });
-        this.load(q.id);
+        this.refreshLines();
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error al eliminar' }),
     });
   }
   
   deleteActivity(id: string) {
-    const q = this.quotation()!;
     this.quotationService.deleteActivity(id).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Actividad eliminada' });
-        this.load(q.id);
+        this.refreshLines();
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Error al eliminar' }),
     });
