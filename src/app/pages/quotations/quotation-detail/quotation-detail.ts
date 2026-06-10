@@ -1065,7 +1065,7 @@ export class QuotationDetail implements OnInit {
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
     this.recalculateVersion(q.id, version.id, {
-      successMessage: 'Total recalculado',
+      successMessage: 'Precios actualizados desde el catálogo',
       onDone: () => this.load(q.id),
     });
   }
@@ -1269,7 +1269,7 @@ export class QuotationDetail implements OnInit {
       },
       { separator: true },
       {
-        label: 'Actualizar total',
+        label: 'Actualizar precios',
         icon: 'pi pi-refresh',
         command: () => this.recalculate(),
       },
