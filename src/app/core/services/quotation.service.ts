@@ -202,6 +202,13 @@ export class QuotationService {
     );
   }
 
+  recalculateFileAASystemPrices(fileId: string) {
+    return this.http.post<FileAAWithDetails>(
+      `${this.url}/file-aa/${fileId}/recalculate-system-prices`,
+      {},
+    );
+  }
+
   attachActivityToHotel(hotelDetailId: string, activityDetailId: string) {
     return this.http.post<FileAAWithDetails>(
       `${this.url}/details/${hotelDetailId}/attach-activity/${activityDetailId}`,

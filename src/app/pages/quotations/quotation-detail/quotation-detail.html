@@ -855,6 +855,17 @@
                   (onClick)="generateFileAA()"
                 />
                 @if (fichaFileAA()) {
+                  @if (isAdmin()) {
+                    <p-button
+                      label="Recalcular precios sistema"
+                      icon="pi pi-refresh"
+                      [outlined]="true"
+                      [loading]="recalculatingFichaSystemPrices()"
+                      (onClick)="recalculateFichaSystemPrices()"
+                      pTooltip="Actualiza precios sistema (neto) según catálogo y temporadas"
+                      tooltipPosition="top"
+                    />
+                  }
                   <p-button
                     label="Columnas"
                     icon="pi pi-table"

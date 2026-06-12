@@ -328,6 +328,7 @@ export class QuotationDetail implements OnInit {
   saving = signal(false);
   downloadingFichaWord = signal(false);
   downloadingFichaPdf = signal(false);
+  recalculatingFichaSystemPrices = signal(false);
   /** Id del detalle de Ficha AA al que se está enviando correo (botón enviar). */
   sendingFichaEmailDetailId = signal<string | null>(null);
 
@@ -5411,6 +5412,34 @@ export class QuotationDetail implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'No se pudo descargar el ODT',
+        });
+      },
+    });
+  }
+
+  recalculateFichaSystemPrices(): void {
+    const f = this.fichaFileAA();
+    if (!f?.id) return;
+    this.recalculatingFichaSystemPrices.set(true);
+    this.quotationService.recalculateFileAASystemPrices(f.id).subscribe({
+      next: (updated) => {
+        this.recalculatingFichaSystemPrices.set(false);
+        this.fichaFileAA.set({
+          ...updated,
+          header_color: updated.header_color || this.fichaHeaderColor(),
+        });
+        this.syncFichaVisibleDetailsList();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Precios sistema actualizados',
+        });
+      },
+      error: (err) => {
+        this.recalculatingFichaSystemPrices.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se pudieron recalcular los precios',
+          detail: err?.error?.detail ?? undefined,
         });
       },
     });
