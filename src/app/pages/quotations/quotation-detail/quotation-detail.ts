@@ -4648,7 +4648,7 @@ export class QuotationDetail implements OnInit {
   }
 
   /**
-   * Congela tarifa/noche a partir de ``rack_nightly_sum`` o, en fichas antiguas,
+   * Congela tarifa neta/noche a partir de ``rack_nightly_sum`` o, en fichas antiguas,
    * del ``total_price`` actual del detalle (antes de editar noches/cantidad).
    */
   private backfillHotelRackSnapshotFields(
@@ -4714,7 +4714,7 @@ export class QuotationDetail implements OnInit {
     return Number((perNight * nights * qty).toFixed(2));
   }
 
-  /** Precio sistema hotel: rack/noche × noches × cantidad de habitaciones (por tipología). */
+  /** Precio sistema hotel: neto/noche × noches × cantidad de habitaciones (por tipología). */
   private fichaHotelSystemPriceFromExtras(
     observation_extras: Record<string, unknown>,
     detail?: FileAADetailRow,
