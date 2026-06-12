@@ -2417,21 +2417,21 @@
       @if (fichaAddAnchorRow()?.category === 'room') {
         <p class="ficha-add-pick-note">
           Se copian las <strong>fechas</strong> y las <strong>observaciones</strong> de la fila donde pulsó +. Si elige otra habitación del <strong>mismo hotel</strong>, se añadirá a la misma fila. El
-          <strong>precio sistema</strong> es la tarifa <strong>pública (rack)</strong> de la habitación en el
+          <strong>precio sistema</strong> es la tarifa <strong>neta</strong> de la habitación en el
           itinerario, multiplicada por el <strong>número de habitaciones</strong> y por las
           <strong>noches</strong> entre las fechas de esa fila.
         </p>
       } @else if (fichaAddAnchorRow()?.category === 'activity') {
         <p class="ficha-add-pick-note">
           Se copian <strong>fechas</strong> y <strong>observaciones</strong>. Los <strong>adultos y niños</strong> para
-          el precio rack se toman del texto <code>[A:n N:m]</code> en el nombre de la fila ancla; si no aparece, se usa
-          <strong>1 adulto</strong> y <strong>0 niños</strong>. El total es rack diario de la actividad elegida × los
+          el precio neto se toman del texto <code>[A:n N:m]</code> en el nombre de la fila ancla; si no aparece, se usa
+          <strong>1 adulto</strong> y <strong>0 niños</strong>. El total es neto diario de la actividad elegida × los
           <strong>días</strong> guardados en esa fila.
         </p>
       } @else if (fichaAddAnchorRow()?.category === 'vehicle') {
         <p class="ficha-add-pick-note">
           Se copian <strong>fechas</strong> y <strong>observaciones</strong>. El <strong>precio sistema</strong> usa
-          tarifas <strong>rack</strong> del vehículo elegido con la misma regla <strong>semanal + diaria</strong> que en
+          tarifas <strong>netas</strong> del vehículo elegido con la misma regla <strong>semanal + diaria</strong> que en
           la ficha, según la temporada del <strong>primer día</strong> del ancla y el número de <strong>días</strong> de
           esa fila.
         </p>
@@ -2472,13 +2472,13 @@
                 [class.pick-gama-low]="item.hotelCategory === 'low'"
                 [innerHTML]="item.listLabel | richText"
               ></div>
-              <div class="ficha-add-source-meta">Hotel · habitación · rack por noche</div>
+              <div class="ficha-add-source-meta">Hotel · habitación · neto por noche</div>
             } @else if (item.activityId) {
               <div class="ficha-add-source-name" [innerHTML]="item.listLabel | richText"></div>
-              <div class="ficha-add-source-meta">Actividad · precio rack según pax de la fila</div>
+              <div class="ficha-add-source-meta">Actividad · precio neto según pax de la fila</div>
             } @else {
               <div class="ficha-add-source-name" [innerHTML]="item.listLabel | richText"></div>
-              <div class="ficha-add-source-meta">Vehículo · rack diario / semanal</div>
+              <div class="ficha-add-source-meta">Vehículo · neto diario / semanal</div>
             }
           </div>
         </ng-template>

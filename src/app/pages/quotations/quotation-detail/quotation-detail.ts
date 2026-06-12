@@ -3798,7 +3798,7 @@ export class QuotationDetail implements OnInit {
     const notesTrim = row.notes.trim();
     // Recálculo local del «Precio sistema» para feedback instantáneo.
     //
-    // Usa el snapshot de tarifas rack que el backend persiste en
+    // Usa el snapshot de tarifas netas que el backend persiste en
     // `observation_extras` (`activity_rack_adult` / `activity_rack_child`).
     // Si están presentes, replicamos exactamente la fórmula del catálogo
     // y mandamos `total_price` en el PATCH; si no, dejamos que el backend
@@ -4482,7 +4482,7 @@ export class QuotationDetail implements OnInit {
     return String(v);
   }
 
-  /** Precio sistema en vivo para filas hotel (rack + actividades fusionadas). */
+  /** Precio sistema en vivo para filas hotel (neto + actividades fusionadas). */
   fichaHotelSystemPriceDisplay(d: FileAADetailRow): string {
     this.hotelFichaPriceRev();
     if (d.category !== 'room') {
