@@ -1,5 +1,6 @@
 interface QuotationVehicle {
   id: string;
+  vehicle_id?: string | null;
   name: string;
   grade: string;
   net_price: number;
@@ -11,6 +12,8 @@ interface QuotationVehicle {
 
 interface QuotationRoom {
   id: string;
+  room_id?: string | null;
+  hotel_id?: string | null;
   name: string;
   grade: string;
   net_price: number;
@@ -27,6 +30,7 @@ interface QuotationRoom {
 
 interface QuotationActivity {
   id: string;
+  activity_id?: string | null;
   name: string;
   recommendation: string;
   grade: string;

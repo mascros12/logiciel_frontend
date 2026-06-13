@@ -3,7 +3,7 @@ import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, forkJoin } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
@@ -24,7 +24,7 @@ import { MessageService, ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { FormsModule } from '@angular/forms';
-import { QuotationSummary } from '../../../core/models/quotation.model';
+import { QuotationSummary, ServiceSummaryLine } from '../../../core/models/quotation.model';
 import { DatePickerModule } from 'primeng/datepicker';
 
 import { QuotationService } from '../../../core/services/quotation.service';
@@ -218,7 +218,7 @@ function computeFichaAaTableMinWidthPx(
   selector: 'app-quotation-detail',
   standalone: true,
   imports: [
-    DatePipe, CurrencyPipe, NgClass, ReactiveFormsModule,
+    DatePipe, CurrencyPipe, NgClass, RouterLink, ReactiveFormsModule,
     TabsModule, ButtonModule, TableModule, TagModule,
     DialogModule, SelectModule, InputTextModule, TextareaModule,
     InputNumberModule, CheckboxModule,
@@ -795,6 +795,116 @@ export class QuotationDetail implements OnInit {
         this.loadingSummary.set(false);
       },
     });
+  }
+
+  /** Grupo del tab Cotización al que pertenece cada ítem de línea (v1 = all). */
+  private summaryItemInGroup(
+    item: { is_original: boolean; deleted: boolean },
+    group: 'all' | 'original' | 'deleted' | 'new',
+  ): boolean {
+    if (group === 'all') return !item.deleted;
+    if (group === 'original') return !item.is_original && !item.deleted;
+    if (group === 'deleted') return item.deleted && !item.is_original;
+    return item.is_original && !item.deleted;
+  }
+
+  /** Orden cronológico y rutas de catálogo según la primera aparición en ``lines()``. */
+  private summaryLineMeta = computed(() => {
+    const lines = this.lines();
+    const meta = new Map<
+      string,
+      { order: number; route: string[] | null; queryParams: Record<string, string> | null }
+    >();
+    const groups = ['all', 'original', 'deleted', 'new'] as const;
+    const kinds = ['room', 'activity', 'vehicle'] as const;
+
+    for (const group of groups) {
+      for (const kind of kinds) {
+        let order = 0;
+        for (const line of lines) {
+          const items =
+            kind === 'room'
+              ? line.rooms
+              : kind === 'activity'
+                ? line.activities
+                : line.vehicles;
+          for (const item of items) {
+            if (!this.summaryItemInGroup(item, group)) continue;
+            const key = `${group}:${kind}:${item.name}`;
+            if (meta.has(key)) continue;
+            meta.set(key, {
+              order: order++,
+              route: this.summaryCatalogRoute(kind, item),
+              queryParams: this.summaryCatalogQueryParams(kind, item),
+            });
+          }
+        }
+      }
+    }
+    return meta;
+  });
+
+  private summaryCatalogRoute(
+    kind: 'room' | 'activity' | 'vehicle',
+    item: QuotationLine['rooms'][number] | QuotationLine['activities'][number] | QuotationLine['vehicles'][number],
+  ): string[] | null {
+    if (kind === 'room') {
+      const hotelId = (item as QuotationLine['rooms'][number]).hotel_id;
+      if (hotelId) return ['/hoteles', hotelId];
+      return null;
+    }
+    if (kind === 'activity') {
+      const activityId = (item as QuotationLine['activities'][number]).activity_id;
+      if (activityId) return ['/actividades'];
+      return null;
+    }
+    const vehicleId = (item as QuotationLine['vehicles'][number]).vehicle_id;
+    if (vehicleId) return ['/vehiculos', vehicleId];
+    return null;
+  }
+
+  private summaryCatalogQueryParams(
+    kind: 'room' | 'activity' | 'vehicle',
+    item: QuotationLine['rooms'][number] | QuotationLine['activities'][number] | QuotationLine['vehicles'][number],
+  ): Record<string, string> | null {
+    if (kind !== 'activity') return null;
+    const q = this.summaryActivitySearchQuery(item.name);
+    return q ? { q } : null;
+  }
+
+  private summaryActivitySearchQuery(name: string): string {
+    const plain = (name || '').split(' [')[0].trim();
+    return plain.length > 60 ? plain.slice(0, 60) : plain;
+  }
+
+  sortSummaryItems(
+    items: ServiceSummaryLine[],
+    kind: 'room' | 'activity' | 'vehicle',
+    group: 'all' | 'original' | 'deleted' | 'new',
+  ): ServiceSummaryLine[] {
+    const meta = this.summaryLineMeta();
+    return [...items].sort((a, b) => {
+      const ka = `${group}:${kind}:${a.name}`;
+      const kb = `${group}:${kind}:${b.name}`;
+      const oa = meta.get(ka)?.order ?? Number.MAX_SAFE_INTEGER;
+      const ob = meta.get(kb)?.order ?? Number.MAX_SAFE_INTEGER;
+      if (oa !== ob) return oa - ob;
+      return a.name.localeCompare(b.name, 'es');
+    });
+  }
+
+  summaryNameCell(
+    item: ServiceSummaryLine,
+    kind: 'room' | 'activity' | 'vehicle',
+    group: 'all' | 'original' | 'deleted' | 'new',
+  ): { text: string; route: string[] | null; queryParams: Record<string, string> | null } {
+    const key = `${group}:${kind}:${item.name}`;
+    const m = this.summaryLineMeta().get(key);
+    return {
+      text: item.name,
+      route: m?.route ?? null,
+      queryParams: m?.queryParams ?? null,
+    };
   }
 
   // ─── Autocomplete ──────────────────────────────────────────

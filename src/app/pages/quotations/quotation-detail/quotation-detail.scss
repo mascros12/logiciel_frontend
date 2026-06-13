@@ -1975,6 +1975,16 @@
       }
   
       .qty { width: 5.5rem; text-align: center; color: var(--p-text-muted-color); }
+      td:first-child:not([colspan]) {
+        padding-left: 1.35rem;
+      }
+      .summary-product-link {
+        color: var(--p-primary-color, #1d4e89);
+        text-decoration: none;
+        &:hover {
+          text-decoration: underline;
+        }
+      }
       td:last-child,
       th:last-child {
         width: 11rem;

@@ -393,9 +393,16 @@
                     <td colspan="2"><strong>Hotel</strong></td>
                     <td>{{ s.rooms_total | currency:'USD' }}</td>
                     </tr>
-                    @for (r of s.rooms; track r.name) {
+                    @for (r of sortSummaryItems(s.rooms, 'room', 'all'); track r.name) {
                     <tr [class.yellow-row]="r.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        @let cell = summaryNameCell(r, 'room', 'all');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ r.qty }})</td>
                         <td>{{ r.total | currency:'USD' }}</td>
                     </tr>
@@ -406,9 +413,16 @@
                     <td colspan="2"><strong>Actividades</strong></td>
                     <td>{{ s.activities_total | currency:'USD' }}</td>
                     </tr>
-                    @for (a of s.activities; track a.name) {
+                    @for (a of sortSummaryItems(s.activities, 'activity', 'all'); track a.name) {
                     <tr [class.yellow-row]="a.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        @let cell = summaryNameCell(a, 'activity', 'all');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ a.qty }})</td>
                         <td>{{ a.total | currency:'USD' }}</td>
                     </tr>
@@ -419,9 +433,16 @@
                     <td colspan="2"><strong>Vehículo</strong></td>
                     <td>{{ s.vehicles_total | currency:'USD' }}</td>
                     </tr>
-                    @for (v of s.vehicles; track v.name) {
+                    @for (v of sortSummaryItems(s.vehicles, 'vehicle', 'all'); track v.name) {
                     <tr [class.yellow-row]="v.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        @let cell = summaryNameCell(v, 'vehicle', 'all');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ v.qty }})</td>
                         <td>{{ v.total | currency:'USD' }}</td>
                     </tr>
@@ -458,9 +479,16 @@
                     <td colspan="2"><strong>Hotel</strong></td>
                     <td>{{ s.rooms_total | currency:'USD' }}</td>
                     </tr>
-                    @for (r of s.original_rooms; track r.name) {
+                    @for (r of sortSummaryItems(s.original_rooms, 'room', 'original'); track r.name) {
                     <tr [class.yellow-row]="r.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        @let cell = summaryNameCell(r, 'room', 'original');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ r.qty }})</td>
                         <td>{{ r.total | currency:'USD' }}</td>
                     </tr>
@@ -469,9 +497,16 @@
                     <td colspan="2"><strong>Actividades</strong></td>
                     <td>{{ s.activities_total | currency:'USD' }}</td>
                     </tr>
-                    @for (a of s.original_activities; track a.name) {
+                    @for (a of sortSummaryItems(s.original_activities, 'activity', 'original'); track a.name) {
                     <tr [class.yellow-row]="a.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        @let cell = summaryNameCell(a, 'activity', 'original');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ a.qty }})</td>
                         <td>{{ a.total | currency:'USD' }}</td>
                     </tr>
@@ -480,9 +515,16 @@
                     <td colspan="2"><strong>Vehículo</strong></td>
                     <td>{{ s.vehicles_total | currency:'USD' }}</td>
                     </tr>
-                    @for (v of s.original_vehicles; track v.name) {
+                    @for (v of sortSummaryItems(s.original_vehicles, 'vehicle', 'original'); track v.name) {
                     <tr [class.yellow-row]="v.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        @let cell = summaryNameCell(v, 'vehicle', 'original');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ v.qty }})</td>
                         <td>{{ v.total | currency:'USD' }}</td>
                     </tr>
@@ -493,9 +535,16 @@
                     <tr class="category-row red-row">
                     <td colspan="2"><strong>Hotel</strong></td><td></td>
                     </tr>
-                    @for (r of s.deleted_rooms; track r.name) {
+                    @for (r of sortSummaryItems(s.deleted_rooms, 'room', 'deleted'); track r.name) {
                     <tr>
-                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        @let cell = summaryNameCell(r, 'room', 'deleted');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ r.qty }})</td>
                         <td>{{ r.total | currency:'USD' }}</td>
                     </tr>
@@ -503,9 +552,16 @@
                     <tr class="category-row red-row">
                     <td colspan="2"><strong>Actividades</strong></td><td></td>
                     </tr>
-                    @for (a of s.deleted_activities; track a.name) {
+                    @for (a of sortSummaryItems(s.deleted_activities, 'activity', 'deleted'); track a.name) {
                     <tr>
-                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        @let cell = summaryNameCell(a, 'activity', 'deleted');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ a.qty }})</td>
                         <td>{{ a.total | currency:'USD' }}</td>
                     </tr>
@@ -513,9 +569,16 @@
                     <tr class="category-row red-row">
                     <td colspan="2"><strong>Vehículo</strong></td><td></td>
                     </tr>
-                    @for (v of s.deleted_vehicles; track v.name) {
+                    @for (v of sortSummaryItems(s.deleted_vehicles, 'vehicle', 'deleted'); track v.name) {
                     <tr>
-                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        @let cell = summaryNameCell(v, 'vehicle', 'deleted');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ v.qty }})</td>
                         <td>{{ v.total | currency:'USD' }}</td>
                     </tr>
@@ -526,9 +589,16 @@
                     <tr class="category-row green-row">
                     <td colspan="2"><strong>Hotel</strong></td><td></td>
                     </tr>
-                    @for (r of s.new_rooms; track r.name) {
+                    @for (r of sortSummaryItems(s.new_rooms, 'room', 'new'); track r.name) {
                     <tr [class.yellow-row]="r.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ r.name }}</td>
+                        @let cell = summaryNameCell(r, 'room', 'new');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ r.qty }})</td>
                         <td>{{ r.total | currency:'USD' }}</td>
                     </tr>
@@ -536,9 +606,16 @@
                     <tr class="category-row green-row">
                     <td colspan="2"><strong>Actividades</strong></td><td></td>
                     </tr>
-                    @for (a of s.new_activities; track a.name) {
+                    @for (a of sortSummaryItems(s.new_activities, 'activity', 'new'); track a.name) {
                     <tr [class.yellow-row]="a.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ a.name }}</td>
+                        @let cell = summaryNameCell(a, 'activity', 'new');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ a.qty }})</td>
                         <td>{{ a.total | currency:'USD' }}</td>
                     </tr>
@@ -546,9 +623,16 @@
                     <tr class="category-row green-row">
                     <td colspan="2"><strong>Vehículo</strong></td><td></td>
                     </tr>
-                    @for (v of s.new_vehicles; track v.name) {
+                    @for (v of sortSummaryItems(s.new_vehicles, 'vehicle', 'new'); track v.name) {
                     <tr [class.yellow-row]="v.total < 1">
-                        <td>&nbsp;&nbsp;&nbsp;{{ v.name }}</td>
+                        @let cell = summaryNameCell(v, 'vehicle', 'new');
+                        <td>
+                          @if (cell.route) {
+                            <a class="summary-product-link" [routerLink]="cell.route" [queryParams]="cell.queryParams">{{ cell.text }}</a>
+                          } @else {
+                            {{ cell.text }}
+                          }
+                        </td>
                         <td class="qty">({{ v.qty }})</td>
                         <td>{{ v.total | currency:'USD' }}</td>
                     </tr>
