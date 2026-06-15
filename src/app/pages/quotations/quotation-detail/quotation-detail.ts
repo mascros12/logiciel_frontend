@@ -4864,6 +4864,15 @@ export class QuotationDetail implements OnInit {
     return Number((sum / base).toFixed(4));
   }
 
+  private fichaRoomAdditionalNightlyNet(slot: Record<string, unknown>): number {
+    const adults = Math.max(0, Math.floor(Number(slot['additional_adults']) || 0));
+    const children = Math.max(0, Math.floor(Number(slot['additional_children']) || 0));
+    if (adults <= 0 && children <= 0) return 0;
+    const netA = this.coerceDecimalLike(slot['room_net_additional_adult']) ?? 0;
+    const netC = this.coerceDecimalLike(slot['room_net_additional_child']) ?? 0;
+    return Number((netA * adults + netC * children).toFixed(2));
+  }
+
   private fichaRoomSystemPriceFromSlot(slot: Record<string, unknown>): number | null {
     const perNight = this.fichaRoomRackPerNight(slot);
     if (perNight === null) return null;
@@ -4873,7 +4882,8 @@ export class QuotationDetail implements OnInit {
       nights = Number.isFinite(base) && base > 0 ? base : 1;
     }
     const qty = Math.max(1, Math.floor(Number(slot['room_quantity']) || 1));
-    return Number((perNight * nights * qty).toFixed(2));
+    const nightly = perNight + this.fichaRoomAdditionalNightlyNet(slot);
+    return Number((nightly * nights * qty).toFixed(2));
   }
 
   /** Precio sistema hotel: neto/noche × noches × cantidad de habitaciones (por tipología). */
