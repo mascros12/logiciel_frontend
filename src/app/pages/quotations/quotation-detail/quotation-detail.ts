@@ -893,6 +893,41 @@ export class QuotationDetail implements OnInit {
     });
   }
 
+  /** Suma de líneas de un apartado (Hotel / Actividades / Vehículo). */
+  summaryCategoryTotal(items: ServiceSummaryLine[] | null | undefined): number {
+    return (items ?? []).reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  }
+
+  /** Etiqueta de total por categoría: «—» si no hay importe. */
+  summaryCategoryTotalLabel(
+    items: ServiceSummaryLine[] | null | undefined,
+    sign: 'none' | 'positive' | 'negative' = 'none',
+  ): string {
+    const total = this.summaryCategoryTotal(items);
+    if (Math.abs(total) < 0.005) return '—';
+    const fmt = new Intl.NumberFormat('es-CR', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(Math.abs(total));
+    if (sign === 'positive') return `+${fmt}`;
+    if (sign === 'negative') return `-${fmt}`;
+    return fmt;
+  }
+
+  /** Total de sección (Elementos Eliminados / Añadidos). */
+  summaryDiffSectionTotal(
+    amount: number | null | undefined,
+    sign: 'positive' | 'negative',
+  ): string {
+    const n = Number(amount);
+    if (!Number.isFinite(n) || Math.abs(n) < 0.005) return '—';
+    const fmt = new Intl.NumberFormat('es-CR', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(Math.abs(n));
+    return sign === 'positive' ? `+${fmt}` : `-${fmt}`;
+  }
+
   summaryNameCell(
     item: ServiceSummaryLine,
     kind: 'room' | 'activity' | 'vehicle',

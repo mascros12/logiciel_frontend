@@ -531,9 +531,13 @@
                     }
 
                     <!-- ELIMINADOS -->
-                    <tr><td colspan="3" class="summary-header-red">Elementos Eliminados</td></tr>
+                    <tr class="summary-header-red">
+                    <td colspan="2"><strong>Elementos Eliminados</strong></td>
+                    <td>{{ summaryDiffSectionTotal(s.deleted_subtotal, 'negative') }}</td>
+                    </tr>
                     <tr class="category-row red-row">
-                    <td colspan="2"><strong>Hotel</strong></td><td></td>
+                    <td colspan="2"><strong>Hotel</strong></td>
+                    <td>{{ summaryCategoryTotalLabel(s.deleted_rooms, 'negative') }}</td>
                     </tr>
                     @for (r of sortSummaryItems(s.deleted_rooms, 'room', 'deleted'); track r.name) {
                     <tr>
@@ -550,7 +554,8 @@
                     </tr>
                     }
                     <tr class="category-row red-row">
-                    <td colspan="2"><strong>Actividades</strong></td><td></td>
+                    <td colspan="2"><strong>Actividades</strong></td>
+                    <td>{{ summaryCategoryTotalLabel(s.deleted_activities, 'negative') }}</td>
                     </tr>
                     @for (a of sortSummaryItems(s.deleted_activities, 'activity', 'deleted'); track a.name) {
                     <tr>
@@ -567,7 +572,8 @@
                     </tr>
                     }
                     <tr class="category-row red-row">
-                    <td colspan="2"><strong>Vehículo</strong></td><td></td>
+                    <td colspan="2"><strong>Vehículo</strong></td>
+                    <td>{{ summaryCategoryTotalLabel(s.deleted_vehicles, 'negative') }}</td>
                     </tr>
                     @for (v of sortSummaryItems(s.deleted_vehicles, 'vehicle', 'deleted'); track v.name) {
                     <tr>
@@ -585,9 +591,13 @@
                     }
 
                     <!-- NUEVOS -->
-                    <tr><td colspan="3" class="summary-header-green">Elementos Añadidos</td></tr>
+                    <tr class="summary-header-green">
+                    <td colspan="2"><strong>Elementos Añadidos</strong></td>
+                    <td>{{ summaryDiffSectionTotal(s.new_subtotal, 'positive') }}</td>
+                    </tr>
                     <tr class="category-row green-row">
-                    <td colspan="2"><strong>Hotel</strong></td><td></td>
+                    <td colspan="2"><strong>Hotel</strong></td>
+                    <td>{{ summaryCategoryTotalLabel(s.new_rooms, 'positive') }}</td>
                     </tr>
                     @for (r of sortSummaryItems(s.new_rooms, 'room', 'new'); track r.name) {
                     <tr [class.yellow-row]="r.total < 1">
@@ -604,7 +614,8 @@
                     </tr>
                     }
                     <tr class="category-row green-row">
-                    <td colspan="2"><strong>Actividades</strong></td><td></td>
+                    <td colspan="2"><strong>Actividades</strong></td>
+                    <td>{{ summaryCategoryTotalLabel(s.new_activities, 'positive') }}</td>
                     </tr>
                     @for (a of sortSummaryItems(s.new_activities, 'activity', 'new'); track a.name) {
                     <tr [class.yellow-row]="a.total < 1">
@@ -621,7 +632,8 @@
                     </tr>
                     }
                     <tr class="category-row green-row">
-                    <td colspan="2"><strong>Vehículo</strong></td><td></td>
+                    <td colspan="2"><strong>Vehículo</strong></td>
+                    <td>{{ summaryCategoryTotalLabel(s.new_vehicles, 'positive') }}</td>
                     </tr>
                     @for (v of sortSummaryItems(s.new_vehicles, 'vehicle', 'new'); track v.name) {
                     <tr [class.yellow-row]="v.total < 1">
