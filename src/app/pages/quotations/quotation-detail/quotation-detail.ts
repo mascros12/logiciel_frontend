@@ -2165,6 +2165,21 @@ export class QuotationDetail implements OnInit {
     return `${qty} ${tipo}`;
   }
 
+  /** ``file_aa_name`` de catálogo para edición inline (sin formato export Word/PDF). */
+  fichaRoomFileAaNameForEdit(d: FileAADetailRow, target: string): string {
+    const extras = d.observation_extras as Record<string, unknown> | null | undefined;
+    if (target.startsWith('room:')) {
+      const index = Number(target.slice('room:'.length));
+      const slot = this.fichaMergedRoomsFromExtras(d)[index];
+      return (slot?.room_file_aa_name ?? '').trim();
+    }
+    const merged = this.fichaMergedRoomsFromExtras(d);
+    if (merged.length === 1) {
+      return (merged[0].room_file_aa_name ?? '').trim();
+    }
+    return String(extras?.['room_file_aa_name'] ?? '').trim();
+  }
+
   /** Partes de tipología con color (heredada vs reemplazo). */
   fichaMergedRoomTypeParts(d: FileAADetailRow): { text: string; isReplacement: boolean }[] {
     const rooms = this.fichaMergedRoomsFromExtras(d);
@@ -3539,17 +3554,9 @@ export class QuotationDetail implements OnInit {
       );
       return;
     }
-    if (target === 'room') {
-      this.fichaNameEditValue.set(
-        (extras?.['room_file_aa_name'] as string) ||
-          (d.display_service_lines?.[1] ?? ''),
-      );
-      return;
-    }
-    if (target.startsWith('room:')) {
-      const index = Number(target.slice('room:'.length));
-      const slot = this.fichaMergedRoomsFromExtras(d)[index];
-      this.fichaNameEditValue.set((slot?.room_file_aa_name ?? '').trim());
+    if (target === 'room' || target.startsWith('room:')) {
+      const roomFaa = this.fichaRoomFileAaNameForEdit(d, target);
+      this.fichaNameEditValue.set(roomFaa);
       return;
     }
     if (d.category === 'vehicle') {
