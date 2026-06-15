@@ -2167,17 +2167,26 @@ export class QuotationDetail implements OnInit {
 
   /** ``file_aa_name`` de catálogo para edición inline (sin formato export Word/PDF). */
   fichaRoomFileAaNameForEdit(d: FileAADetailRow, target: string): string {
+    const normalize = (value: string): string => {
+      const s = value.trim();
+      if (!s) return '';
+      const slash = s.indexOf('/');
+      if (slash >= 0) return s.slice(0, slash).trim();
+      const paren = s.indexOf('(');
+      if (paren >= 0) return s.slice(0, paren).trim();
+      return s;
+    };
     const extras = d.observation_extras as Record<string, unknown> | null | undefined;
     if (target.startsWith('room:')) {
       const index = Number(target.slice('room:'.length));
       const slot = this.fichaMergedRoomsFromExtras(d)[index];
-      return (slot?.room_file_aa_name ?? '').trim();
+      return normalize(slot?.room_file_aa_name ?? '');
     }
     const merged = this.fichaMergedRoomsFromExtras(d);
     if (merged.length === 1) {
-      return (merged[0].room_file_aa_name ?? '').trim();
+      return normalize(merged[0].room_file_aa_name ?? '');
     }
-    return String(extras?.['room_file_aa_name'] ?? '').trim();
+    return normalize(String(extras?.['room_file_aa_name'] ?? ''));
   }
 
   /** Partes de tipología con color (heredada vs reemplazo). */
