@@ -2212,13 +2212,13 @@
                           class="col-money"
                           [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioSistema')"
                         >
-                          {{ fichaTotals().system | currency: 'USD' }}
+                          {{ fichaDetailPriceDisplay(fichaTotals().system) }}
                         </td>
                         <td
                           class="col-money"
                           [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('precioProveedor')"
                         >
-                          {{ fichaTotals().provider | currency: 'USD' }}
+                          {{ fichaDetailPriceDisplay(fichaTotals().provider) }}
                         </td>
                         <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('paid')"></td>
                         <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')"></td>

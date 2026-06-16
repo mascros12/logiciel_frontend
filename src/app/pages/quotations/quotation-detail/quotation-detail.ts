@@ -660,7 +660,7 @@ export class QuotationDetail implements OnInit {
       this.syncTabToRoute(value);
       if (value === 'fileaa') {
         const q = this.quotation();
-        if (q) this.loadFileAA(q.id);
+        if (q) this.loadFileAA(q.id, { syncAgendaVersion: true });
       }
     }
   }
@@ -745,7 +745,8 @@ export class QuotationDetail implements OnInit {
           this.lines.set(this.sortLinesByDate(lines));
           this.loading.set(false);
           this.loadSummary();
-          this.loadFileAA(q.id);
+          // Solo al abrir la cotización; no si el usuario ya tenía otra versión seleccionada.
+          this.loadFileAA(q.id, { syncAgendaVersion: !keepViewingOther });
         };
 
         if (keepViewingOther) {
@@ -1390,7 +1391,6 @@ export class QuotationDetail implements OnInit {
     if (String(normalizedId) === currentId) {
       this.lines.set(this.sortLinesByDate(q.lines ?? []));
       this.loadSummary();
-      this.loadFileAA(q.id);
       return;
     }
 
@@ -1399,7 +1399,6 @@ export class QuotationDetail implements OnInit {
         const arr = Array.isArray(resp) ? resp : (resp as any)?.lines ?? [];
         this.lines.set(this.sortLinesByDate(arr));
         this.loadSummary();
-        this.loadFileAA(q.id);
       },
       error: () =>
         this.messageService.add({
@@ -3127,7 +3126,10 @@ export class QuotationDetail implements OnInit {
   }
 
   /** Carga la única Ficha AA activa de la cotización (no depende del selector de versión). */
-  private loadFileAA(quotationId: string): void {
+  private loadFileAA(
+    quotationId: string,
+    options?: { syncAgendaVersion?: boolean },
+  ): void {
     this.quotationService.getLatestFileAA(quotationId).subscribe({
       next: (f) => {
         this.clearAllVehicleFichaObsDrafts();
@@ -3148,7 +3150,7 @@ export class QuotationDetail implements OnInit {
           this.activeTab.set('fileaa');
           this.syncTabToRoute('fileaa');
         }
-        if (this.activeTab() === 'fileaa') {
+        if (options?.syncAgendaVersion) {
           this.syncAgendaVersionForFichaAaTab(loaded);
         }
       },
@@ -3160,7 +3162,7 @@ export class QuotationDetail implements OnInit {
           this.resetChecklistDraft();
           this.hydrateFichaFreeTextDrafts(null);
           this.fichaAATab.set('config');
-          if (this.activeTab() === 'fileaa') {
+          if (options?.syncAgendaVersion) {
             this.syncAgendaVersionForFichaAaTab(null);
           }
         }
@@ -4700,7 +4702,9 @@ export class QuotationDetail implements OnInit {
 
   fichaDetailPriceDisplay(v: number | string | null | undefined): string {
     if (v === null || v === undefined || v === '') return '';
-    return String(v);
+    const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+    if (!Number.isFinite(n)) return '';
+    return n.toFixed(2);
   }
 
   /** Precio sistema en vivo para filas hotel (neto + actividades fusionadas). */
