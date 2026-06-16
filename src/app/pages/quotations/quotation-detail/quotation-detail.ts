@@ -665,45 +665,27 @@ export class QuotationDetail implements OnInit {
     }
   }
 
-  /** Versión «Programme» (v1) de la cotización. */
-  private programmeVersionId(q: QuotationFull): string | null {
-    const v1 =
-      q.versions?.find(
-        (v) =>
-          v.version_number === 1 &&
-          !(v as QuotationVersion & { deleted?: boolean }).deleted,
-      ) ?? null;
-    if (v1?.id) return String(v1.id);
-    const cur = q.current_version?.id;
-    return cur ? String(cur) : null;
-  }
-
   /**
-   * En tab Ficha AA: agenda/cotización usan la versión de la ficha activa;
-   * sin ficha, el Programme (v1).
+   * Solo si hay Ficha AA generada: alinea el selector con ``version_id`` de la ficha.
+   * Sin ficha no cambia la versión automáticamente.
    */
   private syncAgendaVersionForFichaAaTab(ficha: FileAAWithDetails | null): void {
     const q = this.quotation();
-    if (!q) return;
+    if (!q || !ficha?.version_id) return;
 
-    let targetId: string | null = null;
-    if (ficha?.version_id) {
-      const vid = String(ficha.version_id);
-      const exists = q.versions?.some((v) => String(v.id) === vid);
-      if (exists) targetId = vid;
-    }
-    if (!targetId) targetId = this.programmeVersionId(q);
-    if (!targetId || String(this.selectedVersionId()) === targetId) return;
+    const vid = String(ficha.version_id);
+    const exists = q.versions?.some((v) => String(v.id) === vid);
+    if (!exists || String(this.selectedVersionId()) === vid) return;
 
-    this.selectedVersionId.set(targetId);
+    this.selectedVersionId.set(vid);
     const currentId = q.current_version?.id ? String(q.current_version.id) : null;
-    if (String(targetId) === currentId) {
+    if (vid === currentId) {
       this.lines.set(this.sortLinesByDate(q.lines ?? []));
       this.loadSummary();
       return;
     }
 
-    this.quotationService.getVersionLines(q.id, targetId).subscribe({
+    this.quotationService.getVersionLines(q.id, vid).subscribe({
       next: (resp) => {
         const arr = Array.isArray(resp)
           ? resp
@@ -3162,9 +3144,6 @@ export class QuotationDetail implements OnInit {
           this.resetChecklistDraft();
           this.hydrateFichaFreeTextDrafts(null);
           this.fichaAATab.set('config');
-          if (options?.syncAgendaVersion) {
-            this.syncAgendaVersionForFichaAaTab(null);
-          }
         }
       },
     });
