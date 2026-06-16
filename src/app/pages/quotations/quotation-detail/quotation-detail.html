@@ -2204,6 +2204,7 @@
                       }
                     </tbody>
                     }
+                    @if (isAdmin()) {
                     <tfoot>
                       <tr class="ficha-aa-totals-row">
                         <td [attr.colspan]="fichaAaTotalsLabelColspan()" class="totals-label">Totales</td>
@@ -2223,6 +2224,7 @@
                         <td [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')"></td>
                       </tr>
                     </tfoot>
+                    }
                   </table>
                 </div>
               </div>

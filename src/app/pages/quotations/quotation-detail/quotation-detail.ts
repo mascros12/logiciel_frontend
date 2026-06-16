@@ -665,6 +665,60 @@ export class QuotationDetail implements OnInit {
     }
   }
 
+  /** Versión «Programme» (v1) de la cotización. */
+  private programmeVersionId(q: QuotationFull): string | null {
+    const v1 =
+      q.versions?.find(
+        (v) =>
+          v.version_number === 1 &&
+          !(v as QuotationVersion & { deleted?: boolean }).deleted,
+      ) ?? null;
+    if (v1?.id) return String(v1.id);
+    const cur = q.current_version?.id;
+    return cur ? String(cur) : null;
+  }
+
+  /**
+   * En tab Ficha AA: agenda/cotización usan la versión de la ficha activa;
+   * sin ficha, el Programme (v1).
+   */
+  private syncAgendaVersionForFichaAaTab(ficha: FileAAWithDetails | null): void {
+    const q = this.quotation();
+    if (!q) return;
+
+    let targetId: string | null = null;
+    if (ficha?.version_id) {
+      const vid = String(ficha.version_id);
+      const exists = q.versions?.some((v) => String(v.id) === vid);
+      if (exists) targetId = vid;
+    }
+    if (!targetId) targetId = this.programmeVersionId(q);
+    if (!targetId || String(this.selectedVersionId()) === targetId) return;
+
+    this.selectedVersionId.set(targetId);
+    const currentId = q.current_version?.id ? String(q.current_version.id) : null;
+    if (String(targetId) === currentId) {
+      this.lines.set(this.sortLinesByDate(q.lines ?? []));
+      this.loadSummary();
+      return;
+    }
+
+    this.quotationService.getVersionLines(q.id, targetId).subscribe({
+      next: (resp) => {
+        const arr = Array.isArray(resp)
+          ? resp
+          : (resp as { lines?: QuotationLine[] })?.lines ?? [];
+        this.lines.set(this.sortLinesByDate(arr));
+        this.loadSummary();
+      },
+      error: () =>
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se pudieron cargar las líneas de esta versión',
+        }),
+    });
+  }
+
   load(id: string) {
     this.loading.set(true);
     const prevVersionId = this.selectedVersionId();
@@ -3094,6 +3148,9 @@ export class QuotationDetail implements OnInit {
           this.activeTab.set('fileaa');
           this.syncTabToRoute('fileaa');
         }
+        if (this.activeTab() === 'fileaa') {
+          this.syncAgendaVersionForFichaAaTab(loaded);
+        }
       },
       error: (err) => {
         if (err.status === 404) {
@@ -3103,6 +3160,9 @@ export class QuotationDetail implements OnInit {
           this.resetChecklistDraft();
           this.hydrateFichaFreeTextDrafts(null);
           this.fichaAATab.set('config');
+          if (this.activeTab() === 'fileaa') {
+            this.syncAgendaVersionForFichaAaTab(null);
+          }
         }
       },
     });
