@@ -2740,8 +2740,7 @@ export class QuotationDetail implements OnInit {
   // Estos helpers replican la lógica del header del documento exportado
   // (Word y PDF) para mostrar la misma información en la celda
   // `ficha-aa-table-summary-cell` del frontend, con colores que imitan los
-  // del export: rojo para vuelos/noches/fecha límite y verde oscuro para
-  // «Voiture de Location».
+  // del export: rojo para vuelos/noches/fecha límite, versión y Voiture de Location.
 
   /** Nombre exportado: corta todo lo que va después del primer `/`. */
   fichaExportDisplayNameFr(name: string | null | undefined): string {
