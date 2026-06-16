@@ -29,6 +29,9 @@ import {
   onCatalogTablePage,
   readListStateFromRoute,
 } from '../../../core/utils/list-url-state';
+import { canEditProviderReservationEmail } from '../../../core/utils/catalog-provider-email';
+import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-activity-list',
@@ -38,7 +41,7 @@ import {
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TagModule, SelectModule,
-    RichTextPipe,
+    RichTextPipe, ProviderReservationEmailDialogComponent, TooltipModule,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './activity-list.html',
@@ -60,6 +63,9 @@ export class ActivityList implements OnInit {
 
   showDialog = signal(false);
   editingId = signal<string | null>(null);
+  showProviderEmailDialog = signal(false);
+  providerEmailTarget = signal<Activity | null>(null);
+  savingProviderEmail = signal(false);
 
   form: FormGroup;
 
@@ -327,6 +333,47 @@ export class ActivityList implements OnInit {
   canManageActivities(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  canEditProviderEmail(): boolean {
+    return canEditProviderReservationEmail(this.auth.currentUser()?.role);
+  }
+
+  showActionsColumn(): boolean {
+    return this.canManageActivities() || this.canEditProviderEmail();
+  }
+
+  openProviderEmail(activity: Activity, event: Event): void {
+    event.stopPropagation();
+    this.providerEmailTarget.set(activity);
+    this.showProviderEmailDialog.set(true);
+  }
+
+  providerEmailEntityLabel(activity: Activity | null): string {
+    if (!activity) return '';
+    return activity.name_es || activity.name || '';
+  }
+
+  submitProviderEmail(email: string | null): void {
+    const target = this.providerEmailTarget();
+    if (!target) return;
+    this.savingProviderEmail.set(true);
+    this.activityService.updateReservationEmail(target.id, email).subscribe({
+      next: () => {
+        this.savingProviderEmail.set(false);
+        this.showProviderEmailDialog.set(false);
+        this.providerEmailTarget.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Correo actualizado' });
+        this.load();
+      },
+      error: (err) => {
+        this.savingProviderEmail.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'Error al guardar el correo',
+        });
+      },
+    });
   }
 
   filteredActivities(): Activity[] {

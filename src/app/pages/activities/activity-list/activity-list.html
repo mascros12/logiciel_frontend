@@ -59,6 +59,8 @@
         <th style="width: 110px;">Precio Adulto</th>
         <th style="width: 110px;">Precio Niño</th>
         <th style="width: 90px;">Comisión</th>
+      }
+      @if (showActionsColumn()) {
         <th style="width: 100px;">Acciones</th>
       }
     </tr>
@@ -87,11 +89,25 @@
           <div class="rack-price">R: ${{ a.rack_child_price | number:'1.2-2' }}</div>
         </td>
         <td>{{ a.commission | number:'1.2-2' }}</td>
+      }
+      @if (showActionsColumn()) {
         <td>
           <div class="flex gap-2">
-            <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="openEdit(a)" />
-            <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
-              (onClick)="confirmDelete($event, a.id)" />
+            @if (canEditProviderEmail()) {
+              <p-button
+                icon="pi pi-envelope"
+                [text]="true"
+                size="small"
+                pTooltip="Correo del proveedor"
+                tooltipPosition="top"
+                (onClick)="openProviderEmail(a, $event)"
+              />
+            }
+            @if (canManageActivities()) {
+              <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="openEdit(a)" />
+              <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+                (onClick)="confirmDelete($event, a.id)" />
+            }
           </div>
         </td>
       }
@@ -100,7 +116,7 @@
 
   <ng-template pTemplate="emptymessage">
     <tr>
-      <td [attr.colspan]="canManageActivities() ? 6 : 1" class="text-center">No hay actividades registradas</td>
+      <td [attr.colspan]="(canManageActivities() ? 5 : 1) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay actividades registradas</td>
     </tr>
   </ng-template>
 </p-table>
@@ -248,3 +264,13 @@
   </ng-template>
 </p-dialog>
 }
+
+<app-provider-reservation-email-dialog
+  header="Correo del proveedor — Actividad"
+  [visible]="showProviderEmailDialog()"
+  (visibleChange)="showProviderEmailDialog.set($event)"
+  [entityName]="providerEmailEntityLabel(providerEmailTarget())"
+  [initialEmail]="providerEmailTarget()?.reservation_email"
+  [saving]="savingProviderEmail()"
+  (saveEmail)="submitProviderEmail($event)"
+/>

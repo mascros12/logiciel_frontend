@@ -58,6 +58,8 @@
         <th style="width:120px">Provincia</th>
         @if (canManageHotels()) {
           <th style="width:100px">Comisión</th>
+        }
+        @if (showActionsColumn()) {
           <th style="width:110px">Acciones</th>
         }
       </tr>
@@ -86,12 +88,26 @@
         <td>{{ h.province ?? '—' }}</td>
         @if (canManageHotels()) {
           <td>{{ h.commission | number:'1.2-2' }}</td>
+        }
+        @if (showActionsColumn()) {
           <td>
             <div class="flex gap-1" (click)="$event.stopPropagation()">
-              <p-button icon="pi pi-pencil" [text]="true" size="small"
-                (onClick)="openEdit(h, $event)" />
-              <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
-                (onClick)="confirmDelete($event, h.id)" />
+              @if (canEditProviderEmail()) {
+                <p-button
+                  icon="pi pi-envelope"
+                  [text]="true"
+                  size="small"
+                  pTooltip="Correo del proveedor"
+                  tooltipPosition="top"
+                  (onClick)="openProviderEmail(h, $event)"
+                />
+              }
+              @if (canManageHotels()) {
+                <p-button icon="pi pi-pencil" [text]="true" size="small"
+                  (onClick)="openEdit(h, $event)" />
+                <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small"
+                  (onClick)="confirmDelete($event, h.id)" />
+              }
             </div>
           </td>
         }
@@ -99,7 +115,7 @@
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td [attr.colspan]="canManageHotels() ? 5 : 2" class="text-center">No hay hoteles registrados</td></tr>
+      <tr><td [attr.colspan]="(canManageHotels() ? 4 : 2) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay hoteles registrados</td></tr>
     </ng-template>
   </p-table>
 </div>
@@ -161,3 +177,13 @@
   </ng-template>
 </p-dialog>
 }
+
+<app-provider-reservation-email-dialog
+  header="Correo del proveedor — Hotel"
+  [visible]="showProviderEmailDialog()"
+  (visibleChange)="showProviderEmailDialog.set($event)"
+  [entityName]="providerEmailTarget()?.name ?? ''"
+  [initialEmail]="providerEmailTarget()?.reservation_email"
+  [saving]="savingProviderEmail()"
+  (saveEmail)="submitProviderEmail($event)"
+/>

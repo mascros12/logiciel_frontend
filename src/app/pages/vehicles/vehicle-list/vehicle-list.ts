@@ -37,6 +37,9 @@ import {
   onCatalogTablePage,
   readListStateFromRoute,
 } from '../../../core/utils/list-url-state';
+import { canEditProviderReservationEmail } from '../../../core/utils/catalog-provider-email';
+import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-vehicle-list',
@@ -47,6 +50,7 @@ import {
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
     DatePickerModule, TagModule, RichTextPipe,
+    ProviderReservationEmailDialogComponent, TooltipModule,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './vehicle-list.html',
@@ -67,6 +71,9 @@ export class VehicleList implements OnInit {
 
   showDialog = signal(false);
   editingVehicle = signal<Vehicle | null>(null);
+  showProviderEmailDialog = signal(false);
+  providerEmailTarget = signal<Vehicle | null>(null);
+  savingProviderEmail = signal(false);
 
   // Para el dialog de temporada
   showSeasonDialog = signal(false);
@@ -448,8 +455,54 @@ export class VehicleList implements OnInit {
     return role === 'admin' || role === 'admin_proveedores';
   }
 
+  canEditProviderEmail(): boolean {
+    return canEditProviderReservationEmail(this.auth.currentUser()?.role);
+  }
+
+  showActionsColumn(): boolean {
+    return this.canManageVehicles() || this.canEditProviderEmail();
+  }
+
+  openProviderEmail(v: Vehicle, event: Event): void {
+    event.stopPropagation();
+    this.providerEmailTarget.set(v);
+    this.showProviderEmailDialog.set(true);
+  }
+
+  providerEmailEntityLabel(v: Vehicle | null): string {
+    if (!v) return '';
+    return v.brand ? `${v.name} (${v.brand})` : v.name;
+  }
+
+  submitProviderEmail(email: string | null): void {
+    const target = this.providerEmailTarget();
+    if (!target) return;
+    this.savingProviderEmail.set(true);
+    this.vehicleService.updateReservationEmail(target.id, email).subscribe({
+      next: () => {
+        this.savingProviderEmail.set(false);
+        this.showProviderEmailDialog.set(false);
+        this.providerEmailTarget.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Correo actualizado' });
+        this.load();
+      },
+      error: (err) => {
+        this.savingProviderEmail.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'Error al guardar el correo',
+        });
+      },
+    });
+  }
+
   filteredVehicles(): Vehicle[] {
     return this.filterBySearch(this.vehicles(), this.searchTerm);
+  }
+
+  emptyTableColspan(): number {
+    if (this.canManageVehicles()) return 9;
+    return 4 + (this.canEditProviderEmail() ? 1 : 0);
   }
 
   private filterBySearch<T>(items: T[], term: string): T[] {

@@ -29,6 +29,12 @@ export class VehicleService {
     return this.http.patch<Vehicle>(`${this.url}/${id}`, body);
   }
 
+  updateReservationEmail(id: string, reservation_email: string | null) {
+    return this.http.patch<Vehicle>(`${this.url}/${id}/reservation-email`, {
+      reservation_email,
+    });
+  }
+
   delete(id: string) {
     return this.http.delete(`${this.url}/${id}`);
   }

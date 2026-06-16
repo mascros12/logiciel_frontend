@@ -29,6 +29,12 @@ export class ActivityService {
     return this.http.patch<Activity>(`${this.url}/${id}`, body);
   }
 
+  updateReservationEmail(id: string, reservation_email: string | null) {
+    return this.http.patch<Activity>(`${this.url}/${id}/reservation-email`, {
+      reservation_email,
+    });
+  }
+
   delete(id: string) {
     return this.http.delete(`${this.url}/${id}`);
   }

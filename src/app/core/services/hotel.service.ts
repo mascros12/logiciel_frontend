@@ -31,6 +31,12 @@ export class HotelService {
     return this.http.patch<Hotel>(`${this.url}/${id}`, body);
   }
 
+  updateReservationEmail(id: string, reservation_email: string | null) {
+    return this.http.patch<Hotel>(`${this.url}/${id}/reservation-email`, {
+      reservation_email,
+    });
+  }
+
   delete(id: string) {
     return this.http.delete(`${this.url}/${id}`);
   }

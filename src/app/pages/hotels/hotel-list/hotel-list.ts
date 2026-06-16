@@ -12,6 +12,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
 import { Hotel, HotelCategory } from '../../../core/models/hotel.model';
@@ -30,6 +31,8 @@ import {
   onCatalogTablePage,
   readListStateFromRoute,
 } from '../../../core/utils/list-url-state';
+import { canEditProviderReservationEmail } from '../../../core/utils/catalog-provider-email';
+import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
 
 @Component({
   selector: 'app-hotel-list',
@@ -38,8 +41,8 @@ import {
     ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
-    ConfirmDialogModule, SelectModule, TagModule,
-    DecimalPipe, RichTextPipe,
+    ConfirmDialogModule, SelectModule, TagModule, TooltipModule,
+    DecimalPipe, RichTextPipe, ProviderReservationEmailDialogComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-list.html',
@@ -54,6 +57,9 @@ export class HotelList implements OnInit {
   selectedHotels: Hotel[] = [];
   showDialog = signal(false);
   editingHotel = signal<Hotel | null>(null);
+  showProviderEmailDialog = signal(false);
+  providerEmailTarget = signal<Hotel | null>(null);
+  savingProviderEmail = signal(false);
   listState: CatalogListState = {
     searchTerm: '',
     first: 0,
@@ -278,6 +284,42 @@ export class HotelList implements OnInit {
   canManageHotels(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  canEditProviderEmail(): boolean {
+    return canEditProviderReservationEmail(this.auth.currentUser()?.role);
+  }
+
+  showActionsColumn(): boolean {
+    return this.canManageHotels() || this.canEditProviderEmail();
+  }
+
+  openProviderEmail(h: Hotel, event: Event): void {
+    event.stopPropagation();
+    this.providerEmailTarget.set(h);
+    this.showProviderEmailDialog.set(true);
+  }
+
+  submitProviderEmail(email: string | null): void {
+    const target = this.providerEmailTarget();
+    if (!target) return;
+    this.savingProviderEmail.set(true);
+    this.hotelService.updateReservationEmail(target.id, email).subscribe({
+      next: () => {
+        this.savingProviderEmail.set(false);
+        this.showProviderEmailDialog.set(false);
+        this.providerEmailTarget.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Correo actualizado' });
+        this.load();
+      },
+      error: (err) => {
+        this.savingProviderEmail.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'Error al guardar el correo',
+        });
+      },
+    });
   }
 
   filteredHotels(): Hotel[] {
