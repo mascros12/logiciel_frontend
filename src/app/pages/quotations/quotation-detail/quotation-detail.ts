@@ -2951,8 +2951,8 @@ export class QuotationDetail implements OnInit {
   }
 
   /**
-   * «Voiture de Location: …» — Alquiler: nombre del vehículo (antes del ``/`` y del ``(``),
-   * Interbus (una vez) y Vuelo Interno (file_aa_name). Igual que export Word/PDF.
+   * «Voiture de Location: …» — Alquiler: ``name`` antes del ``/`` y del ``(``;
+   * Interbus (una vez) y Vuelo Interno (``file_aa_name``). Omite filas sustituidas (rojo).
    */
   fichaVoitureLocationLineFr(ficha: FileAAWithDetails): string {
     if (!ficha.details?.length) return '';
@@ -2963,6 +2963,7 @@ export class QuotationDetail implements OnInit {
     const seenVuelo = new Set<string>();
 
     for (const d of ficha.details) {
+      if (d.row_status === 'red') continue;
       if (d.category !== 'vehicle') continue;
       const ex = (d.observation_extras ?? {}) as Record<string, unknown>;
       const cat = String(ex['vehicle_category'] ?? '').trim();
