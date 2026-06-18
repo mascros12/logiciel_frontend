@@ -1758,7 +1758,14 @@
       margin: 0.35rem 0 0;
       font-size: 1rem;
       font-weight: 700;
-      color: #991B1B; // rojo oscuro (idéntico al export Word/PDF y Arrivée)
+    }
+
+    .ficha-aa-summary-voiture-label {
+      color: #0f172a;
+    }
+
+    .ficha-aa-summary-voiture-value {
+      color: #991B1B;
     }
 
     .ficha-aa-totals-row td {

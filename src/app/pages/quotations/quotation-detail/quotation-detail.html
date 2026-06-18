@@ -1138,9 +1138,12 @@
                               <p class="ficha-aa-summary-flight-fr">{{ fichaDepartureLineFr(q) }}</p>
                             }
 
-                            @let voitureLocFr = fichaVoitureLocationLineFr(ficha);
-                            @if (voitureLocFr) {
-                              <p class="ficha-aa-summary-voiture-fr">{{ voitureLocFr }}</p>
+                            @let voitureLocContent = fichaVoitureLocationContentFr(ficha);
+                            @if (voitureLocContent) {
+                              <p class="ficha-aa-summary-voiture-fr">
+                                <span class="ficha-aa-summary-voiture-label">{{ voitureLocationLabelPrefix }}</span>
+                                <span class="ficha-aa-summary-voiture-value"> {{ voitureLocContent }}</span>
+                              </p>
                             }
                           </div>
                         </td>

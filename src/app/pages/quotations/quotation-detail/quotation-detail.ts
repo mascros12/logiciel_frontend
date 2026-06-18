@@ -154,6 +154,8 @@ const VOITURE_LOCATION_VEHICLE_CATEGORIES = [
   'Vuelo Interno',
 ] as const;
 
+const VOITURE_LOCATION_LABEL_PREFIX = 'Voiture de Location:';
+
 type FichaAaColumnKey =
   | 'drag'
   | 'confirmed'
@@ -234,6 +236,7 @@ function computeFichaAaTableMinWidthPx(
 export class QuotationDetail implements OnInit {
   /** Opciones del selector de color (misma lista que valida el API). */
   readonly fichaHeaderPalette: readonly string[] = [...FICHA_HEADER_COLORS];
+  readonly voitureLocationLabelPrefix = VOITURE_LOCATION_LABEL_PREFIX;
 
   quotation = signal<QuotationFull | null>(null);
   loading = signal(true);
@@ -3135,7 +3138,14 @@ export class QuotationDetail implements OnInit {
     const parts: string[] = [...alquiler];
     if (hasInterbus) parts.push('Interbus');
     parts.push(...vueloBrands);
-    return parts.length ? `Voiture de Location: ${parts.join(', ')}` : '';
+    return parts.length ? `${VOITURE_LOCATION_LABEL_PREFIX} ${parts.join(', ')}` : '';
+  }
+
+  /** Contenido tras «Voiture de Location:» (vehículos listados). */
+  fichaVoitureLocationContentFr(ficha: FileAAWithDetails): string {
+    const line = this.fichaVoitureLocationLineFr(ficha);
+    if (!line.startsWith(VOITURE_LOCATION_LABEL_PREFIX)) return line;
+    return line.slice(VOITURE_LOCATION_LABEL_PREFIX.length).trim();
   }
 
   fichaCategoryLabel(cat: string): string {
