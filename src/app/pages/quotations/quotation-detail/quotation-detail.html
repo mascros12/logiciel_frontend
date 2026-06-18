@@ -1447,7 +1447,7 @@
                                     </span>
                                   }
                                 </span>
-                                @for (act of fichaHotelAttachedActivityDisplay(d); track act.detailId) {
+                                @for (act of fichaAttachedActivityDisplay(d); track act.detailId) {
                                   @if (fichaAttachedActivityRow(act.detailId); as actRow) {
                                     @if (isFichaNameEditing(act.detailId, 'activity')) {
                                       <div class="ficha-name-inline-edit" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
@@ -1587,7 +1587,60 @@
                                 </div>
                               } @else if (d.category === 'activity') {
                                 @let actParts = fichaSplitActivityTimeSuffix(svcLines[0]);
-                                @if (canEditFichaCatalogueName()) {
+                                @if (fichaAttachedActivityIds(d).length > 0) {
+                                  <div class="ficha-activity-merged-service">
+                                    @if (canEditFichaCatalogueName()) {
+                                      <span
+                                        class="ficha-name ficha-name-clickable"
+                                        (click)="$event.stopPropagation(); startFichaNameEdit(d, 'activity')"
+                                      >
+                                        {{ actParts.main }}
+                                        @if (actParts.time) {
+                                          <span class="ficha-activity-time">, {{ actParts.time }}</span>
+                                        }
+                                      </span>
+                                    } @else {
+                                      <span class="ficha-name">
+                                        {{ actParts.main }}
+                                        @if (actParts.time) {
+                                          <span class="ficha-activity-time">, {{ actParts.time }}</span>
+                                        }
+                                      </span>
+                                    }
+                                    @for (act of fichaAttachedActivityDisplay(d); track act.detailId) {
+                                      @if (fichaAttachedActivityRow(act.detailId); as actRow) {
+                                        @if (isFichaNameEditing(act.detailId, 'activity')) {
+                                          <div class="ficha-name-inline-edit" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                                            <input pInputText class="ficha-name-edit-input" placeholder="Nombre actividad" [ngModel]="fichaNameEditValue()" (ngModelChange)="fichaNameEditValue.set($event)" [disabled]="savingFichaName()" (keydown.enter)="confirmFichaNameEdit(actRow, ficha, 'activity')" (keydown.escape)="cancelFichaNameEdit()" autofocus />
+                                            <button pButton icon="pi pi-check" class="p-button-sm p-button-success ficha-name-edit-btn" [loading]="savingFichaName()" (click)="confirmFichaNameEdit(actRow, ficha, 'activity')"></button>
+                                            <button pButton icon="pi pi-times" class="p-button-sm p-button-text ficha-name-edit-btn" (click)="cancelFichaNameEdit()"></button>
+                                          </div>
+                                        } @else if (canEditFichaCatalogueName()) {
+                                          <div class="ficha-room-attached-activity">
+                                            <span
+                                              class="ficha-name ficha-name-clickable"
+                                              (click)="$event.stopPropagation(); startFichaNameEdit(actRow, 'activity')"
+                                            >
+                                              {{ act.main }}
+                                              @if (act.time) {
+                                                <span class="ficha-activity-time">, {{ act.time }}</span>
+                                              }
+                                            </span>
+                                          </div>
+                                        } @else {
+                                          <div class="ficha-room-attached-activity">
+                                            <span class="ficha-name">
+                                              {{ act.main }}
+                                              @if (act.time) {
+                                                <span class="ficha-activity-time">, {{ act.time }}</span>
+                                              }
+                                            </span>
+                                          </div>
+                                        }
+                                      }
+                                    }
+                                  </div>
+                                } @else if (canEditFichaCatalogueName()) {
                                   <span
                                     class="ficha-name ficha-name-clickable"
                                     (click)="$event.stopPropagation(); startFichaNameEdit(d, 'activity')"
@@ -2135,20 +2188,20 @@
                           </td>
                           <td class="col-ficha-actions" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')">
                             <div class="ficha-actions-cell">
-                              @if (canFichaCombineActivity(d) && fichaCombineHotelOptions().length > 0) {
+                              @if (canShowFichaCombineButton(d)) {
                                 <p-button
                                   icon="pi pi-link"
                                   [text]="true"
                                   [rounded]="true"
                                   size="small"
                                   severity="secondary"
-                                  pTooltip="Combinar con un hotel"
+                                  pTooltip="Combinar con hotel o actividad"
                                   tooltipPosition="top"
                                   [disabled]="fichaDetailReorderSaving()"
                                   (onClick)="openFichaCombineDialog(d)"
                                 />
                               }
-                              @if (canFichaDetachFromHotel(d)) {
+                              @if (canFichaDetachAttached(d)) {
                                 <p-button
                                   icon="pi pi-undo"
                                   [text]="true"
@@ -2308,10 +2361,10 @@
   </ng-template>
 </p-dialog>
 
-<!-- Combinar actividad con hotel -->
+<!-- Combinar actividad con hotel o actividad -->
 <p-dialog
   styleClass="ficha-combine-dialog"
-  header="Combinar actividad con hotel"
+  header="Combinar actividad"
   [visible]="showFichaCombineDialog()"
   (visibleChange)="showFichaCombineDialog.set($event)"
   [modal]="true"
@@ -2323,25 +2376,52 @@
       Actividad:
       <strong>{{ fichaCombineActivityLabel() }}</strong>
     </p>
-    @if (fichaCombineHotelOptions().length === 0) {
-      <p class="ficha-add-empty">No hay filas de hotel disponibles en esta ficha.</p>
+    @if (fichaCombineHotelOptions().length === 0 && fichaCombineActivityTargetOptions(activity).length === 0) {
+      <p class="ficha-add-empty">No hay filas disponibles para combinar en esta ficha.</p>
     } @else {
-      <p class="ficha-add-pick-hint">Seleccione el hotel con el que desea combinar esta actividad.</p>
-      <label class="ficha-add-select-label" for="ficha-combine-hotel-sel">Hotel</label>
-      <p-select
-        inputId="ficha-combine-hotel-sel"
-        [options]="fichaCombineHotelOptions()"
-        [ngModel]="fichaCombineSelectedHotelId()"
-        (ngModelChange)="fichaCombineSelectedHotelId.set($event)"
-        dataKey="id"
-        optionLabel="label"
-        optionValue="id"
-        placeholder="Seleccione hotel…"
-        styleClass="w-full"
-        appendTo="body"
-        [filter]="true"
-        filterBy="label"
-      />
+      <p class="ficha-add-pick-hint">¿Con qué tipo de servicio desea combinarla?</p>
+      <div class="ficha-combine-kind-row">
+        @if (fichaCombineHotelOptions().length > 0) {
+          <p-button
+            label="Hotel"
+            icon="pi pi-building"
+            [outlined]="fichaCombineTargetKind() !== 'hotel'"
+            (onClick)="fichaCombineTargetKind.set('hotel'); fichaCombineSelectedTargetId.set(null)"
+          />
+        }
+        @if (fichaCombineActivityTargetOptions(activity).length > 0) {
+          <p-button
+            label="Actividad"
+            icon="pi pi-map"
+            [outlined]="fichaCombineTargetKind() !== 'activity'"
+            (onClick)="fichaCombineTargetKind.set('activity'); fichaCombineSelectedTargetId.set(null)"
+          />
+        }
+      </div>
+      @if (fichaCombineTargetKind(); as kind) {
+        @if (fichaCombineTargetOptions().length === 0) {
+          <p class="ficha-add-empty">No hay destinos disponibles.</p>
+        } @else {
+          <p class="ficha-add-pick-hint">
+            Seleccione el {{ kind === 'hotel' ? 'hotel' : 'actividad' }} destino.
+          </p>
+          <label class="ficha-add-select-label" for="ficha-combine-target-sel">Destino</label>
+          <p-select
+            inputId="ficha-combine-target-sel"
+            [options]="fichaCombineTargetOptions()"
+            [ngModel]="fichaCombineSelectedTargetId()"
+            (ngModelChange)="fichaCombineSelectedTargetId.set($event)"
+            dataKey="id"
+            optionLabel="label"
+            optionValue="id"
+            [placeholder]="kind === 'hotel' ? 'Seleccione hotel…' : 'Seleccione actividad…'"
+            styleClass="w-full"
+            appendTo="body"
+            [filter]="true"
+            filterBy="label"
+          />
+        }
+      }
     }
   }
   <ng-template pTemplate="footer">
@@ -2349,7 +2429,7 @@
     <p-button
       label="Continuar"
       icon="pi pi-check"
-      [disabled]="!fichaCombineSelectedHotelId() || fichaCombineHotelOptions().length === 0"
+      [disabled]="!fichaCombineTargetKind() || !fichaCombineSelectedTargetId() || fichaCombineTargetOptions().length === 0"
       (onClick)="submitFichaCombine()"
     />
   </ng-template>
@@ -2403,29 +2483,29 @@
   </ng-template>
 </p-dialog>
 
-<!-- Descombinar actividad de hotel -->
+<!-- Descombinar actividad incorporada -->
 <p-dialog
   styleClass="ficha-combine-dialog"
-  header="Descombinar actividad del hotel"
+  header="Descombinar actividad"
   [visible]="showFichaDetachDialog()"
   (visibleChange)="showFichaDetachDialog.set($event)"
   [modal]="true"
   [style]="{ width: 'min(520px, 96vw)' }"
   (onHide)="onFichaDetachDialogHide()"
 >
-  @if (fichaDetachHotelRow(); as hotel) {
+  @if (fichaDetachAnchorRow(); as anchor) {
     <p class="ficha-add-dialog-hint">
-      Hotel:
-      <strong>{{ fichaDetachHotelLabel() }}</strong>
+      Servicio:
+      <strong>{{ fichaDetachAnchorLabel() }}</strong>
     </p>
-    @if (fichaHotelAttachedActivityOptions(hotel).length === 0) {
-      <p class="ficha-add-empty">No hay actividades incorporadas en este hotel.</p>
+    @if (fichaAttachedActivityOptions(anchor).length === 0) {
+      <p class="ficha-add-empty">No hay actividades incorporadas.</p>
     } @else {
       <p class="ficha-add-pick-hint">Seleccione la actividad que desea descombinar.</p>
       <label class="ficha-add-select-label" for="ficha-detach-activity-sel">Actividad</label>
       <p-select
         inputId="ficha-detach-activity-sel"
-        [options]="fichaHotelAttachedActivityOptions(hotel)"
+        [options]="fichaAttachedActivityOptions(anchor)"
         [ngModel]="fichaDetachSelectedActivityId()"
         (ngModelChange)="fichaDetachSelectedActivityId.set($event)"
         dataKey="id"

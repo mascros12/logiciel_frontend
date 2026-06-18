@@ -1795,6 +1795,15 @@
     }
   }
 
+  :host ::ng-deep .p-dialog.ficha-combine-dialog {
+    .ficha-combine-kind-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin: 0.75rem 0 1rem;
+    }
+  }
+
   :host ::ng-deep .p-dialog.ficha-add-detail-dialog {
     .ficha-add-dialog-hint {
       margin: 0 0 0.75rem;

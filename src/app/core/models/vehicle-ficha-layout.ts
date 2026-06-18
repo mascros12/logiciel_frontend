@@ -235,8 +235,12 @@ export function fichaAaDetailVisibleInTable(d: {
   observation_extras?: Record<string, unknown> | null;
 }): boolean {
   if (d.category === 'activity') {
-    const merged = d.observation_extras?.['merged_into_hotel_detail_id'];
-    if (merged !== null && merged !== undefined && String(merged).trim()) {
+    const mergedHotel = d.observation_extras?.['merged_into_hotel_detail_id'];
+    const mergedActivity = d.observation_extras?.['merged_into_activity_detail_id'];
+    if (
+      (mergedHotel !== null && mergedHotel !== undefined && String(mergedHotel).trim()) ||
+      (mergedActivity !== null && mergedActivity !== undefined && String(mergedActivity).trim())
+    ) {
       return false;
     }
   }

@@ -456,9 +456,10 @@ export class QuotationDetail implements OnInit {
   savingFichaAddDetail = signal(false);
   showFichaCombineDialog = signal(false);
   fichaCombineActivityRow = signal<FileAADetailRow | null>(null);
-  fichaCombineSelectedHotelId = signal<string | null>(null);
+  fichaCombineTargetKind = signal<'hotel' | 'activity' | null>(null);
+  fichaCombineSelectedTargetId = signal<string | null>(null);
   showFichaDetachDialog = signal(false);
-  fichaDetachHotelRow = signal<FileAADetailRow | null>(null);
+  fichaDetachAnchorRow = signal<FileAADetailRow | null>(null);
   fichaDetachSelectedActivityId = signal<string | null>(null);
   showFichaColorPicker = signal(false);
 
@@ -1630,16 +1631,29 @@ export class QuotationDetail implements OnInit {
       });
   }
 
-  private fichaActivityMergedIntoHotel(d: FileAADetailRow): boolean {
-    const raw = d.observation_extras?.['merged_into_hotel_detail_id'];
-    return raw !== null && raw !== undefined && String(raw).trim().length > 0;
+  private fichaActivityMergedIntoAny(d: FileAADetailRow): boolean {
+    const ex = d.observation_extras;
+    const hotel = ex?.['merged_into_hotel_detail_id'];
+    const activity = ex?.['merged_into_activity_detail_id'];
+    return (
+      (hotel !== null && hotel !== undefined && String(hotel).trim().length > 0) ||
+      (activity !== null && activity !== undefined && String(activity).trim().length > 0)
+    );
   }
 
   canFichaCombineActivity(d: FileAADetailRow): boolean {
     return (
       d.category === 'activity' &&
       d.row_status !== 'red' &&
-      !this.fichaActivityMergedIntoHotel(d)
+      !this.fichaActivityMergedIntoAny(d)
+    );
+  }
+
+  canShowFichaCombineButton(d: FileAADetailRow): boolean {
+    return (
+      this.canFichaCombineActivity(d) &&
+      (this.fichaCombineHotelOptions().length > 0 ||
+        this.fichaCombineActivityTargetOptions(d).length > 0)
     );
   }
 
@@ -1661,26 +1675,65 @@ export class QuotationDetail implements OnInit {
       }));
   }
 
+  fichaCombineActivityTargetOptions(
+    source: FileAADetailRow,
+  ): { id: string; label: string }[] {
+    const f = this.fichaFileAA();
+    if (!f) return [];
+    return (f.details ?? [])
+      .filter(
+        (row) =>
+          row.id !== source.id &&
+          row.category === 'activity' &&
+          row.row_status !== 'red' &&
+          fichaAaDetailVisibleInTable(row),
+      )
+      .map((row) => ({
+        id: row.id,
+        label: this.stripHtml(
+          this.fichaDetailServiceLines(row)[0] || row.name || 'Actividad',
+        ),
+      }));
+  }
+
   openFichaCombineDialog(activity: FileAADetailRow): void {
     if (!this.canFichaCombineActivity(activity)) return;
     this.fichaCombineActivityRow.set(activity);
-    this.fichaCombineSelectedHotelId.set(null);
+    this.fichaCombineTargetKind.set(null);
+    this.fichaCombineSelectedTargetId.set(null);
     this.showFichaCombineDialog.set(true);
   }
 
   onFichaCombineDialogHide(): void {
     this.fichaCombineActivityRow.set(null);
-    this.fichaCombineSelectedHotelId.set(null);
+    this.fichaCombineTargetKind.set(null);
+    this.fichaCombineSelectedTargetId.set(null);
+  }
+
+  fichaCombineTargetOptions(): { id: string; label: string }[] {
+    const activity = this.fichaCombineActivityRow();
+    const kind = this.fichaCombineTargetKind();
+    if (!activity || !kind) return [];
+    if (kind === 'hotel') return this.fichaCombineHotelOptions();
+    return this.fichaCombineActivityTargetOptions(activity);
   }
 
   submitFichaCombine(): void {
     const activity = this.fichaCombineActivityRow();
-    const hotelId = this.fichaCombineSelectedHotelId();
-    if (!activity || !hotelId) return;
-    const hotel = this.fichaFileAA()?.details?.find((row) => row.id === hotelId);
-    if (!hotel || hotel.category !== 'room') return;
+    const kind = this.fichaCombineTargetKind();
+    const targetId = this.fichaCombineSelectedTargetId();
+    if (!activity || !kind || !targetId) return;
+    const ficha = this.fichaFileAA();
+    const target = ficha?.details?.find((row) => row.id === targetId);
+    if (!target) return;
     this.showFichaCombineDialog.set(false);
-    this.confirmAttachActivityToHotel(activity, hotel);
+    if (kind === 'hotel' && target.category === 'room') {
+      this.confirmAttachActivityToHotel(activity, target);
+      return;
+    }
+    if (kind === 'activity' && target.category === 'activity') {
+      this.confirmAttachActivityToActivity(activity, target);
+    }
   }
 
   fichaCombineActivityLabel(): string {
@@ -1734,15 +1787,66 @@ export class QuotationDetail implements OnInit {
     });
   }
 
-  fichaHotelAttachedActivityIds(hotel: FileAADetailRow): string[] {
-    const raw = hotel.observation_extras?.['attached_activity_detail_ids'];
+  private confirmAttachActivityToActivity(
+    activity: FileAADetailRow,
+    anchor: FileAADetailRow,
+  ): void {
+    const actLabel = this.stripHtml(
+      this.fichaDetailServiceLines(activity)[0] || activity.name || 'Actividad',
+    );
+    const anchorLabel = this.stripHtml(
+      this.fichaDetailServiceLines(anchor)[0] || anchor.name || 'Actividad',
+    );
+    this.confirmationService.confirm({
+      message: `¿Desea añadir la actividad «${actLabel}» a «${anchorLabel}»? Se sumará al precio sistema, se combinarán fechas y nombres en la fila destino, y la actividad dejará de mostrarse en la tabla (en Word/PDF seguirá en línea aparte con Net «---»).`,
+      header: 'Incorporar actividad',
+      icon: 'pi pi-question-circle',
+      acceptLabel: 'Sí, añadir',
+      rejectLabel: 'Cancelar',
+      reject: () => this.scheduleFichaDetailDragBodyRemount(),
+      accept: () => {
+        this.fichaDetailReorderSaving.set(true);
+        this.quotationService.attachActivityToActivity(anchor.id, activity.id).subscribe({
+          next: (updated) => {
+            this.fichaFileAA.set(updated);
+            this.syncFichaVisibleDetailsList();
+            delete this.activityDatesDraft[anchor.id];
+            this.scheduleFichaDetailDragBodyRemount();
+            this.fichaDetailReorderSaving.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Actividad incorporada',
+            });
+          },
+          error: (err) => {
+            this.scheduleFichaDetailDragBodyRemount();
+            this.fichaDetailReorderSaving.set(false);
+            const d = err.error?.detail;
+            this.messageService.add({
+              severity: 'error',
+              summary:
+                typeof d === 'string' ? d : 'No se pudo incorporar la actividad',
+            });
+          },
+        });
+      },
+    });
+  }
+
+  fichaAttachedActivityIds(anchor: FileAADetailRow): string[] {
+    const raw = anchor.observation_extras?.['attached_activity_detail_ids'];
     if (!Array.isArray(raw)) return [];
     return raw.map((id) => String(id)).filter((id) => id.trim().length > 0);
   }
 
-  /** Suma precio sistema de actividades fusionadas en esta fila hotel. */
-  fichaHotelAttachedActivitiesTotal(hotel: FileAADetailRow): number {
-    const ids = this.fichaHotelAttachedActivityIds(hotel);
+  /** @deprecated Use fichaAttachedActivityIds */
+  fichaHotelAttachedActivityIds(hotel: FileAADetailRow): string[] {
+    return this.fichaAttachedActivityIds(hotel);
+  }
+
+  /** Suma precio sistema de actividades fusionadas en hotel o actividad ancla. */
+  fichaAttachedActivitiesTotal(anchor: FileAADetailRow): number {
+    const ids = this.fichaAttachedActivityIds(anchor);
     if (!ids.length) return 0;
     const ficha = this.fichaFileAA();
     if (!ficha) return 0;
@@ -1757,18 +1861,26 @@ export class QuotationDetail implements OnInit {
     return sum;
   }
 
-  canFichaDetachFromHotel(hotel: FileAADetailRow): boolean {
+  fichaHotelAttachedActivitiesTotal(hotel: FileAADetailRow): number {
+    return this.fichaAttachedActivitiesTotal(hotel);
+  }
+
+  canFichaDetachAttached(anchor: FileAADetailRow): boolean {
     return (
-      hotel.category === 'room' &&
-      hotel.row_status !== 'red' &&
-      this.fichaHotelAttachedActivityIds(hotel).length > 0
+      (anchor.category === 'room' || anchor.category === 'activity') &&
+      anchor.row_status !== 'red' &&
+      this.fichaAttachedActivityIds(anchor).length > 0
     );
   }
 
-  fichaHotelAttachedActivityOptions(hotel: FileAADetailRow): { id: string; label: string }[] {
+  canFichaDetachFromHotel(hotel: FileAADetailRow): boolean {
+    return hotel.category === 'room' && this.canFichaDetachAttached(hotel);
+  }
+
+  fichaAttachedActivityOptions(anchor: FileAADetailRow): { id: string; label: string }[] {
     const f = this.fichaFileAA();
     if (!f) return [];
-    const attachedIds = new Set(this.fichaHotelAttachedActivityIds(hotel));
+    const attachedIds = new Set(this.fichaAttachedActivityIds(anchor));
     return (f.details ?? [])
       .filter((row) => row.category === 'activity' && attachedIds.has(row.id))
       .map((row) => ({
@@ -1779,72 +1891,94 @@ export class QuotationDetail implements OnInit {
       }));
   }
 
-  onFichaDetachClick(hotel: FileAADetailRow): void {
-    if (!this.canFichaDetachFromHotel(hotel)) return;
-    const options = this.fichaHotelAttachedActivityOptions(hotel);
+  fichaHotelAttachedActivityOptions(hotel: FileAADetailRow): { id: string; label: string }[] {
+    return this.fichaAttachedActivityOptions(hotel);
+  }
+
+  onFichaDetachClick(anchor: FileAADetailRow): void {
+    if (!this.canFichaDetachAttached(anchor)) return;
+    const options = this.fichaAttachedActivityOptions(anchor);
     if (options.length === 0) return;
     if (options.length === 1) {
       const activity = this.fichaFileAA()?.details?.find((row) => row.id === options[0].id);
-      if (activity) this.confirmDetachActivityFromHotel(hotel, activity);
+      if (activity) this.confirmDetachActivity(anchor, activity);
       return;
     }
-    this.fichaDetachHotelRow.set(hotel);
+    this.fichaDetachAnchorRow.set(anchor);
     this.fichaDetachSelectedActivityId.set(null);
     this.showFichaDetachDialog.set(true);
   }
 
   onFichaDetachDialogHide(): void {
-    this.fichaDetachHotelRow.set(null);
+    this.fichaDetachAnchorRow.set(null);
     this.fichaDetachSelectedActivityId.set(null);
   }
 
   submitFichaDetach(): void {
-    const hotel = this.fichaDetachHotelRow();
+    const anchor = this.fichaDetachAnchorRow();
     const activityId = this.fichaDetachSelectedActivityId();
-    if (!hotel || !activityId) return;
+    if (!anchor || !activityId) return;
     const activity = this.fichaFileAA()?.details?.find((row) => row.id === activityId);
     if (!activity) return;
     this.showFichaDetachDialog.set(false);
-    this.confirmDetachActivityFromHotel(hotel, activity);
+    this.confirmDetachActivity(anchor, activity);
   }
 
-  fichaDetachHotelLabel(): string {
-    const hotel = this.fichaDetachHotelRow();
-    if (!hotel) return '';
+  fichaDetachAnchorLabel(): string {
+    const anchor = this.fichaDetachAnchorRow();
+    if (!anchor) return '';
     return this.stripHtml(
-      this.fichaDetailServiceLines(hotel).join(' · ') || hotel.name || 'Hotel',
+      this.fichaDetailServiceLines(anchor).join(' · ') || anchor.name || 'Servicio',
     );
   }
 
-  private confirmDetachActivityFromHotel(
-    hotel: FileAADetailRow,
+  fichaDetachHotelLabel(): string {
+    const anchor = this.fichaDetachAnchorRow();
+    if (!anchor || anchor.category !== 'room') return '';
+    return this.fichaDetachAnchorLabel();
+  }
+
+  private confirmDetachActivity(
+    anchor: FileAADetailRow,
     activity: FileAADetailRow,
   ): void {
     const actLabel = this.stripHtml(
       this.fichaDetailServiceLines(activity)[0] || activity.name || 'Actividad',
     );
-    const hotelLabel = this.stripHtml(
-      this.fichaDetailServiceLines(hotel)[0] || hotel.name || 'Hotel',
+    const anchorLabel = this.stripHtml(
+      this.fichaDetailServiceLines(anchor)[0] || anchor.name || 'Servicio',
     );
+    const isHotel = anchor.category === 'room';
     this.confirmationService.confirm({
-      message: `¿Desea descombinar la actividad «${actLabel}» del hotel «${hotelLabel}»? Se quitará de las observaciones del hotel, se restará del precio sistema y la actividad volverá a mostrarse en la tabla con su importe Net en Word/PDF.`,
-      header: 'Descombinar actividad del hotel',
+      message: isHotel
+        ? `¿Desea descombinar la actividad «${actLabel}» del hotel «${anchorLabel}»? Se quitará de las observaciones del hotel, se restará del precio sistema y la actividad volverá a mostrarse en la tabla con su importe Net en Word/PDF.`
+        : `¿Desea descombinar la actividad «${actLabel}» de «${anchorLabel}»? Se restará del precio sistema, se actualizarán fechas y nombres, y la actividad volverá a mostrarse en la tabla con su importe Net en Word/PDF.`,
+      header: isHotel ? 'Descombinar actividad del hotel' : 'Descombinar actividad',
       icon: 'pi pi-question-circle',
       acceptLabel: 'Sí, descombinar',
       rejectLabel: 'Cancelar',
       reject: () => this.scheduleFichaDetailDragBodyRemount(),
       accept: () => {
         this.fichaDetailReorderSaving.set(true);
-        this.quotationService.detachActivityFromHotel(hotel.id, activity.id).subscribe({
+        const req$ = isHotel
+          ? this.quotationService.detachActivityFromHotel(anchor.id, activity.id)
+          : this.quotationService.detachActivityFromActivity(anchor.id, activity.id);
+        req$.subscribe({
           next: (updated) => {
             this.fichaFileAA.set(updated);
             this.syncFichaVisibleDetailsList();
-            delete this.hotelFichaObsDraft[hotel.id];
+            if (isHotel) {
+              delete this.hotelFichaObsDraft[anchor.id];
+            } else {
+              delete this.activityDatesDraft[anchor.id];
+            }
             this.scheduleFichaDetailDragBodyRemount();
             this.fichaDetailReorderSaving.set(false);
             this.messageService.add({
               severity: 'success',
-              summary: 'Actividad descombinada del hotel',
+              summary: isHotel
+                ? 'Actividad descombinada del hotel'
+                : 'Actividad descombinada',
             });
           },
           error: (err) => {
@@ -1854,7 +1988,11 @@ export class QuotationDetail implements OnInit {
             this.messageService.add({
               severity: 'error',
               summary:
-                typeof d === 'string' ? d : 'No se pudo descombinar la actividad del hotel',
+                typeof d === 'string'
+                  ? d
+                  : isHotel
+                    ? 'No se pudo descombinar la actividad del hotel'
+                    : 'No se pudo descombinar la actividad',
             });
           },
         });
@@ -2275,16 +2413,23 @@ export class QuotationDetail implements OnInit {
     }));
   }
 
-  fichaHotelAttachedActivityDisplay(
-    hotel: FileAADetailRow,
+  fichaAttachedActivityDisplay(
+    anchor: FileAADetailRow,
   ): { detailId: string; line: string; main: string; time: string }[] {
-    const ids = this.fichaHotelAttachedActivityIds(hotel);
-    const lines = this.fichaDetailServiceLines(hotel).slice(2);
+    const ids = this.fichaAttachedActivityIds(anchor);
+    const skip = anchor.category === 'room' ? 2 : 1;
+    const lines = this.fichaDetailServiceLines(anchor).slice(skip);
     return ids.map((detailId, index) => {
       const line = lines[index] ?? '';
       const parts = this.fichaSplitActivityTimeSuffix(line);
       return { detailId, line, ...parts };
     });
+  }
+
+  fichaHotelAttachedActivityDisplay(
+    hotel: FileAADetailRow,
+  ): { detailId: string; line: string; main: string; time: string }[] {
+    return this.fichaAttachedActivityDisplay(hotel);
   }
 
   fichaAttachedActivityRow(detailId: string): FileAADetailRow | undefined {
@@ -4019,7 +4164,8 @@ export class QuotationDetail implements OnInit {
       const total = daily * days;
       // Normalizamos a dos decimales para evitar arrastrar ruido de coma
       // flotante (p. ej. 0.1 + 0.2) en lo que se persiste.
-      patch.total_price = Number(total.toFixed(2));
+      const attached = this.fichaAttachedActivitiesTotal(d);
+      patch.total_price = Number((total + attached).toFixed(2));
     }
     this.patchFileDetail(d.id, patch);
   }

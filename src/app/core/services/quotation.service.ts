@@ -216,9 +216,23 @@ export class QuotationService {
     );
   }
 
+  attachActivityToActivity(anchorDetailId: string, activityDetailId: string) {
+    return this.http.post<FileAAWithDetails>(
+      `${this.url}/details/${anchorDetailId}/attach-activity-to-activity/${activityDetailId}`,
+      {},
+    );
+  }
+
   detachActivityFromHotel(hotelDetailId: string, activityDetailId: string) {
     return this.http.post<FileAAWithDetails>(
       `${this.url}/details/${hotelDetailId}/detach-activity/${activityDetailId}`,
+      {},
+    );
+  }
+
+  detachActivityFromActivity(anchorDetailId: string, activityDetailId: string) {
+    return this.http.post<FileAAWithDetails>(
+      `${this.url}/details/${anchorDetailId}/detach-activity-from-activity/${activityDetailId}`,
       {},
     );
   }
