@@ -1141,8 +1141,8 @@
                             @let voitureLocContent = fichaVoitureLocationContentFr(ficha);
                             @if (voitureLocContent) {
                               <p class="ficha-aa-summary-voiture-fr">
-                                <span class="ficha-aa-summary-voiture-label">{{ voitureLocationLabelPrefix }}</span>
-                                <span class="ficha-aa-summary-voiture-value"> {{ voitureLocContent }}</span>
+                                <span class="ficha-aa-summary-voiture-label">{{ voitureLocationLabelPrefix }} </span>
+                                <span class="ficha-aa-summary-voiture-value">{{ voitureLocContent }}</span>
                               </p>
                             }
                           </div>
@@ -2529,6 +2529,56 @@
       icon="pi pi-check"
       [disabled]="!fichaDetachSelectedActivityId()"
       (onClick)="submitFichaDetach()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Unión hotel + actividad: separar o eliminar ambos (reemplazo / eliminación) -->
+<p-dialog
+  styleClass="ficha-union-action-dialog"
+  [header]="fichaUnionActionContext()?.mode === 'delete' ? 'Eliminar hotel con actividades unidas' : 'Reemplazar hotel con actividades unidas'"
+  [visible]="showFichaUnionActionDialog()"
+  (visibleChange)="showFichaUnionActionDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(520px, 96vw)' }"
+  (onHide)="closeFichaUnionActionDialog()"
+>
+  @if (fichaUnionActionContext(); as ctx) {
+    <p class="ficha-add-dialog-hint">
+      Esta habitación tiene actividades incorporadas:
+    </p>
+    <ul class="ficha-add-dialog-bullets">
+      @for (label of fichaHotelUnionActivityLabels(ctx.anchor); track label) {
+        <li>{{ label }}</li>
+      }
+    </ul>
+    <p class="ficha-add-dialog-hint">
+      @if (ctx.mode === 'delete') {
+        ¿Desea separarlas y eliminar solo el hotel, o eliminar también las actividades?
+      } @else {
+        ¿Desea separarlas y reemplazar solo el hotel, o eliminar también las actividades al reemplazar?
+      }
+    </p>
+  }
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      [text]="true"
+      [disabled]="fichaUnionActionBusy()"
+      (onClick)="closeFichaUnionActionDialog()"
+    />
+    <p-button
+      label="Separar y continuar"
+      icon="pi pi-link"
+      [loading]="fichaUnionActionBusy()"
+      (onClick)="submitFichaUnionActionDetach()"
+    />
+    <p-button
+      label="Eliminar ambos"
+      icon="pi pi-trash"
+      severity="danger"
+      [loading]="fichaUnionActionBusy()"
+      (onClick)="submitFichaUnionActionDeleteBoth()"
     />
   </ng-template>
 </p-dialog>

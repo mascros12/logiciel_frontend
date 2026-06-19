@@ -2,7 +2,7 @@ import { Component, OnInit, signal, computed, inject, DestroyRef } from '@angula
 import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, forkJoin } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, concatMap, map } from 'rxjs/operators';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
@@ -464,6 +464,11 @@ export class QuotationDetail implements OnInit {
   showFichaDetachDialog = signal(false);
   fichaDetachAnchorRow = signal<FileAADetailRow | null>(null);
   fichaDetachSelectedActivityId = signal<string | null>(null);
+  showFichaUnionActionDialog = signal(false);
+  fichaUnionActionContext = signal<{ mode: 'replace' | 'delete'; anchor: FileAADetailRow } | null>(
+    null,
+  );
+  fichaUnionActionBusy = signal(false);
   showFichaColorPicker = signal(false);
 
   /** Edición inline del nombre en Ficha AA (file_aa_name del catálogo). */
@@ -1642,6 +1647,167 @@ export class QuotationDetail implements OnInit {
       (hotel !== null && hotel !== undefined && String(hotel).trim().length > 0) ||
       (activity !== null && activity !== undefined && String(activity).trim().length > 0)
     );
+  }
+
+  fichaActivitiesMergedIntoHotel(hotelId: string): FileAADetailRow[] {
+    const f = this.fichaFileAA();
+    if (!f) return [];
+    const hid = hotelId.trim();
+    return (f.details ?? []).filter(
+      (d) =>
+        d.category === 'activity' &&
+        d.row_status !== 'red' &&
+        String(d.observation_extras?.['merged_into_hotel_detail_id'] ?? '').trim() === hid,
+    );
+  }
+
+  fichaHotelHasUnion(hotel: FileAADetailRow): boolean {
+    if (hotel.category !== 'room') return false;
+    if (this.fichaAttachedActivityIds(hotel).length > 0) return true;
+    return this.fichaActivitiesMergedIntoHotel(hotel.id).length > 0;
+  }
+
+  fichaHotelUnionActivityLabels(hotel: FileAADetailRow): string[] {
+    const ids = new Set([
+      ...this.fichaAttachedActivityIds(hotel),
+      ...this.fichaActivitiesMergedIntoHotel(hotel.id).map((a) => a.id),
+    ]);
+    const f = this.fichaFileAA();
+    if (!f) return [];
+    return [...ids]
+      .map((id) => (f.details ?? []).find((d) => d.id === id))
+      .filter((d): d is FileAADetailRow => !!d)
+      .map((d) =>
+        this.stripHtml(this.fichaDetailServiceLines(d)[0] || d.name || 'Actividad'),
+      );
+  }
+
+  closeFichaUnionActionDialog(): void {
+    this.showFichaUnionActionDialog.set(false);
+    this.fichaUnionActionContext.set(null);
+    this.fichaUnionActionBusy.set(false);
+  }
+
+  private resolveFichaHotelUnion(
+    hotel: FileAADetailRow,
+    mode: 'detach' | 'deleteActivities',
+  ): Observable<void> {
+    const f = this.fichaFileAA();
+    const activityIds = [
+      ...new Set([
+        ...this.fichaAttachedActivityIds(hotel),
+        ...this.fichaActivitiesMergedIntoHotel(hotel.id).map((a) => a.id),
+      ]),
+    ];
+    if (!activityIds.length) return of(undefined);
+    let chain: Observable<FileAAWithDetails | void> = of(undefined);
+    for (const actId of activityIds) {
+      const act = f?.details?.find((d) => d.id === actId);
+      const mergedHotelId = String(
+        act?.observation_extras?.['merged_into_hotel_detail_id'] ?? hotel.id,
+      ).trim();
+      const hotelId = mergedHotelId || hotel.id;
+      chain = chain.pipe(
+        concatMap(() => this.quotationService.detachActivityFromHotel(hotelId, actId)),
+      );
+    }
+    if (mode === 'deleteActivities') {
+      for (const actId of activityIds) {
+        chain = chain.pipe(
+          concatMap(() => this.quotationService.deleteFileAADetail(actId)),
+        );
+      }
+    }
+    return chain.pipe(map(() => undefined));
+  }
+
+  private reloadFichaAfterUnionAction(
+    ctx: { mode: 'replace' | 'delete'; anchor: FileAADetailRow },
+    onDone: () => void,
+  ): void {
+    const q = this.quotation();
+    if (!q) {
+      this.fichaUnionActionBusy.set(false);
+      return;
+    }
+    this.quotationService.getLatestFileAA(q.id).subscribe({
+      next: (f) => {
+        const loaded = { ...f, header_color: f.header_color || '#2563EB' };
+        this.fichaFileAA.set(loaded);
+        this.syncFichaVisibleDetailsList();
+        this.hydrateChecklistFromFicha(loaded);
+        this.applyChecklistToFicha(loaded);
+        this.hydrateFichaFreeTextDrafts(loaded);
+        if (ctx.mode === 'replace') {
+          const updated = (f.details ?? []).find((d) => d.id === ctx.anchor.id);
+          if (updated) {
+            this.fichaAddAnchorRow.set(updated);
+            this.fichaAddAnchorDetailId.set(updated.id);
+          }
+        }
+        this.fichaUnionActionBusy.set(false);
+        this.showFichaUnionActionDialog.set(false);
+        this.fichaUnionActionContext.set(null);
+        onDone();
+      },
+      error: () => {
+        this.fichaUnionActionBusy.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se pudo recargar la ficha',
+        });
+      },
+    });
+  }
+
+  submitFichaUnionActionDetach(): void {
+    const ctx = this.fichaUnionActionContext();
+    if (!ctx || this.fichaUnionActionBusy()) return;
+    this.fichaUnionActionBusy.set(true);
+    this.resolveFichaHotelUnion(ctx.anchor, 'detach').subscribe({
+      next: () => {
+        this.reloadFichaAfterUnionAction(ctx, () => {
+          if (ctx.mode === 'replace') {
+            this.proceedChooseFichaAddKind('replace');
+          } else {
+            this.executeDeleteFichaDetailRow(ctx.anchor.id);
+          }
+        });
+      },
+      error: (err) => {
+        this.fichaUnionActionBusy.set(false);
+        const d = err.error?.detail;
+        this.messageService.add({
+          severity: 'error',
+          summary: typeof d === 'string' ? d : 'No se pudo separar la unión',
+        });
+      },
+    });
+  }
+
+  submitFichaUnionActionDeleteBoth(): void {
+    const ctx = this.fichaUnionActionContext();
+    if (!ctx || this.fichaUnionActionBusy()) return;
+    this.fichaUnionActionBusy.set(true);
+    this.resolveFichaHotelUnion(ctx.anchor, 'deleteActivities').subscribe({
+      next: () => {
+        this.reloadFichaAfterUnionAction(ctx, () => {
+          if (ctx.mode === 'replace') {
+            this.proceedChooseFichaAddKind('replace');
+          } else {
+            this.executeDeleteFichaDetailRow(ctx.anchor.id);
+          }
+        });
+      },
+      error: (err) => {
+        this.fichaUnionActionBusy.set(false);
+        const d = err.error?.detail;
+        this.messageService.add({
+          severity: 'error',
+          summary: typeof d === 'string' ? d : 'No se pudo eliminar la unión',
+        });
+      },
+    });
   }
 
   canFichaCombineActivity(d: FileAADetailRow): boolean {
@@ -5157,6 +5323,18 @@ export class QuotationDetail implements OnInit {
   }
 
   chooseFichaAddKind(kind: 'new' | 'replace'): void {
+    if (kind === 'replace') {
+      const anchor = this.fichaAddAnchorRow();
+      if (anchor && this.fichaHotelHasUnion(anchor)) {
+        this.fichaUnionActionContext.set({ mode: 'replace', anchor });
+        this.showFichaUnionActionDialog.set(true);
+        return;
+      }
+    }
+    this.proceedChooseFichaAddKind(kind);
+  }
+
+  private proceedChooseFichaAddKind(kind: 'new' | 'replace'): void {
     this.fichaAddKind.set(kind);
     const anchor = this.fichaAddAnchorRow();
     const q = this.quotation();
@@ -5350,6 +5528,15 @@ export class QuotationDetail implements OnInit {
   }
 
   confirmDeleteFichaDetailRow(row: FileAADetailRow): void {
+    if (row.category === 'room' && this.fichaHotelHasUnion(row)) {
+      this.fichaUnionActionContext.set({ mode: 'delete', anchor: row });
+      this.showFichaUnionActionDialog.set(true);
+      return;
+    }
+    this.promptDeleteFichaDetailRow(row);
+  }
+
+  private promptDeleteFichaDetailRow(row: FileAADetailRow): void {
     const name = (row.name || 'Servicio').slice(0, 80);
     this.confirmationService.confirm({
       message: `¿Eliminar la línea «${name}» de esta ficha? Esta acción no se puede deshacer.`,
@@ -5358,20 +5545,22 @@ export class QuotationDetail implements OnInit {
       acceptButtonStyleClass: 'p-button-danger',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      accept: () => {
-        this.quotationService.deleteFileAADetail(row.id).subscribe({
-          next: () => {
-            this.messageService.add({ severity: 'success', summary: 'Línea eliminada' });
-            const q = this.quotation();
-            if (q) this.loadFileAA(q.id);
-          },
-          error: (err) => {
-            const d = err.error?.detail;
-            this.messageService.add({
-              severity: 'error',
-              summary: typeof d === 'string' ? d : 'No se pudo eliminar la línea',
-            });
-          },
+      accept: () => this.executeDeleteFichaDetailRow(row.id),
+    });
+  }
+
+  private executeDeleteFichaDetailRow(detailId: string): void {
+    this.quotationService.deleteFileAADetail(detailId).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Línea eliminada' });
+        const q = this.quotation();
+        if (q) this.loadFileAA(q.id);
+      },
+      error: (err) => {
+        const d = err.error?.detail;
+        this.messageService.add({
+          severity: 'error',
+          summary: typeof d === 'string' ? d : 'No se pudo eliminar la línea',
         });
       },
     });
