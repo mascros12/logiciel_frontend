@@ -2211,7 +2211,7 @@
                                   [rounded]="true"
                                   size="small"
                                   severity="warn"
-                                  pTooltip="Descombinar actividad incorporada"
+                                  [pTooltip]="d.row_status === 'red' ? 'Descombinar actividad (fila sustituida)' : 'Descombinar actividad incorporada'"
                                   tooltipPosition="top"
                                   [disabled]="fichaDetailReorderSaving()"
                                   (onClick)="onFichaDetachClick(d)"

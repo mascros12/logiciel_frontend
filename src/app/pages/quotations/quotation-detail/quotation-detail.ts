@@ -2035,11 +2035,12 @@ export class QuotationDetail implements OnInit {
   }
 
   canFichaDetachAttached(anchor: FileAADetailRow): boolean {
-    return (
-      (anchor.category === 'room' || anchor.category === 'activity') &&
-      anchor.row_status !== 'red' &&
-      this.fichaAttachedActivityIds(anchor).length > 0
-    );
+    if (anchor.category !== 'room' && anchor.category !== 'activity') return false;
+    if (this.fichaAttachedActivityIds(anchor).length > 0) return true;
+    if (anchor.category === 'room') {
+      return this.fichaActivitiesMergedIntoHotel(anchor.id).length > 0;
+    }
+    return false;
   }
 
   canFichaDetachFromHotel(hotel: FileAADetailRow): boolean {
@@ -2050,6 +2051,11 @@ export class QuotationDetail implements OnInit {
     const f = this.fichaFileAA();
     if (!f) return [];
     const attachedIds = new Set(this.fichaAttachedActivityIds(anchor));
+    if (anchor.category === 'room') {
+      for (const row of this.fichaActivitiesMergedIntoHotel(anchor.id)) {
+        attachedIds.add(row.id);
+      }
+    }
     return (f.details ?? [])
       .filter((row) => row.category === 'activity' && attachedIds.has(row.id))
       .map((row) => ({
