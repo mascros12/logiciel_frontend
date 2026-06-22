@@ -146,6 +146,8 @@ export interface FichaMergedRoomSlot {
   room_quantity: number | null;
   /** Tipología añadida por reemplazo parcial en fila agrupada (verde en UI). */
   is_replacement?: boolean;
+  /** Tipología sustituida que sigue visible en la fila agrupada (rojo tachado). */
+  is_superseded?: boolean;
   /** Estadías de esta tipología (puede diferir entre habitaciones de la misma fila). */
   stay_segments?: FichaHotelStaySegment[];
 }

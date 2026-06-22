@@ -1413,12 +1413,14 @@
                                         <span
                                           class="ficha-room-type ficha-name-clickable"
                                           [class.ficha-room-type-replacement]="part.isReplacement"
+                                          [class.ficha-room-type-superseded]="part.isSuperseded"
                                           (click)="$event.stopPropagation(); startFichaNameEdit(d, 'room:' + i)"
                                         >{{ part.text }}</span>
                                       } @else {
                                         <span
                                           class="ficha-room-type"
                                           [class.ficha-room-type-replacement]="part.isReplacement"
+                                          [class.ficha-room-type-superseded]="part.isSuperseded"
                                         >{{ part.text }}</span>
                                       }
                                       @if (!last) {
@@ -2361,6 +2363,66 @@
       (onClick)="resetFichaAaColumnLayout()"
     />
     <p-button label="Cerrar" (onClick)="showFichaAaColumnsDialog.set(false)" />
+  </ng-template>
+</p-dialog>
+
+<!-- Versión al salir de Ficha AA hacia Agenda / Cotización -->
+<p-dialog
+  styleClass="ficha-leave-version-dialog"
+  header="Versión de la cotización"
+  [visible]="showFichaLeaveVersionDialog()"
+  (visibleChange)="showFichaLeaveVersionDialog.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: 'min(480px, 96vw)' }"
+  (onHide)="closeFichaLeaveVersionDialog()"
+>
+  @if (fichaLeaveTargetTab(); as target) {
+    <p class="ficha-add-dialog-hint">
+      Va a abrir <strong>{{ fichaLeaveTargetTabLabel() }}</strong>. Elija qué versión del itinerario desea ver.
+    </p>
+    @if (fichaFileAA() && quotation(); as q) {
+      @let fichaLbl = fichaVersionLabel(fichaFileAA()!, q);
+      @if (fichaLbl) {
+        <p class="ficha-add-pick-note">
+          La Ficha AA está asociada a <strong>{{ fichaLbl }}</strong> (selección por defecto).
+        </p>
+      }
+    }
+    <label class="ficha-add-select-label" for="ficha-leave-version-sel">Versión</label>
+    <p-select
+      inputId="ficha-leave-version-sel"
+      [options]="versionSelectOptions"
+      [ngModel]="fichaLeaveSelectedVersionId()"
+      (ngModelChange)="fichaLeaveSelectedVersionId.set($event)"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Seleccione versión…"
+      styleClass="w-full"
+      appendTo="body"
+    >
+      <ng-template let-opt pTemplate="item">
+        <span class="version-opt-row">
+          <span class="version-opt-v">{{ opt.label }}</span>
+          @if (opt.createdByName) {
+            <span class="version-opt-creator">{{ opt.createdByName }}</span>
+          }
+        </span>
+      </ng-template>
+    </p-select>
+  }
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      [text]="true"
+      (onClick)="closeFichaLeaveVersionDialog()"
+    />
+    <p-button
+      label="Continuar"
+      icon="pi pi-check"
+      [disabled]="!fichaLeaveSelectedVersionId()"
+      (onClick)="confirmFichaLeaveVersion()"
+    />
   </ng-template>
 </p-dialog>
 

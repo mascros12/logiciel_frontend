@@ -244,6 +244,8 @@ export class QuotationDetail implements OnInit {
   loadingSummary = signal(false);
   isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
   isOperaciones = computed(() => this.auth.currentUser()?.role === 'operaciones');
+  /** Al salir de Ficha AA hacia Agenda/Cotización: elegir versión (admin y operaciones). */
+  canPickVersionWhenLeavingFicha = computed(() => this.isAdmin() || this.isOperaciones());
   /** Editar y guardar `file_aa_name` desde la Ficha AA (catálogo + fila). */
   canEditFichaCatalogueName = computed(() => this.roleCanEditFichaCatalogueName());
   canViewQuotationBreakdown = computed(() => {
@@ -469,6 +471,9 @@ export class QuotationDetail implements OnInit {
     null,
   );
   fichaUnionActionBusy = signal(false);
+  showFichaLeaveVersionDialog = signal(false);
+  fichaLeaveTargetTab = signal<'agenda' | 'cotizacion' | null>(null);
+  fichaLeaveSelectedVersionId = signal<string | null>(null);
   showFichaColorPicker = signal(false);
 
   /** Edición inline del nombre en Ficha AA (file_aa_name del catálogo). */
@@ -665,12 +670,64 @@ export class QuotationDetail implements OnInit {
   setActiveTab(value: string | number | undefined): void {
     if (value === 'agenda' || value === 'cotizacion' || value === 'fileaa') {
       if (value === 'cotizacion' && !this.canViewQuotationBreakdown()) return;
-      this.activeTab.set(value);
-      this.syncTabToRoute(value);
-      if (value === 'fileaa') {
-        const q = this.quotation();
-        if (q) this.loadFileAA(q.id, { syncAgendaVersion: true });
+      if (
+        (value === 'agenda' || value === 'cotizacion') &&
+        this.shouldPromptVersionWhenLeavingFicha(value)
+      ) {
+        const fichaVid = this.fichaFileAA()?.version_id;
+        this.fichaLeaveTargetTab.set(value);
+        this.fichaLeaveSelectedVersionId.set(fichaVid ? String(fichaVid) : null);
+        this.showFichaLeaveVersionDialog.set(true);
+        return;
       }
+      this.applyActiveTab(value);
+    }
+  }
+
+  private shouldPromptVersionWhenLeavingFicha(
+    target: 'agenda' | 'cotizacion',
+  ): boolean {
+    if (!this.canPickVersionWhenLeavingFicha()) return false;
+    if (this.activeTab() !== 'fileaa') return false;
+    const ficha = this.fichaFileAA();
+    if (!ficha?.version_id) return false;
+    const q = this.quotation();
+    if (!q?.versions?.length) return false;
+    return q.versions.some((v) => String(v.id) === String(ficha.version_id));
+  }
+
+  private applyActiveTab(value: 'agenda' | 'cotizacion' | 'fileaa'): void {
+    this.activeTab.set(value);
+    this.syncTabToRoute(value);
+    if (value === 'fileaa') {
+      const q = this.quotation();
+      if (q) this.loadFileAA(q.id, { syncAgendaVersion: true });
+    }
+  }
+
+  fichaLeaveTargetTabLabel(): string {
+    const t = this.fichaLeaveTargetTab();
+    if (t === 'agenda') return 'Agenda';
+    if (t === 'cotizacion') return 'Cotización';
+    return '';
+  }
+
+  closeFichaLeaveVersionDialog(): void {
+    this.showFichaLeaveVersionDialog.set(false);
+    this.fichaLeaveTargetTab.set(null);
+    this.fichaLeaveSelectedVersionId.set(null);
+  }
+
+  confirmFichaLeaveVersion(): void {
+    const target = this.fichaLeaveTargetTab();
+    const versionId = this.fichaLeaveSelectedVersionId();
+    if (!target || !versionId) return;
+    this.showFichaLeaveVersionDialog.set(false);
+    this.fichaLeaveTargetTab.set(null);
+    this.fichaLeaveSelectedVersionId.set(null);
+    this.applyActiveTab(target);
+    if (String(this.selectedVersionId()) !== String(versionId)) {
+      this.onVersionChange(versionId);
     }
   }
 
@@ -2573,18 +2630,22 @@ export class QuotationDetail implements OnInit {
   }
 
   /** Partes de tipología con color (heredada vs reemplazo). */
-  fichaMergedRoomTypeParts(d: FileAADetailRow): { text: string; isReplacement: boolean }[] {
+  fichaMergedRoomTypeParts(
+    d: FileAADetailRow,
+  ): { text: string; isReplacement: boolean; isSuperseded: boolean }[] {
     const rooms = this.fichaMergedRoomsFromExtras(d);
     if (!rooms.length) {
       return this.fichaMergedRoomTypeLineParts(d).map((text) => ({
         text,
         isReplacement: false,
+        isSuperseded: false,
       }));
     }
     const includeQty = rooms.length > 1;
     return rooms.map((slot) => ({
       text: this.fichaMergedRoomPartLabel(slot, includeQty),
       isReplacement: Boolean(slot.is_replacement),
+      isSuperseded: Boolean(slot.is_superseded),
     }));
   }
 
@@ -4827,6 +4888,7 @@ export class QuotationDetail implements OnInit {
               room_file_aa_name: String(slot['room_file_aa_name'] ?? '').trim() || undefined,
               room_quantity,
               is_replacement: Boolean(slot['is_replacement']),
+              is_superseded: Boolean(slot['is_superseded']),
             };
           });
       }
@@ -5270,6 +5332,7 @@ export class QuotationDetail implements OnInit {
       for (const item of merged) {
         if (!item || typeof item !== 'object') continue;
         const slot = { ...(item as Record<string, unknown>) };
+        if (Boolean(slot['is_superseded'])) continue;
         this.backfillHotelRackSnapshotFields(slot, detail, { slotCount: merged.length });
         const part = this.fichaRoomSystemPriceFromSlot(slot);
         if (part !== null) {
@@ -5292,7 +5355,9 @@ export class QuotationDetail implements OnInit {
     if (
       detail.category === 'room' &&
       this.fichaHasMultipleRoomTypes(detail) &&
-      this.fichaMergedRoomsFromExtras(detail).some((s) => s.is_replacement)
+      this.fichaMergedRoomsFromExtras(detail).some(
+        (s) => s.is_replacement || s.is_superseded,
+      )
     ) {
       return false;
     }

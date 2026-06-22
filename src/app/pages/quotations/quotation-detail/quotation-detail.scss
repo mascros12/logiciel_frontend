@@ -1498,6 +1498,12 @@
       color: #15803d;
     }
 
+    .ficha-room-type-superseded {
+      color: #991b1b;
+      text-decoration: line-through;
+      text-decoration-color: #991b1b;
+    }
+
     // Fragmento `, XhMM` al final del nombre de las actividades: mismo
     // rojo bordeaux que el tipo de habitación / la columna Net, para
     // que la coma + hora resalten visualmente en HTML / PDF / Word.
