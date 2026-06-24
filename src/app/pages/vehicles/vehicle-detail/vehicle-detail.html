@@ -28,8 +28,13 @@
       </div>
     </div>
     <div class="header-actions">
-      <p-button label="Correo reservas" icon="pi pi-envelope" [outlined]="true" severity="secondary" (onClick)="openVehicleMetaDialog()" />
-      <p-button label="Nueva temporada" icon="pi pi-calendar-plus" (onClick)="openSeasonDialog()" />
+      @if (canManageVehicles()) {
+        <p-button label="Editar vehículo" icon="pi pi-pencil" [outlined]="true" severity="secondary" (onClick)="openVehicleEditDialog()" />
+        <p-button label="Nueva temporada" icon="pi pi-calendar-plus" (onClick)="openSeasonDialog()" />
+      }
+      @if (showEmailActions()) {
+        <p-button label="Correo reservas" icon="pi pi-envelope" [outlined]="true" severity="secondary" (onClick)="openVehicleMetaDialog()" />
+      }
     </div>
   </div>
 
@@ -174,7 +179,143 @@
   </div>
 }
 
+@if (canManageVehicles()) {
+<!-- Editar vehículo -->
+<p-dialog
+  header="Editar vehículo"
+  [visible]="showVehicleEditDialog()"
+  (visibleChange)="showVehicleEditDialog.set($event)"
+  [modal]="true"
+  styleClass="vehicle-form-dialog"
+  [style]="{ width: 'min(560px, 96vw)' }"
+>
+  <form [formGroup]="vehicleEditForm" class="vehicle-form">
+    <p-tabs value="info">
+      <p-tablist>
+        <p-tab value="info">Información</p-tab>
+        <p-tab value="prices">Precios</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <p-tabpanel value="info">
+          <div class="tab-content-pad">
+            <div class="field-row">
+              <div class="field">
+                <label class="label-stacked">
+                  <span>Nombre *</span>
+                  <span class="format-hint">
+                    Soporta: *<strong>negrita</strong>* &nbsp; _<em>cursiva</em>_ &nbsp; ~<s>tachado</s>~
+                  </span>
+                </label>
+                <input pInputText formControlName="name" class="w-full" placeholder="Toyota Hilux 4x4" />
+                @if (vehicleEditForm.get('name')!.value) {
+                  <div class="name-preview" [innerHTML]="vehicleEditForm.get('name')!.value | richText"></div>
+                }
+              </div>
+              <div class="field">
+                <label>Marca *</label>
+                <input pInputText formControlName="brand" class="w-full" placeholder="Toyota" />
+              </div>
+            </div>
+            <div class="field-row capacity-cols">
+              <div class="field field-compact">
+                <label>Asientos *</label>
+                <p-inputNumber formControlName="seats" [min]="1" [max]="50" styleClass="capacity-input" inputStyleClass="capacity-input-inner" />
+              </div>
+              <div class="field field-compact">
+                <label>M. de Bodega *</label>
+                <p-inputNumber formControlName="bag" [min]="0" styleClass="capacity-input" inputStyleClass="capacity-input-inner" />
+              </div>
+              <div class="field field-compact">
+                <label>M. de mano *</label>
+                <p-inputNumber formControlName="carryon_bag" [min]="0" styleClass="capacity-input" inputStyleClass="capacity-input-inner" />
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Categoría</label>
+                <p-select
+                  formControlName="category"
+                  [options]="categoryOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccionar categoría"
+                  styleClass="w-full"
+                  appendTo="body"
+                />
+              </div>
+              <div class="field">
+                <label>Comisión</label>
+                <p-inputNumber formControlName="commission" [minFractionDigits]="2" [maxFractionDigits]="4" styleClass="w-full" />
+              </div>
+            </div>
+            <div class="field">
+              <label>Correo reservas</label>
+              <input pInputText type="email" formControlName="reservation_email" class="w-full" placeholder="flota@rentacar.com" />
+              <small class="vehicle-email-hint">Para envío de correos desde la Ficha AA</small>
+            </div>
+          </div>
+        </p-tabpanel>
+
+        <p-tabpanel value="prices">
+          <div class="tab-content-pad">
+            <table class="prices-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="col-high">Pico</th>
+                  <th class="col-medium">Alta</th>
+                  <th class="col-low">Promocional</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="section-row">
+                  <td colspan="4"><strong>Precio diario — Neto</strong></td>
+                </tr>
+                <tr>
+                  <td class="row-label">Neto</td>
+                  <td><p-inputNumber formControlName="net_daily_high" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="net_daily_medium" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="net_daily_low" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                </tr>
+                <tr>
+                  <td class="row-label rack-row">Rack</td>
+                  <td><p-inputNumber formControlName="rack_daily_high" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="rack_daily_medium" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="rack_daily_low" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                </tr>
+                <tr class="section-row">
+                  <td colspan="4"><strong>Precio semanal</strong></td>
+                </tr>
+                <tr>
+                  <td class="row-label">Neto</td>
+                  <td><p-inputNumber formControlName="net_weekly_high" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="net_weekly_medium" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="net_weekly_low" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                </tr>
+                <tr>
+                  <td class="row-label rack-row">Rack</td>
+                  <td><p-inputNumber formControlName="rack_weekly_high" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="rack_weekly_medium" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                  <td><p-inputNumber formControlName="rack_weekly_low" mode="currency" currency="USD" styleClass="w-full" inputStyleClass="price-input" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showVehicleEditDialog.set(false)" />
+    <p-button label="Guardar cambios" icon="pi pi-check" [loading]="savingVehicleEdit()" (onClick)="submitVehicleEdit()" />
+  </ng-template>
+</p-dialog>
+}
+
 <!-- Correo de reservas (Ficha AA) -->
+@if (showEmailActions()) {
 <p-dialog
   header="Correo de reservas"
   [visible]="showVehicleMetaDialog()"
@@ -194,8 +335,10 @@
     <p-button label="Guardar" icon="pi pi-check" [loading]="savingVehicleMeta()" (onClick)="submitVehicleMeta()" />
   </ng-template>
 </p-dialog>
+}
 
 <!-- Dialog nueva temporada -->
+@if (canManageVehicles()) {
 <p-dialog
   header="Agregar temporada"
   [visible]="showSeasonDialog()"
@@ -242,4 +385,4 @@
     <p-button label="Agregar" icon="pi pi-check" [loading]="savingSeason()" (onClick)="submitSeason()" />
   </ng-template>
 </p-dialog>
-
+}
