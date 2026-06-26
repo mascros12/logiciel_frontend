@@ -84,6 +84,29 @@ function nameLooksTransfert(name: string): boolean {
   return false;
 }
 
+export function detailIsTransferAeropuertoGroup(
+  category: string | null,
+  name: string,
+  extras?: Record<string, unknown> | null,
+): boolean {
+  const cat = category ?? vehicleCategoryFromExtras(extras);
+  if (cat && FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat)) return false;
+  if (
+    cat === 'Transfer Zona a Zona'
+    || cat === 'Transfer Privado Zona a Zona'
+    || cat === 'Transfer Colectivo Privado Tortuguero'
+  ) {
+    return false;
+  }
+  if (cat === 'Transfer Aeropuerto/Hotel') return true;
+  const fileAa =
+    extras && typeof extras === 'object' && !Array.isArray(extras)
+      ? String(extras['vehicle_file_aa_name'] ?? '').trim()
+      : '';
+  if (nameLooksTransfert(name) || nameLooksTransfert(fileAa)) return true;
+  return false;
+}
+
 export function vehicleFichaServiceLayout(
   category: string | null,
   name: string,

@@ -65,6 +65,7 @@ import {
   transferZonaZonaServiceLabel,
   rentalVoitureLocationLabel,
   rentalVehicleServiceLabel,
+  detailIsTransferAeropuertoGroup,
   fichaAaDetailVisibleInTable,
   vueloInternoServiceLabel,
   formatTaxiMaritimoFichaDatesCell,
@@ -471,6 +472,7 @@ export class QuotationDetail implements OnInit {
     null,
   );
   fichaUnionActionBusy = signal(false);
+  mergingFichaTransfers = signal(false);
   showFichaLeaveVersionDialog = signal(false);
   fichaLeaveTargetTab = signal<'agenda' | 'cotizacion' | null>(null);
   fichaLeaveSelectedVersionId = signal<string | null>(null);
@@ -2495,6 +2497,62 @@ export class QuotationDetail implements OnInit {
 
   fichaVehicleDatesLayout(d: FileAADetailRow): VehicleFichaDatesLayout {
     return vehicleFichaDatesLayout(this.fichaVehicleCategory(d), d.name ?? '');
+  }
+
+  fichaDetailIsTransferGroup(d: FileAADetailRow): boolean {
+    return detailIsTransferAeropuertoGroup(
+      this.fichaVehicleCategory(d),
+      d.name ?? '',
+      d.observation_extras,
+    );
+  }
+
+  fichaTransferVehicleRows(ficha: FileAAWithDetails): FileAADetailRow[] {
+    return this.fichaVisibleDetails(ficha).filter(
+      (row) => row.category === 'vehicle' && this.fichaDetailIsTransferGroup(row),
+    );
+  }
+
+  canShowFichaMergeTransfersButton(d: FileAADetailRow, ficha: FileAAWithDetails): boolean {
+    const transfers = this.fichaTransferVehicleRows(ficha);
+    if (transfers.length < 2 || d.row_status === 'red') return false;
+    return transfers[transfers.length - 1]?.id === d.id;
+  }
+
+  mergeFichaTransferVehicles(ficha: FileAAWithDetails): void {
+    const count = this.fichaTransferVehicleRows(ficha).length;
+    if (count < 2) return;
+    this.confirmationService.confirm({
+      message: `¿Unificar ${count} filas Transfer en una sola? Las fechas se combinarán (p. ej. «20/3 y 25/3») y se sumarán los precios.`,
+      header: 'Unificar transfers',
+      icon: 'pi pi-compress',
+      acceptLabel: 'Unificar',
+      rejectLabel: 'Cancelar',
+      accept: () => {
+        this.mergingFichaTransfers.set(true);
+        this.quotationService.mergeFichaTransferVehicles(ficha.id).subscribe({
+          next: (updated) => {
+            this.fichaFileAA.set(updated);
+            this.syncFichaVisibleDetailsList();
+            this.mergingFichaTransfers.set(false);
+            this.scheduleFichaDetailDragBodyRemount();
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Transfers unificados',
+            });
+          },
+          error: (err) => {
+            this.mergingFichaTransfers.set(false);
+            const detail = err.error?.detail;
+            this.messageService.add({
+              severity: 'error',
+              summary:
+                typeof detail === 'string' ? detail : 'No se pudieron unificar los transfers',
+            });
+          },
+        });
+      },
+    });
   }
 
   fichaVehicleBrand(d: FileAADetailRow): string {

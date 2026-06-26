@@ -1524,10 +1524,25 @@
                                       </div>
                                     }
                                     @case ('fixed_transfer') {
-                                      @if (fichaVehicleCategory(d) === 'Transfer Aeropuerto/Hotel') {
+                                      @if (fichaVehicleCategory(d) === 'Transfer Aeropuerto/Hotel' || fichaDetailIsTransferGroup(d)) {
                                         <span class="ficha-name">Transfert</span>
                                       } @else {
                                         <span class="ficha-name">Transfer@if (vehParts.suffix) { <strong>{{ vehParts.suffix }}</strong>}</span>
+                                      }
+                                      @if (canShowFichaMergeTransfersButton(d, ficha)) {
+                                        <p-button
+                                          class="ficha-merge-transfers-btn"
+                                          label="Unificar transfers"
+                                          icon="pi pi-compress"
+                                          [outlined]="true"
+                                          size="small"
+                                          severity="secondary"
+                                          [loading]="mergingFichaTransfers()"
+                                          [disabled]="fichaDetailReorderSaving()"
+                                          pTooltip="Unificar todas las filas Transfer en una sola"
+                                          tooltipPosition="top"
+                                          (onClick)="mergeFichaTransferVehicles(ficha)"
+                                        />
                                       }
                                     }
                                     @case ('fixed_colectivo') {
