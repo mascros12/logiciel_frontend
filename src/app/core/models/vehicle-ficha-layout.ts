@@ -76,7 +76,12 @@ function nameLooksTaxi(name: string): boolean {
 }
 
 function nameLooksTransfert(name: string): boolean {
-  return /transfert/i.test(name);
+  const n = (name ?? '').trim().toLowerCase();
+  if (!n) return false;
+  if (n === 'transfer' || n === 'transfert') return true;
+  if (/transfert/i.test(name)) return true;
+  if (/\btransfer\b/i.test(name) && !/zona|actividad|colectivo/i.test(name)) return true;
+  return false;
 }
 
 export function vehicleFichaServiceLayout(
@@ -98,6 +103,7 @@ export function vehicleFichaDatesLayout(
   if (category && DATES_BY_CATEGORY[category]) {
     return DATES_BY_CATEGORY[category];
   }
+  if (nameLooksTransfert(name)) return 'fecha_only';
   if (nameLooksRetour(name) || nameLooksTaxi(name)) return 'retour';
   return 'rental_full';
 }
