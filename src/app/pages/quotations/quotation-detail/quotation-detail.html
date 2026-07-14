@@ -895,11 +895,11 @@
               <div class="ficha-aa-checklist-extra">
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyBed()" (ngModelChange)="fichaNeedBabyBed.set(!!$event); onFichaChecklistChange()" />
-                  <span>Cama para bebés</span>
+                  <span>Lit bébé</span>
                 </label>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaNeedAC()" (ngModelChange)="fichaNeedAC.set(!!$event); onFichaChecklistChange()" />
-                  <span>Aire acondicionado</span>
+                  <span>Climatisation</span>
                 </label>
                 <div class="ficha-check-row ficha-check-row--with-input">
                   <label class="ficha-check-inline">
@@ -908,7 +908,7 @@
                       [ngModel]="fichaHasDisability()"
                       (ngModelChange)="fichaHasDisability.set(!!$event); onFichaDisabilityToggle(!!$event)"
                     />
-                    <span>Persona con discapacidad</span>
+                    <span>Personne en situation de handicap</span>
                   </label>
                   @if (fichaHasDisability()) {
                     <input
@@ -917,17 +917,69 @@
                       [ngModel]="fichaDisabilityInfo()"
                       (ngModelChange)="fichaDisabilityInfo.set($event ?? '')"
                       (blur)="onFichaChecklistChange()"
-                      placeholder="Tipo de discapacidad (si se conoce)"
+                      placeholder="Type de handicap (si connu)"
                     />
                   }
                 </div>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaNeedConnectingRooms()" (ngModelChange)="fichaNeedConnectingRooms.set(!!$event); onFichaChecklistChange()" />
-                  <span>Habitaciones communicante</span>
+                  <span>Chambres communicantes</span>
                 </label>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaNeedBabyChairs()" (ngModelChange)="fichaNeedBabyChairs.set(!!$event); onFichaChecklistChange()" />
-                  <span>Sillas para bebés</span>
+                  <span>Chaises pour bébés</span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaDejaEvaneos()" (ngModelChange)="fichaDejaEvaneos.set(!!$event); onFichaChecklistChange()" />
+                  <span>Déjà voyagé avec Evaneos</span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaDejaAvecNous()" (ngModelChange)="fichaDejaAvecNous.set(!!$event); onFichaChecklistChange()" />
+                  <span>Déjà voyagé avec nous</span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaClientExigeant()" (ngModelChange)="fichaClientExigeant.set(!!$event); onFichaChecklistChange()" />
+                  <span>Client exigeant</span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaHabitudeVoyager()" (ngModelChange)="fichaHabitudeVoyager.set(!!$event); onFichaChecklistChange()" />
+                  <span>On a l'habitude de voyager</span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaBesoinRassure()" (ngModelChange)="fichaBesoinRassure.set(!!$event); onFichaChecklistChange()" />
+                  <span>Besoin d'être rassuré</span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaSeniors()" (ngModelChange)="fichaSeniors.set(!!$event); onFichaChecklistChange()" />
+                  <span>Seniors</span>
+                </label>
+                <div class="ficha-check-row ficha-check-row--with-input">
+                  <label class="ficha-check-inline">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="fichaDemandeMariage()"
+                      (ngModelChange)="fichaDemandeMariage.set(!!$event); onFichaDemandeMariageToggle(!!$event)"
+                    />
+                    <span>Demande en mariage</span>
+                  </label>
+                  @if (fichaDemandeMariage()) {
+                    <input
+                      pInputText
+                      class="ficha-check-input"
+                      [ngModel]="fichaDemandeMariageDay()"
+                      (ngModelChange)="fichaDemandeMariageDay.set($event ?? '')"
+                      (blur)="onFichaChecklistChange()"
+                      placeholder="Jour (ex. 15/07)"
+                    />
+                  }
+                </div>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaReveCostaRica()" (ngModelChange)="fichaReveCostaRica.set(!!$event); onFichaChecklistChange()" />
+                  <span>Rêve de venir depuis longtemps</span>
+                </label>
+                <label class="ficha-check-row">
+                  <p-checkbox [binary]="true" [ngModel]="fichaDejaVisiteCR()" (ngModelChange)="fichaDejaVisiteCR.set(!!$event); onFichaChecklistChange()" />
+                  <span>Déjà visité le Costa Rica</span>
                 </label>
               </div>
             </div>

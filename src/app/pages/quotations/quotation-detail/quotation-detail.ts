@@ -391,6 +391,16 @@ export class QuotationDetail implements OnInit {
   fichaDisabilityInfo = signal('');
   fichaNeedConnectingRooms = signal(false);
   fichaNeedBabyChairs = signal(false);
+  fichaDejaEvaneos = signal(false);
+  fichaDejaAvecNous = signal(false);
+  fichaClientExigeant = signal(false);
+  fichaHabitudeVoyager = signal(false);
+  fichaBesoinRassure = signal(false);
+  fichaSeniors = signal(false);
+  fichaDemandeMariage = signal(false);
+  fichaDemandeMariageDay = signal('');
+  fichaReveCostaRica = signal(false);
+  fichaDejaVisiteCR = signal(false);
 
   fichaTotals = computed(() => {
     const f = this.fichaFileAA();
@@ -3059,6 +3069,11 @@ export class QuotationDetail implements OnInit {
 
   onFichaDisabilityToggle(checked: boolean): void {
     if (!checked) this.fichaDisabilityInfo.set('');
+    this.syncFichaChecklistToFicha();
+  }
+
+  onFichaDemandeMariageToggle(checked: boolean): void {
+    if (!checked) this.fichaDemandeMariageDay.set('');
     this.syncFichaChecklistToFicha();
   }
 
@@ -5821,6 +5836,23 @@ export class QuotationDetail implements OnInit {
   }
 
   private readonly fichaChecklistPrefixes = [
+    // FR (actual)
+    'Lit bébé',
+    'Climatisation',
+    'Personne en situation de handicap',
+    'Chambres communicantes',
+    'Chaises pour bébés',
+    'Déjà voyagé avec Evaneos',
+    'Déjà voyagé avec nous',
+    'Client exigeant',
+    "On a l'habitude de voyager",
+    "Besoin d'être rassuré",
+    'Seniors',
+    'Demande en mariage',
+    'Rêve de venir depuis longtemps',
+    'Déjà visité le Costa Rica',
+    'Date spéciale',
+    // ES (legacy, por fichas ya generadas)
     'Cama para bebés',
     'Fecha Especial',
     'Aire acondicionado',
@@ -5845,14 +5877,30 @@ export class QuotationDetail implements OnInit {
 
   private buildChecklistObservationLines(): string[] {
     const lines: string[] = [];
-    if (this.fichaNeedBabyBed()) lines.push('Cama para bebés');
-    if (this.fichaNeedAC()) lines.push('Aire acondicionado');
-    if (this.fichaNeedConnectingRooms()) lines.push('Habitaciones communicante');
-    if (this.fichaNeedBabyChairs()) lines.push('Sillas para bebés');
+    if (this.fichaNeedBabyBed()) lines.push('Lit bébé');
+    if (this.fichaNeedAC()) lines.push('Climatisation');
+    if (this.fichaNeedConnectingRooms()) lines.push('Chambres communicantes');
+    if (this.fichaNeedBabyChairs()) lines.push('Chaises pour bébés');
     if (this.fichaHasDisability()) {
       const info = (this.fichaDisabilityInfo() || '').trim();
-      lines.push(info ? `Persona con discapacidad: ${info}` : 'Persona con discapacidad');
+      lines.push(
+        info
+          ? `Personne en situation de handicap: ${info}`
+          : 'Personne en situation de handicap',
+      );
     }
+    if (this.fichaDejaEvaneos()) lines.push('Déjà voyagé avec Evaneos');
+    if (this.fichaDejaAvecNous()) lines.push('Déjà voyagé avec nous');
+    if (this.fichaClientExigeant()) lines.push('Client exigeant');
+    if (this.fichaHabitudeVoyager()) lines.push("On a l'habitude de voyager");
+    if (this.fichaBesoinRassure()) lines.push("Besoin d'être rassuré");
+    if (this.fichaSeniors()) lines.push('Seniors');
+    if (this.fichaDemandeMariage()) {
+      const day = (this.fichaDemandeMariageDay() || '').trim();
+      lines.push(day ? `Demande en mariage: ${day}` : 'Demande en mariage');
+    }
+    if (this.fichaReveCostaRica()) lines.push('Rêve de venir depuis longtemps');
+    if (this.fichaDejaVisiteCR()) lines.push('Déjà visité le Costa Rica');
     return lines;
   }
 
@@ -5909,6 +5957,16 @@ export class QuotationDetail implements OnInit {
     this.fichaDisabilityInfo.set('');
     this.fichaNeedConnectingRooms.set(false);
     this.fichaNeedBabyChairs.set(false);
+    this.fichaDejaEvaneos.set(false);
+    this.fichaDejaAvecNous.set(false);
+    this.fichaClientExigeant.set(false);
+    this.fichaHabitudeVoyager.set(false);
+    this.fichaBesoinRassure.set(false);
+    this.fichaSeniors.set(false);
+    this.fichaDemandeMariage.set(false);
+    this.fichaDemandeMariageDay.set('');
+    this.fichaReveCostaRica.set(false);
+    this.fichaDejaVisiteCR.set(false);
   }
 
   private hydrateChecklistFromFicha(ficha: FileAAWithDetails | null): void {
@@ -5932,19 +5990,45 @@ export class QuotationDetail implements OnInit {
       return '';
     };
 
-    const findLine = (prefix: string) => findInObs(prefix) || findInDetails(prefix);
+    const findLine = (...prefixes: string[]) => {
+      for (const p of prefixes) {
+        const hit = findInObs(p) || findInDetails(p);
+        if (hit) return hit;
+      }
+      return '';
+    };
 
-    this.fichaNeedBabyBed.set(!!findLine('Cama para bebés'));
-    this.fichaNeedAC.set(!!findLine('Aire acondicionado'));
-    this.fichaNeedConnectingRooms.set(!!findLine('Habitaciones communicante'));
-    this.fichaNeedBabyChairs.set(!!findLine('Sillas para bebés'));
+    this.fichaNeedBabyBed.set(!!findLine('Lit bébé', 'Cama para bebés'));
+    this.fichaNeedAC.set(!!findLine('Climatisation', 'Aire acondicionado'));
+    this.fichaNeedConnectingRooms.set(
+      !!findLine('Chambres communicantes', 'Habitaciones communicante'),
+    );
+    this.fichaNeedBabyChairs.set(!!findLine('Chaises pour bébés', 'Sillas para bebés'));
 
-    const disability = findLine('Persona con discapacidad');
+    const disability = findLine(
+      'Personne en situation de handicap',
+      'Persona con discapacidad',
+    );
     if (disability) {
       this.fichaHasDisability.set(true);
       const i = disability.indexOf(':');
       this.fichaDisabilityInfo.set(i >= 0 ? disability.slice(i + 1).trim() : '');
     }
+
+    this.fichaDejaEvaneos.set(!!findLine('Déjà voyagé avec Evaneos'));
+    this.fichaDejaAvecNous.set(!!findLine('Déjà voyagé avec nous'));
+    this.fichaClientExigeant.set(!!findLine('Client exigeant'));
+    this.fichaHabitudeVoyager.set(!!findLine("On a l'habitude de voyager"));
+    this.fichaBesoinRassure.set(!!findLine("Besoin d'être rassuré"));
+    this.fichaSeniors.set(!!findLine('Seniors'));
+    const mariage = findLine('Demande en mariage');
+    if (mariage) {
+      this.fichaDemandeMariage.set(true);
+      const i = mariage.indexOf(':');
+      this.fichaDemandeMariageDay.set(i >= 0 ? mariage.slice(i + 1).trim() : '');
+    }
+    this.fichaReveCostaRica.set(!!findLine('Rêve de venir depuis longtemps'));
+    this.fichaDejaVisiteCR.set(!!findLine('Déjà visité le Costa Rica'));
   }
 
   validateFichaClient(q: QuotationFull): string[] {
