@@ -4837,10 +4837,19 @@ export class QuotationDetail implements OnInit {
     return empty;
   }
 
+  private parseNonNegIntInput(raw: unknown): number | null {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return null;
+    return Math.trunc(n);
+  }
+
   private hotelFichaObsFromServer(d: FileAADetailRow): FileAADetailRoomObsState {
     const raw = d.observation_extras;
     const notes = typeof d.observations === 'string' ? d.observations : '';
     let room_quantity: number | null = null;
+    let additional_adults: number | null = null;
+    let additional_children: number | null = null;
     let ficha_entrada = '';
     let ficha_salida = '';
     let ficha_noches_texto = '';
@@ -4851,6 +4860,8 @@ export class QuotationDetail implements OnInit {
         room_id: slot.room_id,
         room_file_aa_name: slot.room_file_aa_name,
         room_quantity: slot.room_quantity,
+        additional_adults: slot.additional_adults,
+        additional_children: slot.additional_children,
       }));
     }
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
@@ -4877,6 +4888,16 @@ export class QuotationDetail implements OnInit {
             }
           }
         }
+        additional_adults = this.parseNonNegIntInput(o['additional_adults']);
+        additional_children = this.parseNonNegIntInput(o['additional_children']);
+        if (additional_adults === null && merged.length === 1) {
+          additional_adults = merged[0].additional_adults ?? null;
+        }
+        if (additional_children === null && merged.length === 1) {
+          additional_children = merged[0].additional_children ?? null;
+        }
+        if (additional_adults === null) additional_adults = 0;
+        if (additional_children === null) additional_children = 0;
       }
       ficha_entrada = String(o['ficha_entrada'] ?? '');
       ficha_salida = String(o['ficha_salida'] ?? '');
@@ -4914,6 +4935,8 @@ export class QuotationDetail implements OnInit {
           room_file_aa_name:
             String(slotObj['room_file_aa_name'] ?? m?.room_file_aa_name ?? '').trim() || undefined,
           room_quantity: m?.room_quantity ?? null,
+          additional_adults: m?.additional_adults ?? null,
+          additional_children: m?.additional_children ?? null,
           stay_segments,
         };
       });
@@ -4932,6 +4955,8 @@ export class QuotationDetail implements OnInit {
 
     return {
       room_quantity,
+      additional_adults: additional_adults ?? 0,
+      additional_children: additional_children ?? 0,
       merged_slots,
       stay_segments,
       ficha_entrada,
@@ -4960,6 +4985,8 @@ export class QuotationDetail implements OnInit {
               room_id: String(slot['room_id'] ?? ''),
               room_file_aa_name: String(slot['room_file_aa_name'] ?? '').trim() || undefined,
               room_quantity,
+              additional_adults: this.parseNonNegIntInput(slot['additional_adults']) ?? 0,
+              additional_children: this.parseNonNegIntInput(slot['additional_children']) ?? 0,
               is_replacement: Boolean(slot['is_replacement']),
               is_superseded: Boolean(slot['is_superseded']),
             };
@@ -4979,6 +5006,8 @@ export class QuotationDetail implements OnInit {
         room_id: roomId,
         room_file_aa_name: String(d.observation_extras?.['room_file_aa_name'] ?? '').trim() || undefined,
         room_quantity,
+        additional_adults: this.parseNonNegIntInput(d.observation_extras?.['additional_adults']) ?? 0,
+        additional_children: this.parseNonNegIntInput(d.observation_extras?.['additional_children']) ?? 0,
       },
     ];
   }
@@ -5005,6 +5034,53 @@ export class QuotationDetail implements OnInit {
     if (!draft.merged_slots?.[index]) return;
     draft.merged_slots[index].room_quantity = this.parseHotelRoomQuantityInput(raw);
     this.bumpHotelFichaPriceRev();
+  }
+
+  ensureHotelMergedRoomAddAdultsDraft(d: FileAADetailRow, index: number): number | null {
+    const draft = this.ensureHotelFichaObsDraft(d);
+    if (!draft.merged_slots?.[index]) return null;
+    return draft.merged_slots[index].additional_adults;
+  }
+
+  ensureHotelMergedRoomAddChildrenDraft(d: FileAADetailRow, index: number): number | null {
+    const draft = this.ensureHotelFichaObsDraft(d);
+    if (!draft.merged_slots?.[index]) return null;
+    return draft.merged_slots[index].additional_children;
+  }
+
+  setHotelMergedRoomAddAdultsDraft(d: FileAADetailRow, index: number, raw: unknown): void {
+    const draft = this.ensureHotelFichaObsDraft(d);
+    if (!draft.merged_slots?.[index]) return;
+    draft.merged_slots[index].additional_adults = this.parseNonNegIntInput(raw) ?? 0;
+    this.bumpHotelFichaPriceRev();
+  }
+
+  setHotelMergedRoomAddChildrenDraft(d: FileAADetailRow, index: number, raw: unknown): void {
+    const draft = this.ensureHotelFichaObsDraft(d);
+    if (!draft.merged_slots?.[index]) return;
+    draft.merged_slots[index].additional_children = this.parseNonNegIntInput(raw) ?? 0;
+    this.bumpHotelFichaPriceRev();
+  }
+
+  onHotelAdditionalPaxInput(d: FileAADetailRow, field: 'additional_adults' | 'additional_children', event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const draft = this.ensureHotelFichaObsDraft(d);
+    draft[field] = this.parseNonNegIntInput(target.value) ?? 0;
+    this.bumpHotelFichaPriceRev();
+  }
+
+  commitHotelAdditionalPaxObs(d: FileAADetailRow, event: Event): void {
+    const target = event.target instanceof HTMLInputElement ? event.target : null;
+    if (target) {
+      if (target.id === `aa-rad-${d.id}`) {
+        this.ensureHotelFichaObsDraft(d).additional_adults = this.parseNonNegIntInput(target.value) ?? 0;
+      } else if (target.id === `aa-rch-${d.id}`) {
+        this.ensureHotelFichaObsDraft(d).additional_children = this.parseNonNegIntInput(target.value) ?? 0;
+      }
+      this.bumpHotelFichaPriceRev();
+    }
+    this.commitHotelFichaObs(d);
   }
 
   fichaReplaceRoomOptions(d: FileAADetailRow): { slotIndex: number; label: string }[] {
@@ -5075,6 +5151,12 @@ export class QuotationDetail implements OnInit {
       case `aa-rmq-${d.id}`:
         row.room_quantity = this.parseHotelRoomQuantityInput(val);
         break;
+      case `aa-rad-${d.id}`:
+        row.additional_adults = this.parseNonNegIntInput(val) ?? 0;
+        break;
+      case `aa-rch-${d.id}`:
+        row.additional_children = this.parseNonNegIntInput(val) ?? 0;
+        break;
       case `aa-rno-${d.id}`:
         row.notes = val;
         break;
@@ -5089,6 +5171,10 @@ export class QuotationDetail implements OnInit {
     if (target instanceof HTMLInputElement && target.id === `aa-rmq-${d.id}`) {
       return;
     }
+    if (target instanceof HTMLInputElement && (target.id === `aa-rad-${d.id}` || target.id === `aa-rch-${d.id}`)) {
+      // Manejado por commitHotelAdditionalPaxObs.
+      return;
+    }
     if (
       target instanceof HTMLInputElement &&
       target.id.startsWith(`aa-rmq-${d.id}-`)
@@ -5096,6 +5182,24 @@ export class QuotationDetail implements OnInit {
       const idx = Number(target.id.slice(`aa-rmq-${d.id}-`.length));
       if (Number.isFinite(idx)) {
         this.setHotelMergedRoomQtyDraft(d, idx, target.value);
+      }
+    }
+    if (
+      target instanceof HTMLInputElement &&
+      target.id.startsWith(`aa-rad-${d.id}-`)
+    ) {
+      const idx = Number(target.id.slice(`aa-rad-${d.id}-`.length));
+      if (Number.isFinite(idx)) {
+        this.setHotelMergedRoomAddAdultsDraft(d, idx, target.value);
+      }
+    }
+    if (
+      target instanceof HTMLInputElement &&
+      target.id.startsWith(`aa-rch-${d.id}-`)
+    ) {
+      const idx = Number(target.id.slice(`aa-rch-${d.id}-`.length));
+      if (Number.isFinite(idx)) {
+        this.setHotelMergedRoomAddChildrenDraft(d, idx, target.value);
       }
     }
     if (target) {
@@ -5180,6 +5284,10 @@ export class QuotationDetail implements OnInit {
   ): { observation_extras: Record<string, unknown>; datesCell: string } {
     const room_quantity = this.parseHotelRoomQuantityInput(row.room_quantity);
     row.room_quantity = room_quantity;
+    const additional_adults = this.parseNonNegIntInput(row.additional_adults) ?? 0;
+    const additional_children = this.parseNonNegIntInput(row.additional_children) ?? 0;
+    row.additional_adults = additional_adults;
+    row.additional_children = additional_children;
     const prev =
       d.observation_extras && typeof d.observation_extras === 'object' && !Array.isArray(d.observation_extras)
         ? { ...(d.observation_extras as Record<string, unknown>) }
@@ -5208,15 +5316,27 @@ export class QuotationDetail implements OnInit {
           item && typeof item === 'object' ? { ...(item as Record<string, unknown>) } : {};
         this.backfillHotelRackSnapshotFields(base, d, { slotCount: prevMerged.length });
         let slotQty: number;
+        let slotAddAdults: number;
+        let slotAddChildren: number;
         if (multiType) {
           const draftSlot = row.merged_slots?.[i];
           slotQty =
             this.parseHotelRoomQuantityInput(draftSlot?.room_quantity) ??
             this.parseHotelRoomQuantityInput(base['room_quantity']) ??
             1;
+          slotAddAdults =
+            this.parseNonNegIntInput(draftSlot?.additional_adults) ??
+            this.parseNonNegIntInput(base['additional_adults']) ??
+            0;
+          slotAddChildren =
+            this.parseNonNegIntInput(draftSlot?.additional_children) ??
+            this.parseNonNegIntInput(base['additional_children']) ??
+            0;
         } else {
           slotQty =
             room_quantity ?? this.parseHotelRoomQuantityInput(base['room_quantity']) ?? 1;
+          slotAddAdults = additional_adults;
+          slotAddChildren = additional_children;
         }
         const slotSegments =
           differentStays && row.merged_slots?.[i]?.stay_segments?.length
@@ -5234,6 +5354,8 @@ export class QuotationDetail implements OnInit {
         return {
           ...base,
           room_quantity: slotQty,
+          additional_adults: slotAddAdults,
+          additional_children: slotAddChildren,
           ficha_entrada: slotFields.ficha_entrada,
           ficha_salida: slotFields.ficha_salida,
           ficha_noches_texto: slotFields.ficha_noches_texto,
@@ -5255,6 +5377,8 @@ export class QuotationDetail implements OnInit {
       observation_extras['room_dates_iso'] = this.segmentsToRoomDatesIso(rowSegments);
       if (!multiType) {
         observation_extras['room_quantity'] = updatedMerged[0]['room_quantity'];
+        observation_extras['additional_adults'] = updatedMerged[0]['additional_adults'];
+        observation_extras['additional_children'] = updatedMerged[0]['additional_children'];
       } else {
         observation_extras['room_quantity'] = updatedMerged.reduce(
           (sum, slot) => sum + Math.max(1, Number((slot as Record<string, unknown>)['room_quantity']) || 1),
@@ -5266,6 +5390,8 @@ export class QuotationDetail implements OnInit {
       observation_extras['ficha_salida'] = rowFields.ficha_salida;
       observation_extras['ficha_noches_texto'] = rowFields.ficha_noches_texto;
       observation_extras['room_quantity'] = room_quantity;
+      observation_extras['additional_adults'] = additional_adults;
+      observation_extras['additional_children'] = additional_children;
       observation_extras['room_dates_iso'] = this.segmentsToRoomDatesIso(rowSegments);
       this.backfillHotelRackSnapshotFields(observation_extras, d);
     }
@@ -5273,7 +5399,14 @@ export class QuotationDetail implements OnInit {
     if (Array.isArray(mergedOut) && mergedOut.length === 1) {
       const slot = mergedOut[0];
       if (slot && typeof slot === 'object') {
-        for (const key of ['room_rack_per_night', 'rack_nights_base', 'rack_nightly_sum', 'room_quantity'] as const) {
+        for (const key of [
+          'room_rack_per_night',
+          'rack_nights_base',
+          'rack_nightly_sum',
+          'room_quantity',
+          'additional_adults',
+          'additional_children',
+        ] as const) {
           const val = (slot as Record<string, unknown>)[key];
           if (val !== undefined && val !== null && val !== '') {
             observation_extras[key] = val;
@@ -5843,16 +5976,19 @@ export class QuotationDetail implements OnInit {
     'Chambres communicantes',
     'Chaises pour bébés',
     'Déjà voyagé avec Evaneos',
-    'Déjà voyagé avec nous',
+    'Déjà voyagé AVEC NOUS',
     'Client exigeant',
-    "On a l'habitude de voyager",
+    'Client habitué à voyager',
     "Besoin d'être rassuré",
     'Seniors',
     'Demande en mariage',
     'Rêve de venir depuis longtemps',
-    'Déjà visité le Costa Rica',
+    'A déjà visité le Costa Rica (pas avec nous)',
     'Date spéciale',
-    // ES (legacy, por fichas ya generadas)
+    // Legacy (fichas ya generadas)
+    'Déjà voyagé avec nous',
+    "On a l'habitude de voyager",
+    'Déjà visité le Costa Rica',
     'Cama para bebés',
     'Fecha Especial',
     'Aire acondicionado',
@@ -5890,9 +6026,9 @@ export class QuotationDetail implements OnInit {
       );
     }
     if (this.fichaDejaEvaneos()) lines.push('Déjà voyagé avec Evaneos');
-    if (this.fichaDejaAvecNous()) lines.push('Déjà voyagé avec nous');
+    if (this.fichaDejaAvecNous()) lines.push('Déjà voyagé AVEC NOUS');
     if (this.fichaClientExigeant()) lines.push('Client exigeant');
-    if (this.fichaHabitudeVoyager()) lines.push("On a l'habitude de voyager");
+    if (this.fichaHabitudeVoyager()) lines.push('Client habitué à voyager');
     if (this.fichaBesoinRassure()) lines.push("Besoin d'être rassuré");
     if (this.fichaSeniors()) lines.push('Seniors');
     if (this.fichaDemandeMariage()) {
@@ -5900,7 +6036,7 @@ export class QuotationDetail implements OnInit {
       lines.push(day ? `Demande en mariage: ${day}` : 'Demande en mariage');
     }
     if (this.fichaReveCostaRica()) lines.push('Rêve de venir depuis longtemps');
-    if (this.fichaDejaVisiteCR()) lines.push('Déjà visité le Costa Rica');
+    if (this.fichaDejaVisiteCR()) lines.push('A déjà visité le Costa Rica (pas avec nous)');
     return lines;
   }
 
@@ -6016,9 +6152,13 @@ export class QuotationDetail implements OnInit {
     }
 
     this.fichaDejaEvaneos.set(!!findLine('Déjà voyagé avec Evaneos'));
-    this.fichaDejaAvecNous.set(!!findLine('Déjà voyagé avec nous'));
+    this.fichaDejaAvecNous.set(
+      !!findLine('Déjà voyagé AVEC NOUS', 'Déjà voyagé avec nous'),
+    );
     this.fichaClientExigeant.set(!!findLine('Client exigeant'));
-    this.fichaHabitudeVoyager.set(!!findLine("On a l'habitude de voyager"));
+    this.fichaHabitudeVoyager.set(
+      !!findLine('Client habitué à voyager', "On a l'habitude de voyager"),
+    );
     this.fichaBesoinRassure.set(!!findLine("Besoin d'être rassuré"));
     this.fichaSeniors.set(!!findLine('Seniors'));
     const mariage = findLine('Demande en mariage');
@@ -6028,7 +6168,12 @@ export class QuotationDetail implements OnInit {
       this.fichaDemandeMariageDay.set(i >= 0 ? mariage.slice(i + 1).trim() : '');
     }
     this.fichaReveCostaRica.set(!!findLine('Rêve de venir depuis longtemps'));
-    this.fichaDejaVisiteCR.set(!!findLine('Déjà visité le Costa Rica'));
+    this.fichaDejaVisiteCR.set(
+      !!findLine(
+        'A déjà visité le Costa Rica (pas avec nous)',
+        'Déjà visité le Costa Rica',
+      ),
+    );
   }
 
   validateFichaClient(q: QuotationFull): string[] {

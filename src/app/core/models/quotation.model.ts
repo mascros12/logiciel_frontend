@@ -144,6 +144,10 @@ export interface FichaMergedRoomSlot {
   room_id: string;
   room_file_aa_name?: string;
   room_quantity: number | null;
+  /** Adultos adicionales (afectan precio sistema). */
+  additional_adults: number | null;
+  /** Niños adicionales (afectan precio sistema). */
+  additional_children: number | null;
   /** Tipología añadida por reemplazo parcial en fila agrupada (verde en UI). */
   is_replacement?: boolean;
   /** Tipología sustituida que sigue visible en la fila agrupada (rojo tachado). */
@@ -154,6 +158,10 @@ export interface FichaMergedRoomSlot {
 
 export interface FileAADetailRoomObsState {
   room_quantity: number | null;
+  /** Adultos adicionales (una tipología o valor compartido). */
+  additional_adults: number | null;
+  /** Niños adicionales (una tipología o valor compartido). */
+  additional_children: number | null;
   /** Cantidades por tipología cuando la fila agrupa varias habitaciones del mismo hotel. */
   merged_slots?: FichaMergedRoomSlot[];
   /** Estadías compartidas (una tipología o varias con las mismas fechas). */

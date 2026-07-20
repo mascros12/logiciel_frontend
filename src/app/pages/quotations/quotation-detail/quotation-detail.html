@@ -935,7 +935,7 @@
                 </label>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaDejaAvecNous()" (ngModelChange)="fichaDejaAvecNous.set(!!$event); onFichaChecklistChange()" />
-                  <span>Déjà voyagé avec nous</span>
+                  <span>Déjà voyagé AVEC NOUS</span>
                 </label>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaClientExigeant()" (ngModelChange)="fichaClientExigeant.set(!!$event); onFichaChecklistChange()" />
@@ -943,7 +943,7 @@
                 </label>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaHabitudeVoyager()" (ngModelChange)="fichaHabitudeVoyager.set(!!$event); onFichaChecklistChange()" />
-                  <span>On a l'habitude de voyager</span>
+                  <span>Client habitué à voyager</span>
                 </label>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaBesoinRassure()" (ngModelChange)="fichaBesoinRassure.set(!!$event); onFichaChecklistChange()" />
@@ -979,7 +979,7 @@
                 </label>
                 <label class="ficha-check-row">
                   <p-checkbox [binary]="true" [ngModel]="fichaDejaVisiteCR()" (ngModelChange)="fichaDejaVisiteCR.set(!!$event); onFichaChecklistChange()" />
-                  <span>Déjà visité le Costa Rica</span>
+                  <span>A déjà visité le Costa Rica (pas avec nous)</span>
                 </label>
               </div>
             </div>
@@ -2022,6 +2022,51 @@
                                 @if (fichaHasMultipleRoomTypes(d)) {
                                   @for (slot of ensureHotelFichaObsDraft(d).merged_slots ?? []; track slot.room_id; let ri = $index) {
                                     <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">
+                                        Pax adicionales {{ fichaMergedRoomLabel(slot, ri) }}
+                                      </label>
+                                      <div class="ficha-activity-pax-row">
+                                        <div class="ficha-activity-pax-cell">
+                                          <label
+                                            class="ficha-activity-pax-label"
+                                            [attr.for]="'aa-rad-' + d.id + '-' + ri"
+                                            pTooltip="Adultos adicionales"
+                                            tooltipPosition="top"
+                                          >A+</label>
+                                          <input
+                                            pInputText
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            [id]="'aa-rad-' + d.id + '-' + ri"
+                                            class="ficha-cell-input ficha-activity-pax-input"
+                                            [ngModel]="ensureHotelMergedRoomAddAdultsDraft(d, ri)"
+                                            (ngModelChange)="setHotelMergedRoomAddAdultsDraft(d, ri, $event)"
+                                            (change)="commitHotelFichaObs(d, $event)"
+                                          />
+                                        </div>
+                                        <div class="ficha-activity-pax-cell">
+                                          <label
+                                            class="ficha-activity-pax-label"
+                                            [attr.for]="'aa-rch-' + d.id + '-' + ri"
+                                            pTooltip="Niños adicionales"
+                                            tooltipPosition="top"
+                                          >N+</label>
+                                          <input
+                                            pInputText
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            [id]="'aa-rch-' + d.id + '-' + ri"
+                                            class="ficha-cell-input ficha-activity-pax-input"
+                                            [ngModel]="ensureHotelMergedRoomAddChildrenDraft(d, ri)"
+                                            (ngModelChange)="setHotelMergedRoomAddChildrenDraft(d, ri, $event)"
+                                            (change)="commitHotelFichaObs(d, $event)"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div class="ficha-obs-block">
                                       <label class="ficha-obs-label" [attr.for]="'aa-rmq-' + d.id + '-' + ri">
                                         Número de habitaciones {{ fichaMergedRoomLabel(slot, ri) }}
                                       </label>
@@ -2039,6 +2084,51 @@
                                     </div>
                                   }
                                 } @else {
+                                  <div class="ficha-obs-block">
+                                    <label class="ficha-obs-label">Pax adicionales</label>
+                                    <div class="ficha-activity-pax-row">
+                                      <div class="ficha-activity-pax-cell">
+                                        <label
+                                          class="ficha-activity-pax-label"
+                                          [attr.for]="'aa-rad-' + d.id"
+                                          pTooltip="Adultos adicionales"
+                                          tooltipPosition="top"
+                                        >A+</label>
+                                        <input
+                                          pInputText
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          [id]="'aa-rad-' + d.id"
+                                          class="ficha-cell-input ficha-activity-pax-input"
+                                          [(ngModel)]="ensureHotelFichaObsDraft(d).additional_adults"
+                                          (input)="onHotelAdditionalPaxInput(d, 'additional_adults', $event)"
+                                          (change)="commitHotelAdditionalPaxObs(d, $event)"
+                                          (blur)="commitHotelAdditionalPaxObs(d, $event)"
+                                        />
+                                      </div>
+                                      <div class="ficha-activity-pax-cell">
+                                        <label
+                                          class="ficha-activity-pax-label"
+                                          [attr.for]="'aa-rch-' + d.id"
+                                          pTooltip="Niños adicionales"
+                                          tooltipPosition="top"
+                                        >N+</label>
+                                        <input
+                                          pInputText
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          [id]="'aa-rch-' + d.id"
+                                          class="ficha-cell-input ficha-activity-pax-input"
+                                          [(ngModel)]="ensureHotelFichaObsDraft(d).additional_children"
+                                          (input)="onHotelAdditionalPaxInput(d, 'additional_children', $event)"
+                                          (change)="commitHotelAdditionalPaxObs(d, $event)"
+                                          (blur)="commitHotelAdditionalPaxObs(d, $event)"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
                                   <div class="ficha-obs-block">
                                     <label class="ficha-obs-label" [attr.for]="'aa-rmq-' + d.id">Número de habitaciones</label>
                                     <input
