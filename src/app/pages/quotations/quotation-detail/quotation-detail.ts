@@ -3717,8 +3717,11 @@ export class QuotationDetail implements OnInit {
     patch: FileAADetailPatch,
     server: FileAADetailRow,
   ): FileAADetailRow {
-    const observation_extras =
-      patch.observation_extras !== undefined
+    // Tras respuesta del servidor, preferir extras y precios recalculados.
+    const preferServer = server !== row && server.id === row.id;
+    const observation_extras = preferServer
+      ? (server.observation_extras ?? patch.observation_extras ?? row.observation_extras)
+      : patch.observation_extras !== undefined
         ? patch.observation_extras
         : row.observation_extras ?? server.observation_extras;
     return {
@@ -3726,10 +3729,23 @@ export class QuotationDetail implements OnInit {
       ...server,
       ...patch,
       observation_extras,
-      dates: patch.dates ?? row.dates ?? server.dates,
-      total_price: patch.total_price ?? row.total_price ?? server.total_price,
-      observations:
-        patch.observations !== undefined ? patch.observations : row.observations ?? server.observations,
+      dates: preferServer
+        ? (server.dates ?? patch.dates ?? row.dates)
+        : (patch.dates ?? row.dates ?? server.dates),
+      total_price: preferServer
+        ? (server.total_price ?? patch.total_price ?? row.total_price)
+        : (patch.total_price ?? row.total_price ?? server.total_price),
+      provider_price: preferServer
+        ? (server.provider_price ?? patch.provider_price ?? row.provider_price)
+        : (patch.provider_price !== undefined
+            ? patch.provider_price
+            : row.provider_price ?? server.provider_price),
+      observations: preferServer
+        ? (server.observations ??
+          (patch.observations !== undefined ? patch.observations : row.observations))
+        : patch.observations !== undefined
+          ? patch.observations
+          : row.observations ?? server.observations,
       display_service_lines:
         server.display_service_lines?.length
           ? server.display_service_lines
@@ -3761,9 +3777,7 @@ export class QuotationDetail implements OnInit {
         this.fichaFileAA.set({ ...f, details });
         this.syncFichaVisibleDetailsList();
         if (patch.observation_extras !== undefined || patch.observations !== undefined) {
-          if (mergedUpdated.category !== 'room') {
-            delete this.hotelFichaObsDraft[detailId];
-          }
+          delete this.hotelFichaObsDraft[detailId];
           delete this.vehicleFichaObsDraft[detailId];
           delete this.vehicleServiceSubtitleDraft[detailId];
           delete this.activityFichaObsDraft[detailId];
@@ -5220,6 +5234,10 @@ export class QuotationDetail implements OnInit {
     if (hotelOnly !== null) {
       patch.total_price = Number((hotelOnly + attached).toFixed(2));
     }
+    const providerOnly = this.fichaHotelProviderPriceFromExtras(observation_extras, d);
+    if (providerOnly !== null) {
+      patch.provider_price = providerOnly;
+    }
     this.patchFileDetail(d.id, patch);
   }
 
@@ -5267,11 +5285,30 @@ export class QuotationDetail implements OnInit {
     return this.fichaDetailPriceDisplay(d.total_price);
   }
 
+  /** Precio proveedor en vivo para filas hotel (rack + adicionales). */
+  fichaHotelProviderPriceDisplay(d: FileAADetailRow): string {
+    this.hotelFichaPriceRev();
+    if (d.category !== 'room') {
+      return this.fichaDetailPriceDisplay(d.provider_price);
+    }
+    const preview = this.previewHotelProviderPriceFromDraft(d);
+    if (preview !== null) {
+      return this.fichaDetailPriceDisplay(preview);
+    }
+    return this.fichaDetailPriceDisplay(d.provider_price);
+  }
+
   /** Construye extras como en commit y calcula precio sin persistir (vista previa). */
   private previewHotelSystemPriceFromDraft(d: FileAADetailRow): number | null {
     const draft = this.hotelFichaObsDraft[d.id] ?? this.hotelFichaObsFromServer(d);
     const { observation_extras } = this.buildHotelObservationExtrasFromDraft(d, draft);
     return this.fichaHotelSystemPriceFromExtras(observation_extras, d);
+  }
+
+  private previewHotelProviderPriceFromDraft(d: FileAADetailRow): number | null {
+    const draft = this.hotelFichaObsDraft[d.id] ?? this.hotelFichaObsFromServer(d);
+    const { observation_extras } = this.buildHotelObservationExtrasFromDraft(d, draft);
+    return this.fichaHotelProviderPriceFromExtras(observation_extras, d);
   }
 
   /**
@@ -5512,6 +5549,15 @@ export class QuotationDetail implements OnInit {
     return Number((netA * adults + netC * children).toFixed(2));
   }
 
+  private fichaRoomAdditionalNightlyRack(slot: Record<string, unknown>): number {
+    const adults = Math.max(0, Math.floor(Number(slot['additional_adults']) || 0));
+    const children = Math.max(0, Math.floor(Number(slot['additional_children']) || 0));
+    if (adults <= 0 && children <= 0) return 0;
+    const rackA = this.coerceDecimalLike(slot['room_rack_additional_adult']) ?? 0;
+    const rackC = this.coerceDecimalLike(slot['room_rack_additional_child']) ?? 0;
+    return Number((rackA * adults + rackC * children).toFixed(2));
+  }
+
   private fichaRoomSystemPriceFromSlot(slot: Record<string, unknown>): number | null {
     const perNight = this.fichaRoomRackPerNight(slot);
     if (perNight === null) return null;
@@ -5522,6 +5568,19 @@ export class QuotationDetail implements OnInit {
     }
     const qty = Math.max(1, Math.floor(Number(slot['room_quantity']) || 1));
     const nightly = perNight + this.fichaRoomAdditionalNightlyNet(slot);
+    return Number((nightly * nights * qty).toFixed(2));
+  }
+
+  private fichaRoomProviderPriceFromSlot(slot: Record<string, unknown>): number | null {
+    const perNight = this.coerceDecimalLike(slot['room_provider_per_night']);
+    if (perNight === null) return null;
+    let nights = this.parseFichaNochesCount(String(slot['ficha_noches_texto'] ?? ''));
+    if (nights <= 0) {
+      const base = Number(slot['rack_nights_base']);
+      nights = Number.isFinite(base) && base > 0 ? base : 1;
+    }
+    const qty = Math.max(1, Math.floor(Number(slot['room_quantity']) || 1));
+    const nightly = perNight + this.fichaRoomAdditionalNightlyRack(slot);
     return Number((nightly * nights * qty).toFixed(2));
   }
 
@@ -5550,6 +5609,47 @@ export class QuotationDetail implements OnInit {
     }
     this.backfillHotelRackSnapshotFields(working, detail);
     return this.fichaRoomSystemPriceFromSlot(working);
+  }
+
+  /** Precio proveedor hotel: rack base + adicionales rack × noches × cantidad. */
+  private fichaHotelProviderPriceFromExtras(
+    observation_extras: Record<string, unknown>,
+    detail?: FileAADetailRow,
+  ): number | null {
+    const working = { ...observation_extras };
+    const merged = working['merged_rooms'];
+    if (Array.isArray(merged) && merged.length > 0) {
+      let sum = 0;
+      let any = false;
+      for (const item of merged) {
+        if (!item || typeof item !== 'object') continue;
+        const slot = { ...(item as Record<string, unknown>) };
+        if (Boolean(slot['is_superseded'])) continue;
+        if (
+          (slot['room_provider_per_night'] === undefined || slot['room_provider_per_night'] === null) &&
+          working['room_provider_per_night'] != null
+        ) {
+          slot['room_provider_per_night'] = working['room_provider_per_night'];
+        }
+        for (const key of [
+          'room_rack_additional_adult',
+          'room_rack_additional_child',
+          'additional_adults',
+          'additional_children',
+        ] as const) {
+          if ((slot[key] === undefined || slot[key] === null) && working[key] != null) {
+            slot[key] = working[key];
+          }
+        }
+        const part = this.fichaRoomProviderPriceFromSlot(slot);
+        if (part !== null) {
+          sum += part;
+          any = true;
+        }
+      }
+      return any ? Number(sum.toFixed(2)) : null;
+    }
+    return this.fichaRoomProviderPriceFromSlot(working);
   }
 
   /** Fila creada desde "Añadir línea" (nueva o reemplazo): se resalta en verde. */
