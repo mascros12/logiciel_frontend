@@ -258,6 +258,7 @@ export const FICHA_AA_MERGED_VEHICLE_CATEGORIES = new Set([
   'Transfer de un Vehiculo Hacia X Zona',
   'Devolucion de Vehiculo',
 ]);
+export const FICHA_MERGED_INTO_VEHICLE_DETAIL_ID_KEY = 'merged_into_vehicle_detail_id';
 
 export function fichaAaDetailVisibleInTable(d: {
   category: string;
@@ -275,7 +276,11 @@ export function fichaAaDetailVisibleInTable(d: {
   }
   if (d.category !== 'vehicle') return true;
   const cat = vehicleCategoryFromExtras(d.observation_extras);
-  return !cat || !FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat);
+  if (!cat || !FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat)) return true;
+  const mergedInto = String(
+    d.observation_extras?.[FICHA_MERGED_INTO_VEHICLE_DETAIL_ID_KEY] ?? '',
+  ).trim();
+  return !mergedInto;
 }
 
 /** Ruta Taxi Marítimo: ``proveedor : origen - dest1 - dest2``. */

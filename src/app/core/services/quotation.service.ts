@@ -244,6 +244,13 @@ export class QuotationService {
     );
   }
 
+  attachTransferToVehicle(sourceDetailId: string, targetDetailId: string) {
+    return this.http.post<FileAAWithDetails>(
+      `${this.url}/details/${sourceDetailId}/attach-transfer-to-vehicle/${targetDetailId}`,
+      {},
+    );
+  }
+
   deleteFileAADetail(detailId: string) {
     return this.http.delete<void>(`${this.url}/details/${detailId}`);
   }

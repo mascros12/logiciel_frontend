@@ -53,6 +53,9 @@
     selectionMode="multiple"
     [expandedRowKeys]="expandedRows"
     (onRowExpand)="onRowExpand($event)"
+    sortMode="single"
+    sortField="created_at"
+    [sortOrder]="-1"
     styleClass="p-datatable-gridlines"
     >
     <ng-template pTemplate="caption">
@@ -76,10 +79,25 @@
             <p-tableHeaderCheckbox />
           </th>
         }
-        <th>Nombre</th>
+        <th pSortableColumn="name" title="Ordenar por nombre">
+          <span class="sortable-header">
+            Nombre
+            <p-sortIcon field="name" />
+          </span>
+        </th>
         <th>Versión actual</th>
-        <th>Creado por</th>
-        <th>Fecha de creación</th>
+        <th pSortableColumn="created_by_name" title="Ordenar por creador">
+          <span class="sortable-header">
+            Creado por
+            <p-sortIcon field="created_by_name" />
+          </span>
+        </th>
+        <th pSortableColumn="created_at" title="Ordenar por fecha de creación">
+          <span class="sortable-header">
+            Fecha de creación
+            <p-sortIcon field="created_at" />
+          </span>
+        </th>
         <th style="width: 8rem">Acciones</th>
       </tr>
     </ng-template>

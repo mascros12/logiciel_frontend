@@ -483,6 +483,10 @@ export class QuotationDetail implements OnInit {
   );
   fichaUnionActionBusy = signal(false);
   mergingFichaTransfers = signal(false);
+  showFichaVehicleMergeDialog = signal(false);
+  fichaVehicleMergeSource = signal<FileAADetailRow | null>(null);
+  fichaVehicleMergeTargetId = signal<string | null>(null);
+  fichaVehicleMergeBusy = signal(false);
   showFichaLeaveVersionDialog = signal(false);
   fichaLeaveTargetTab = signal<'agenda' | 'cotizacion' | null>(null);
   fichaLeaveSelectedVersionId = signal<string | null>(null);
@@ -2567,6 +2571,109 @@ export class QuotationDetail implements OnInit {
 
   fichaVehicleBrand(d: FileAADetailRow): string {
     return vehicleBrandFromExtras(d.observation_extras);
+  }
+
+  fichaIsStandaloneTransferToZone(d: FileAADetailRow): boolean {
+    if (
+      d.category !== 'vehicle' ||
+      d.row_status === 'red' ||
+      this.fichaVehicleCategory(d) !== 'Transfer de un Vehiculo Hacia X Zona'
+    ) {
+      return false;
+    }
+    const mergedInto = String(
+      d.observation_extras?.['merged_into_vehicle_detail_id'] ?? '',
+    ).trim();
+    return !mergedInto;
+  }
+
+  fichaVehicleMergeTargetOptions(
+    source: FileAADetailRow | null = this.fichaVehicleMergeSource(),
+  ): { id: string; label: string; sameBrand: boolean }[] {
+    const ficha = this.fichaFileAA();
+    if (!ficha || !source) return [];
+    const sourceBrand = this.fichaVehicleBrand(source).trim().toLowerCase();
+    const excludedCategories = new Set([
+      'Transfer del Hotel - Actividad - Hotel',
+      'Transfer de un Vehiculo Hacia X Zona',
+      'Devolucion de Vehiculo',
+    ]);
+    return (ficha.details ?? [])
+      .filter((row) => {
+        if (
+          row.id === source.id ||
+          row.category !== 'vehicle' ||
+          row.row_status === 'red' ||
+          !fichaAaDetailVisibleInTable(row)
+        ) {
+          return false;
+        }
+        const category = this.fichaVehicleCategory(row);
+        return !category || !excludedCategories.has(category);
+      })
+      .map((row) => {
+        const brand = this.fichaVehicleBrand(row).trim();
+        const sameBrand = !!sourceBrand && brand.toLowerCase() === sourceBrand;
+        const service = this.stripHtml(
+          this.fichaDetailServiceLines(row).join(' · ') || row.name || 'Vehículo',
+        );
+        return {
+          id: row.id,
+          label: `${service}${brand ? ` — ${brand}` : ''}${sameBrand ? ' (misma marca)' : ''}`,
+          sameBrand,
+        };
+      })
+      .sort((a, b) => Number(b.sameBrand) - Number(a.sameBrand) || a.label.localeCompare(b.label));
+  }
+
+  openFichaVehicleMergeDialog(source: FileAADetailRow): void {
+    this.fichaVehicleMergeSource.set(source);
+    const options = this.fichaVehicleMergeTargetOptions(source);
+    this.fichaVehicleMergeTargetId.set(
+      options.find((option) => option.sameBrand)?.id ?? options[0]?.id ?? null,
+    );
+    this.showFichaVehicleMergeDialog.set(true);
+  }
+
+  closeFichaVehicleMergeDialog(): void {
+    if (this.fichaVehicleMergeBusy()) return;
+    this.showFichaVehicleMergeDialog.set(false);
+    this.fichaVehicleMergeSource.set(null);
+    this.fichaVehicleMergeTargetId.set(null);
+  }
+
+  confirmFichaVehicleMerge(): void {
+    const source = this.fichaVehicleMergeSource();
+    const targetId = this.fichaVehicleMergeTargetId();
+    if (!source || !targetId) return;
+    this.fichaVehicleMergeBusy.set(true);
+    this.quotationService.attachTransferToVehicle(source.id, targetId).subscribe({
+      next: (updated) => {
+        this.fichaFileAA.set(updated);
+        this.syncFichaVisibleDetailsList();
+        this.fichaVehicleMergeBusy.set(false);
+        this.showFichaVehicleMergeDialog.set(false);
+        this.fichaVehicleMergeSource.set(null);
+        this.fichaVehicleMergeTargetId.set(null);
+        this.scheduleFichaDetailDragBodyRemount();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Transfer fusionado',
+          detail: 'El total del transfer se sumó una vez al vehículo seleccionado.',
+        });
+      },
+      error: (err) => {
+        this.fichaVehicleMergeBusy.set(false);
+        const detail = err.error?.detail;
+        this.messageService.add({
+          severity: 'error',
+          summary:
+            typeof detail === 'string'
+              ? detail
+              : 'No se pudo fusionar el transfer con el vehículo',
+        });
+      },
+    });
   }
 
   fichaVueloInternoServiceLabel(d: FileAADetailRow): string {

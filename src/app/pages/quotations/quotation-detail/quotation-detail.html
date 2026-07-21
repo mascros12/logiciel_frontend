@@ -2350,6 +2350,19 @@
                           </td>
                           <td class="col-ficha-actions" [class.ficha-aa-col-hidden]="!fichaAaColumnVisible('actions')">
                             <div class="ficha-actions-cell">
+                              @if (fichaIsStandaloneTransferToZone(d)) {
+                                <p-button
+                                  icon="pi pi-link"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  size="small"
+                                  severity="secondary"
+                                  pTooltip="Fusionar este transfer con otro vehículo"
+                                  tooltipPosition="top"
+                                  [disabled]="fichaVehicleMergeTargetOptions(d).length === 0 || fichaDetailReorderSaving()"
+                                  (onClick)="openFichaVehicleMergeDialog(d)"
+                                />
+                              }
                               @if (canShowFichaCombineButton(d)) {
                                 <p-button
                                   icon="pi pi-link"
@@ -2579,6 +2592,53 @@
       icon="pi pi-check"
       [disabled]="!fichaLeaveSelectedVersionId()"
       (onClick)="confirmFichaLeaveVersion()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Fusionar transfer auxiliar con vehículo -->
+<p-dialog
+  header="Fusionar transfer con vehículo"
+  [visible]="showFichaVehicleMergeDialog()"
+  (visibleChange)="showFichaVehicleMergeDialog.set($event)"
+  [modal]="true"
+  [closable]="!fichaVehicleMergeBusy()"
+  [style]="{ width: 'min(520px, 96vw)' }"
+  (onHide)="closeFichaVehicleMergeDialog()"
+>
+  @if (fichaVehicleMergeSource(); as source) {
+    <p class="ficha-add-dialog-hint">
+      El total de <strong>{{ fichaDetailServiceLines(source)[0] || source.name }}</strong>
+      se sumará una sola vez al vehículo seleccionado y esta fila dejará de mostrarse.
+    </p>
+    <label class="ficha-add-select-label" for="ficha-vehicle-merge-target">
+      Vehículo destino
+    </label>
+    <p-select
+      inputId="ficha-vehicle-merge-target"
+      [options]="fichaVehicleMergeTargetOptions(source)"
+      [ngModel]="fichaVehicleMergeTargetId()"
+      (ngModelChange)="fichaVehicleMergeTargetId.set($event)"
+      optionLabel="label"
+      optionValue="id"
+      placeholder="Seleccione un vehículo…"
+      styleClass="w-full"
+      appendTo="body"
+    />
+  }
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      [text]="true"
+      [disabled]="fichaVehicleMergeBusy()"
+      (onClick)="closeFichaVehicleMergeDialog()"
+    />
+    <p-button
+      label="Fusionar"
+      icon="pi pi-link"
+      [loading]="fichaVehicleMergeBusy()"
+      [disabled]="!fichaVehicleMergeTargetId()"
+      (onClick)="confirmFichaVehicleMerge()"
     />
   </ng-template>
 </p-dialog>

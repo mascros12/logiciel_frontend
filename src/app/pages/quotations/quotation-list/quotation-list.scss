@@ -44,6 +44,13 @@
     font-weight: 500;
     &:hover { text-decoration: underline; }
 }
+
+.sortable-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
   
 .versions-panel {
     padding: 1rem 2rem;
