@@ -487,6 +487,10 @@ export class QuotationDetail implements OnInit {
   fichaVehicleMergeSource = signal<FileAADetailRow | null>(null);
   fichaVehicleMergeTargetId = signal<string | null>(null);
   fichaVehicleMergeBusy = signal(false);
+  showFichaDeleteRoomDialog = signal(false);
+  fichaDeleteRoomRow = signal<FileAADetailRow | null>(null);
+  fichaDeleteRoomSlotIndex = signal<number | null>(null);
+  fichaDeleteRoomBusy = signal(false);
   showFichaLeaveVersionDialog = signal(false);
   fichaLeaveTargetTab = signal<'agenda' | 'cotizacion' | null>(null);
   fichaLeaveSelectedVersionId = signal<string | null>(null);
@@ -6012,12 +6016,78 @@ export class QuotationDetail implements OnInit {
   }
 
   confirmDeleteFichaDetailRow(row: FileAADetailRow): void {
+    if (row.category === 'room' && this.fichaHasMultipleRoomTypes(row)) {
+      this.fichaDeleteRoomRow.set(row);
+      this.fichaDeleteRoomSlotIndex.set(null);
+      this.showFichaDeleteRoomDialog.set(true);
+      return;
+    }
     if (row.category === 'room' && this.fichaHotelHasUnion(row)) {
       this.fichaUnionActionContext.set({ mode: 'delete', anchor: row });
       this.showFichaUnionActionDialog.set(true);
       return;
     }
     this.promptDeleteFichaDetailRow(row);
+  }
+
+  fichaDeleteRoomOptions(): { slotIndex: number; label: string }[] {
+    const row = this.fichaDeleteRoomRow();
+    if (!row) return [];
+    return this.fichaMergedRoomsFromExtras(row).map((slot, index) => {
+      let state = '';
+      if (slot.is_superseded) state = ' — sustituida';
+      else if (slot.is_replacement) state = ' — reemplazo';
+      return {
+        slotIndex: index,
+        label:
+          (this.fichaMergedRoomPartLabel(slot, true) ||
+            this.fichaMergedRoomLabel(slot, index)) + state,
+      };
+    });
+  }
+
+  closeFichaDeleteRoomDialog(): void {
+    if (this.fichaDeleteRoomBusy()) return;
+    this.showFichaDeleteRoomDialog.set(false);
+    this.fichaDeleteRoomRow.set(null);
+    this.fichaDeleteRoomSlotIndex.set(null);
+  }
+
+  confirmDeleteFichaRoomSlot(): void {
+    const row = this.fichaDeleteRoomRow();
+    const slotIndex = this.fichaDeleteRoomSlotIndex();
+    if (!row || slotIndex === null) return;
+
+    this.fichaDeleteRoomBusy.set(true);
+    this.quotationService
+      .removeRoomSlotFromFileAADetail(row.id, slotIndex)
+      .subscribe({
+        next: (updated) => {
+          delete this.hotelFichaObsDraft[row.id];
+          this.fichaFileAA.set(updated);
+          this.syncFichaVisibleDetailsList();
+          this.fichaDeleteRoomBusy.set(false);
+          this.showFichaDeleteRoomDialog.set(false);
+          this.fichaDeleteRoomRow.set(null);
+          this.fichaDeleteRoomSlotIndex.set(null);
+          this.scheduleFichaDetailDragBodyRemount();
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Habitación eliminada de la combinación',
+          });
+        },
+        error: (err) => {
+          this.fichaDeleteRoomBusy.set(false);
+          const detail = err.error?.detail;
+          this.messageService.add({
+            severity: 'error',
+            summary:
+              typeof detail === 'string'
+                ? detail
+                : 'No se pudo eliminar la habitación de la combinación',
+          });
+        },
+      });
   }
 
   private promptDeleteFichaDetailRow(row: FileAADetailRow): void {

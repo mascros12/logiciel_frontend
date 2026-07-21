@@ -195,6 +195,12 @@ export class QuotationService {
     return this.http.post<FileAADetailRow>(`${this.url}/file-aa/${fileId}/details`, body);
   }
 
+  removeRoomSlotFromFileAADetail(detailId: string, slotIndex: number) {
+    return this.http.delete<FileAAWithDetails>(
+      `${this.url}/details/${detailId}/room-slots/${slotIndex}`,
+    );
+  }
+
   reorderFileAADetails(fileId: string, body: { detail_ids_in_order: string[] }) {
     return this.http.post<FileAAWithDetails>(
       `${this.url}/file-aa/${fileId}/details/reorder`,

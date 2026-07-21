@@ -1425,7 +1425,7 @@
                                 [text]="true"
                                 severity="danger"
                                 size="small"
-                                pTooltip="Eliminar esta línea"
+                                [pTooltip]="d.category === 'room' && fichaHasMultipleRoomTypes(d) ? 'Elegir habitación para eliminar' : 'Eliminar esta línea'"
                                 (onClick)="confirmDeleteFichaDetailRow(d)"
                               />
                             </div>
@@ -2808,6 +2808,53 @@
       icon="pi pi-check"
       [disabled]="!fichaDetachSelectedActivityId()"
       (onClick)="submitFichaDetach()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Eliminar una habitación de una fila combinada -->
+<p-dialog
+  header="Eliminar habitación de la combinación"
+  [visible]="showFichaDeleteRoomDialog()"
+  (visibleChange)="showFichaDeleteRoomDialog.set($event)"
+  [modal]="true"
+  [closable]="!fichaDeleteRoomBusy()"
+  [style]="{ width: 'min(520px, 96vw)' }"
+  (onHide)="closeFichaDeleteRoomDialog()"
+>
+  @if (fichaDeleteRoomRow(); as row) {
+    <p class="ficha-add-dialog-hint">
+      Esta línea contiene varias habitaciones. Seleccione cuál desea eliminar.
+    </p>
+    <label class="ficha-add-select-label" for="ficha-delete-room-slot">
+      Habitación
+    </label>
+    <p-select
+      inputId="ficha-delete-room-slot"
+      [options]="fichaDeleteRoomOptions()"
+      [ngModel]="fichaDeleteRoomSlotIndex()"
+      (ngModelChange)="fichaDeleteRoomSlotIndex.set($event)"
+      optionLabel="label"
+      optionValue="slotIndex"
+      placeholder="Seleccione una habitación…"
+      styleClass="w-full"
+      appendTo="body"
+    />
+  }
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      [text]="true"
+      [disabled]="fichaDeleteRoomBusy()"
+      (onClick)="closeFichaDeleteRoomDialog()"
+    />
+    <p-button
+      label="Eliminar habitación"
+      icon="pi pi-trash"
+      severity="danger"
+      [loading]="fichaDeleteRoomBusy()"
+      [disabled]="fichaDeleteRoomSlotIndex() === null"
+      (onClick)="confirmDeleteFichaRoomSlot()"
     />
   </ng-template>
 </p-dialog>
