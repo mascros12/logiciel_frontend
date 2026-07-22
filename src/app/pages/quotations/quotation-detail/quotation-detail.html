@@ -1419,13 +1419,30 @@
                                 pTooltip="Añadir línea (nueva o reemplazo)"
                                 (onClick)="openFichaAddDetailDialog(d)"
                               />
+                              @if (d.row_status === 'red') {
+                                <p-button
+                                  icon="pi pi-replay"
+                                  [rounded]="true"
+                                  [text]="true"
+                                  severity="success"
+                                  size="small"
+                                  pTooltip="Restaurar línea (quitar marca de sustituida)"
+                                  (onClick)="confirmRestoreFichaDetailRow(d)"
+                                />
+                              }
                               <p-button
                                 icon="pi pi-minus"
                                 [rounded]="true"
                                 [text]="true"
                                 severity="danger"
                                 size="small"
-                                [pTooltip]="d.category === 'room' && fichaHasMultipleRoomTypes(d) ? 'Elegir habitación para eliminar' : 'Eliminar esta línea'"
+                                [pTooltip]="
+                                  d.row_status === 'red'
+                                    ? 'Eliminar definitivamente'
+                                    : d.category === 'room' && fichaHasMultipleRoomTypes(d)
+                                      ? 'Elegir habitación para eliminar'
+                                      : 'Marcar como eliminada (roja)'
+                                "
                                 (onClick)="confirmDeleteFichaDetailRow(d)"
                               />
                             </div>

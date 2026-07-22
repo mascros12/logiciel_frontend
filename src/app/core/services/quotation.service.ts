@@ -261,6 +261,11 @@ export class QuotationService {
     return this.http.delete<void>(`${this.url}/details/${detailId}`);
   }
 
+  /** Restaura una fila marcada en rojo (sustitución / baja) a estado normal. */
+  restoreFileAADetail(detailId: string) {
+    return this.http.post<FileAADetailRow>(`${this.url}/details/${detailId}/restore`, {});
+  }
+
   updateFileAA(
     fileId: string,
     body: { header_color?: string; observations?: string; reminder?: string },

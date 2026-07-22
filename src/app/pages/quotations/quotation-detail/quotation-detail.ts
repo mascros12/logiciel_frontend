@@ -5930,18 +5930,65 @@ export class QuotationDetail implements OnInit {
   }
 
   confirmDeleteFichaDetailRow(row: FileAADetailRow): void {
-    if (row.category === 'room' && this.fichaHasMultipleRoomTypes(row)) {
+    if (row.row_status !== 'red' && row.category === 'room' && this.fichaHasMultipleRoomTypes(row)) {
       this.fichaDeleteRoomRow.set(row);
       this.fichaDeleteRoomSlotIndex.set(null);
       this.showFichaDeleteRoomDialog.set(true);
       return;
     }
-    if (row.category === 'room' && this.fichaHotelHasUnion(row)) {
+    if (row.row_status !== 'red' && row.category === 'room' && this.fichaHotelHasUnion(row)) {
       this.fichaUnionActionContext.set({ mode: 'delete', anchor: row });
       this.showFichaUnionActionDialog.set(true);
       return;
     }
     this.promptDeleteFichaDetailRow(row);
+  }
+
+  confirmRestoreFichaDetailRow(row: FileAADetailRow): void {
+    if (row.row_status !== 'red') return;
+    const name = (row.name || 'Servicio').slice(0, 80);
+    this.confirmationService.confirm({
+      message: `¿Restaurar la línea «${name}» a su estado normal? Si hay una línea de reemplazo debajo, puedes eliminarla aparte.`,
+      header: 'Restaurar línea',
+      icon: 'pi pi-replay',
+      acceptLabel: 'Restaurar',
+      rejectLabel: 'Cancelar',
+      accept: () => this.executeRestoreFichaDetailRow(row.id),
+    });
+  }
+
+  private executeRestoreFichaDetailRow(detailId: string): void {
+    this.quotationService.restoreFileAADetail(detailId).subscribe({
+      next: (updated) => {
+        const ficha = this.fichaFileAA();
+        if (ficha?.details) {
+          const idx = ficha.details.findIndex((d) => d.id === detailId);
+          if (idx >= 0) {
+            const details = [...ficha.details];
+            details[idx] = { ...details[idx], ...updated };
+            this.fichaFileAA.set({ ...ficha, details });
+            this.syncFichaVisibleDetailsList();
+          } else {
+            const q = this.quotation();
+            if (q) this.loadFileAA(q.id);
+          }
+        } else {
+          const q = this.quotation();
+          if (q) this.loadFileAA(q.id);
+        }
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Línea restaurada',
+        });
+      },
+      error: (err) => {
+        const d = err.error?.detail;
+        this.messageService.add({
+          severity: 'error',
+          summary: typeof d === 'string' ? d : 'No se pudo restaurar la línea',
+        });
+      },
+    });
   }
 
   fichaDeleteRoomOptions(): { slotIndex: number; label: string }[] {
@@ -6006,12 +6053,15 @@ export class QuotationDetail implements OnInit {
 
   private promptDeleteFichaDetailRow(row: FileAADetailRow): void {
     const name = (row.name || 'Servicio').slice(0, 80);
+    const permanent = row.row_status === 'red';
     this.confirmationService.confirm({
-      message: `¿Eliminar la línea «${name}» de esta ficha? Esta acción no se puede deshacer.`,
-      header: 'Confirmar eliminación',
+      message: permanent
+        ? `¿Eliminar definitivamente la línea «${name}»? Dejará de mostrarse en la ficha.`
+        : `¿Marcar como eliminada la línea «${name}»? Quedará en rojo y se podrá restaurar.`,
+      header: permanent ? 'Eliminar definitivamente' : 'Marcar como eliminada',
       icon: 'pi pi-exclamation-triangle',
       acceptButtonStyleClass: 'p-button-danger',
-      acceptLabel: 'Eliminar',
+      acceptLabel: permanent ? 'Eliminar' : 'Marcar en rojo',
       rejectLabel: 'Cancelar',
       accept: () => this.executeDeleteFichaDetailRow(row.id),
     });
@@ -6020,9 +6070,12 @@ export class QuotationDetail implements OnInit {
   private executeDeleteFichaDetailRow(detailId: string): void {
     this.quotationService.deleteFileAADetail(detailId).subscribe({
       next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Línea eliminada' });
         const q = this.quotation();
         if (q) this.loadFileAA(q.id);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Línea actualizada',
+        });
       },
       error: (err) => {
         const d = err.error?.detail;
