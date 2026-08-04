@@ -10,7 +10,18 @@
   <!-- Header -->
   <div class="detail-header">
     <div class="header-left">
-      <h2>{{ q.name }}</h2>
+      <h2>
+        {{ q.name }}
+        @if (q.shared) {
+          <p-tag
+            value="Compartida"
+            severity="success"
+            styleClass="shared-tag"
+            pTooltip="Visible para todo el equipo comercial"
+            tooltipPosition="top"
+          />
+        }
+      </h2>
       <div class="header-meta">
         @if (q.from_date) {
           <span class="meta-item">
@@ -106,57 +117,69 @@
 
           <div class="header-actions" role="toolbar" aria-label="Acciones de cotización">
             <p-button
-              label="Editar"
-              icon="pi pi-pencil"
+              label="Copiar"
+              icon="pi pi-copy"
               size="small"
               [outlined]="true"
-              pTooltip="Datos generales, fechas de vuelo, comisión…"
-              tooltipPosition="bottom"
-              (onClick)="openEdit()"
-            />
-            <p-button
-              label="Nueva versión"
-              icon="pi pi-plus"
-              size="small"
               severity="secondary"
-              [outlined]="true"
-              pTooltip="Nueva versión a partir de la versión seleccionada"
+              pTooltip="Crear una copia editable a tu nombre"
               tooltipPosition="bottom"
-              (onClick)="openNewVersionDialog()"
+              (onClick)="openCloneDialog()"
             />
-            @if (canDeleteVersions()) {
+            @if (!isQuotationReadOnly()) {
               <p-button
-                label="Eliminar versión"
-                icon="pi pi-trash"
+                label="Editar"
+                icon="pi pi-pencil"
                 size="small"
-                severity="danger"
                 [outlined]="true"
-                [disabled]="(quotation()?.versions?.length ?? 0) <= 1 || saving()"
-                pTooltip="Elimina la versión seleccionada"
+                pTooltip="Datos generales, fechas de vuelo, comisión…"
                 tooltipPosition="bottom"
-                (onClick)="confirmDeleteSelectedVersion()"
+                (onClick)="openEdit()"
+              />
+              <p-button
+                label="Nueva versión"
+                icon="pi pi-plus"
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                pTooltip="Nueva versión a partir de la versión seleccionada"
+                tooltipPosition="bottom"
+                (onClick)="openNewVersionDialog()"
+              />
+              @if (canDeleteVersions()) {
+                <p-button
+                  label="Eliminar versión"
+                  icon="pi pi-trash"
+                  size="small"
+                  severity="danger"
+                  [outlined]="true"
+                  [disabled]="(quotation()?.versions?.length ?? 0) <= 1 || saving()"
+                  pTooltip="Elimina la versión seleccionada"
+                  tooltipPosition="bottom"
+                  (onClick)="confirmDeleteSelectedVersion()"
+                />
+              }
+              <p-button
+                label="Itinerario"
+                icon="pi pi-angle-down"
+                iconPos="right"
+                size="small"
+                [outlined]="true"
+                severity="secondary"
+                styleClass="header-itinerary-menu-btn"
+                pTooltip="Ampliar fechas, mover inicio, organizar días, actualizar precios"
+                tooltipPosition="bottom"
+                [attr.aria-haspopup]="'menu'"
+                (onClick)="openItineraryMenu($event, itineraryMenu)"
+              />
+              <p-menu
+                #itineraryMenu
+                [model]="itineraryMenuItems"
+                [popup]="true"
+                appendTo="body"
+                styleClass="quotation-itinerary-menu"
               />
             }
-            <p-button
-              label="Itinerario"
-              icon="pi pi-angle-down"
-              iconPos="right"
-              size="small"
-              [outlined]="true"
-              severity="secondary"
-              styleClass="header-itinerary-menu-btn"
-              pTooltip="Ampliar fechas, mover inicio, organizar días, actualizar precios"
-              tooltipPosition="bottom"
-              [attr.aria-haspopup]="'menu'"
-              (onClick)="openItineraryMenu($event, itineraryMenu)"
-            />
-            <p-menu
-              #itineraryMenu
-              [model]="itineraryMenuItems"
-              [popup]="true"
-              appendTo="body"
-              styleClass="quotation-itinerary-menu"
-            />
           </div>
         </div>
 
@@ -179,6 +202,16 @@
       </div>
     </div>
   </div>
+
+  @if (isQuotationReadOnly()) {
+    <div class="readonly-banner" role="status">
+      <i class="pi pi-lock" aria-hidden="true"></i>
+      <span>
+        Cotización compartida en solo lectura: no puede añadir días ni servicios.
+        Use <strong>Copiar</strong> para crear una cotización editable a su nombre.
+      </span>
+    </div>
+  }
 
   <!-- Tabs -->
   <div class="detail-body">
@@ -236,13 +269,15 @@
 
                       <!-- Botón agregar habitación -->
                       <td class="cell-add">
-                        <p-button
-                          icon="pi pi-plus"
-                          [text]="true"
-                          size="small"
-                          pTooltip="Agregar habitación"
-                          (onClick)="openAddRoom(line)"
-                        />
+                        @if (!isQuotationReadOnly()) {
+                          <p-button
+                            icon="pi pi-plus"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Agregar habitación"
+                            (onClick)="openAddRoom(line)"
+                          />
+                        }
                       </td>
 
                       <!-- Habitaciones: una caja (habitación + hotel + adicionales + recomendaciones) -->
@@ -269,7 +304,7 @@
                                 </div>
                                 <div class="agenda-service-card__right">
                                   <span class="agenda-service-card__qty">{{ roomExtrasLine(room) }}</span>
-                                  @if (!room.deleted) {
+                                  @if (!isQuotationReadOnly() && !room.deleted) {
                                     <p-button icon="pi pi-times" [text]="true" size="small"
                                       styleClass="chip-delete-btn"
                                       (onClick)="deleteRoom(room.id)" />
@@ -292,13 +327,15 @@
 
                       <!-- Botón agregar actividad -->
                       <td class="cell-add">
-                        <p-button
-                          icon="pi pi-plus"
-                          [text]="true"
-                          size="small"
-                          pTooltip="Agregar actividad"
-                          (onClick)="openAddActivity(line)"
-                        />
+                        @if (!isQuotationReadOnly()) {
+                          <p-button
+                            icon="pi pi-plus"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Agregar actividad"
+                            (onClick)="openAddActivity(line)"
+                          />
+                        }
                       </td>
 
                       <!-- Actividades: una caja (nombre + adultos/niños + recomendaciones) -->
@@ -312,7 +349,7 @@
                                 </div>
                                 <div class="agenda-service-card__right">
                                   <span class="agenda-service-card__qty">{{ activityPaxLine(act) }}</span>
-                                  @if (!act.deleted) {
+                                  @if (!isQuotationReadOnly() && !act.deleted) {
                                     <p-button icon="pi pi-times" [text]="true" size="small"
                                       styleClass="chip-delete-btn"
                                       (onClick)="deleteActivity(act.id)" />
@@ -335,13 +372,15 @@
 
                       <!-- Botón agregar vehículo -->
                       <td class="cell-add">
-                        <p-button
-                          icon="pi pi-plus"
-                          [text]="true"
-                          size="small"
-                          pTooltip="Agregar vehículo"
-                          (onClick)="openAddVehicle(line)"
-                        />
+                        @if (!isQuotationReadOnly()) {
+                          <p-button
+                            icon="pi pi-plus"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Agregar vehículo"
+                            (onClick)="openAddVehicle(line)"
+                          />
+                        }
                       </td>
 
                       <!-- Vehículos -->
@@ -350,7 +389,7 @@
                           @for (v of visibleVehicles(line); track v.id) {
                             <div class="service-chip" [ngClass]="getChipClass(v)">
                               <span class="service-name" [innerHTML]="v.name | richText"></span>
-                              @if (!v.deleted) {
+                              @if (!isQuotationReadOnly() && !v.deleted) {
                               <p-button icon="pi pi-times" [text]="true" size="small"
                                 styleClass="chip-delete-btn"
                                 (onClick)="deleteVehicle(v.id)" />
@@ -3605,6 +3644,105 @@
   <ng-template pTemplate="footer">
     <p-button label="Cancelar" [text]="true" (onClick)="showNewVersion.set(false)" />
     <p-button label="Crear versión" icon="pi pi-copy" [loading]="saving()" (onClick)="submitNewVersion()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Dialog copiar cotización -->
+<p-dialog
+  header="Copiar cotización"
+  [visible]="showCloneDialog()"
+  (visibleChange)="showCloneDialog.set($event)"
+  [modal]="true"
+  [closable]="!cloning()"
+  [style]="{ width: 'min(520px, 96vw)' }"
+>
+  <p class="ficha-add-dialog-hint">
+    Se creará una cotización nueva con el mismo itinerario. Usted será el creador;
+    la fecha de creación será ahora. La copia no queda compartida.
+  </p>
+  <form [formGroup]="cloneForm" class="dialog-form">
+    <div class="field" [class.field-has-error]="cloneForm.get('name')?.invalid && cloneForm.get('name')?.touched">
+      <label>Nombre *</label>
+      <input
+        pInputText
+        formControlName="name"
+        class="w-full"
+        placeholder="Nombre de la copia"
+        [class.ng-invalid]="cloneForm.get('name')?.invalid && cloneForm.get('name')?.touched"
+        [class.ng-dirty]="cloneForm.get('name')?.touched"
+      />
+      <app-field-error [control]="cloneForm.get('name')" label="Nombre" />
+    </div>
+    <div class="field-row">
+      <div class="field" [class.field-has-error]="cloneForm.get('source')?.invalid && cloneForm.get('source')?.touched">
+        <label>Origen *</label>
+        <p-select
+          formControlName="source"
+          [options]="sourceOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+        />
+        <app-field-error [control]="cloneForm.get('source')" label="Origen" />
+      </div>
+      <div class="field">
+        <label>Presupuesto</label>
+        <p-select
+          formControlName="budget"
+          [options]="budgetOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+          [showClear]="true"
+        />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Tipo de viajero</label>
+        <p-select
+          formControlName="traveller_type"
+          [options]="travellerTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+          [showClear]="true"
+        />
+      </div>
+      <div class="field">
+        <label>Ritmo</label>
+        <p-select
+          formControlName="ritm"
+          [options]="ritmOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          styleClass="w-full"
+          appendTo="body"
+          [showClear]="true"
+        />
+      </div>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancelar"
+      [text]="true"
+      [disabled]="cloning()"
+      (onClick)="showCloneDialog.set(false)"
+    />
+    <p-button
+      label="Copiar"
+      icon="pi pi-copy"
+      [loading]="cloning()"
+      (onClick)="submitClone()"
+    />
   </ng-template>
 </p-dialog>
 

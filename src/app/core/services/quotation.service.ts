@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
   Quotation, QuotationFull, QuotationListResponse, QuotationLine,
-  QuotationCreate, QuotationUpdate, QuotationVersion,
+  QuotationCreate, QuotationUpdate, QuotationCloneRequest, QuotationVersion,
   AddVehicleRequest, AddRoomRequest, AddActivityRequest,
   QuotationSummary,
   FileAAGenerateRequest,
@@ -93,6 +93,10 @@ export class QuotationService {
 
   create(body: QuotationCreate) {
     return this.http.post<Quotation>(this.url, body);
+  }
+
+  clone(id: string, body: QuotationCloneRequest) {
+    return this.http.post<Quotation>(`${this.url}/${id}/clone`, body);
   }
 
   update(id: string, body: QuotationUpdate) {

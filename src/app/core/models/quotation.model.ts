@@ -383,6 +383,15 @@ export interface QuotationUpdate {
   ficha_room_requirements?: FichaRoomRequirementRow[];
 }
 
+export interface QuotationCloneRequest {
+  name: string;
+  source: string;
+  budget?: string | null;
+  traveller_type?: string | null;
+  ritm?: string | null;
+  source_version_id?: string | null;
+}
+
 export interface AddVehicleRequest {
   vehicle_id: string;
   date: string;

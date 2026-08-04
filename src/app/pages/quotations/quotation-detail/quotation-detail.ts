@@ -254,7 +254,18 @@ export class QuotationDetail implements OnInit {
     return role === 'admin' || role === 'admin_proveedores';
   });
   isComercial = computed(() => this.auth.currentUser()?.role === 'comercial');
+  /**
+   * Comercial en cotización ajena (p. ej. compartida): solo lectura de agenda/metadatos.
+   * Admin y operaciones siguen pudiendo editar.
+   */
+  isQuotationReadOnly = computed(() => {
+    const q = this.quotation();
+    const user = this.auth.currentUser();
+    if (!q || !user || user.role !== 'comercial') return false;
+    return q.created_by_id !== user.id;
+  });
   canDeleteVersions = computed(() => {
+    if (this.isQuotationReadOnly()) return false;
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'operaciones' || role === 'comercial';
   });
@@ -306,6 +317,8 @@ export class QuotationDetail implements OnInit {
   /** Días a insertar después de cada línea (solo afecta al botón de esa fila). */
   insertAfterByLineId = signal<Record<string, number>>({});
   showEdit = signal(false);
+  showCloneDialog = signal(false);
+  cloning = signal(false);
 
   // Formularios
   vehicleForm: FormGroup;
@@ -315,6 +328,7 @@ export class QuotationDetail implements OnInit {
   calendarForm: FormGroup;
   shiftItineraryForm: FormGroup;
   editForm: FormGroup;
+  cloneForm: FormGroup;
 
   // Opciones para autocomplete
   vehicleOptions = signal<VehicleOption[]>([]);
@@ -580,6 +594,13 @@ export class QuotationDetail implements OnInit {
       commission: [1.92],
       shared: [false],
       source: [null],
+      budget: [null],
+      traveller_type: [null],
+      ritm: [null],
+    });
+    this.cloneForm = this.fb.group({
+      name: ['', Validators.required],
+      source: [null, Validators.required],
       budget: [null],
       traveller_type: [null],
       ritm: [null],
@@ -1097,6 +1118,7 @@ export class QuotationDetail implements OnInit {
   // ─── Abrir dialogs ─────────────────────────────────────────
 
   openAddVehicle(line: QuotationLine) {
+    if (this.isQuotationReadOnly()) return;
     this.activeLine.set(line);
     const lineDate = new Date(line.date + 'T00:00:00');
     this.vehicleForm.reset({
@@ -1107,6 +1129,7 @@ export class QuotationDetail implements OnInit {
   }
 
   openAddRoom(line: QuotationLine) {
+    if (this.isQuotationReadOnly()) return;
     this.activeLine.set(line);
     const lineDate = new Date(line.date + 'T00:00:00');
     const endDate = new Date(lineDate);
@@ -1123,6 +1146,7 @@ export class QuotationDetail implements OnInit {
   }
 
   openAddActivity(line: QuotationLine) {
+    if (this.isQuotationReadOnly()) return;
     this.activeLine.set(line);
     this.activityForm.reset({ adults: 1, children: 0, free: 0 });
     this.showAddActivity.set(true);
@@ -1291,12 +1315,63 @@ export class QuotationDetail implements OnInit {
   // ─── Nueva versión ─────────────────────────────────────────
 
   openNewVersionDialog() {
+    if (this.isQuotationReadOnly()) return;
     const v = this.selectedVersion();
     const parentLabel = v
       ? formatQuotationVersionLabel(v.version_number, { current: false })
       : null;
     this.versionForm.reset({ notes: parentLabel ? `Copiada de: ${parentLabel}` : '' });
     this.showNewVersion.set(true);
+  }
+
+  openCloneDialog() {
+    const q = this.quotation();
+    if (!q) return;
+    this.cloneForm.reset({
+      name: q.name ? `${q.name} (copia)` : '',
+      source: q.contact_source ?? null,
+      budget: q.contact_budget ?? null,
+      traveller_type: q.contact_traveller_type ?? null,
+      ritm: q.contact_ritm ?? null,
+    });
+    this.showCloneDialog.set(true);
+  }
+
+  submitClone() {
+    const q = this.quotation();
+    if (!q) return;
+    if (this.cloneForm.invalid) {
+      this.cloneForm.markAllAsTouched();
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Complete Nombre y Origen',
+      });
+      return;
+    }
+    const val = this.cloneForm.value;
+    this.cloning.set(true);
+    this.quotationService.clone(q.id, {
+      name: String(val.name).trim(),
+      source: val.source,
+      budget: val.budget || null,
+      traveller_type: val.traveller_type || null,
+      ritm: val.ritm || null,
+      source_version_id: this.selectedVersionId() || q.current_version?.id || null,
+    }).subscribe({
+      next: (created) => {
+        this.cloning.set(false);
+        this.showCloneDialog.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Cotización copiada' });
+        this.router.navigate(['/cotizaciones', created.id]);
+      },
+      error: (err) => {
+        this.cloning.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: apiErrorSummary(err, 'Error al copiar cotización'),
+        });
+      },
+    });
   }
 
   submitNewVersion() {
@@ -1337,6 +1412,7 @@ export class QuotationDetail implements OnInit {
   }
 
   confirmDeleteSelectedVersion(): void {
+    if (this.isQuotationReadOnly()) return;
     const q = this.quotation();
     const version = this.selectedVersion();
     if (!q || !version) return;
@@ -1385,6 +1461,7 @@ export class QuotationDetail implements OnInit {
   // ─── Recalcular total ──────────────────────────────────────
 
   recalculate() {
+    if (this.isQuotationReadOnly()) return;
     const q = this.quotation()!;
     const version = this.selectedVersion()!;
     this.recalculateVersion(q.id, version.id, {
@@ -1477,6 +1554,7 @@ export class QuotationDetail implements OnInit {
   }
 
   openEdit() {
+    if (this.isQuotationReadOnly()) return;
     const q = this.quotation();
     if (!q) return;
     this.editForm.patchValue({
@@ -1565,6 +1643,7 @@ export class QuotationDetail implements OnInit {
   }
 
   openItineraryMenu(event: Event, menu: { toggle: (e: Event) => void }): void {
+    if (this.isQuotationReadOnly()) return;
     this.itineraryMenuItems = this.buildItineraryMenuItems();
     menu.toggle(event);
   }
@@ -1598,6 +1677,7 @@ export class QuotationDetail implements OnInit {
   }
 
   openExtendCalendar() {
+    if (this.isQuotationReadOnly()) return;
     const q = this.quotation();
     if (!q) return;
     const from = q.from_date ? new Date(q.from_date + 'T12:00:00') : null;
@@ -1607,6 +1687,7 @@ export class QuotationDetail implements OnInit {
   }
 
   openShiftItinerary() {
+    if (this.isQuotationReadOnly()) return;
     const first = this.firstAgendaDate();
     if (!first) {
       this.messageService.add({
@@ -1661,6 +1742,7 @@ export class QuotationDetail implements OnInit {
   }
 
   openOrganizeItinerary() {
+    if (this.isQuotationReadOnly()) return;
     const ls = this.lines();
     if (!ls.length) {
       this.messageService.add({
@@ -6709,6 +6791,7 @@ export class QuotationDetail implements OnInit {
   }
 
   deleteVehicle(id: string) {
+    if (this.isQuotationReadOnly()) return;
     this.quotationService.deleteVehicle(id).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Vehículo eliminado' });
@@ -6719,6 +6802,7 @@ export class QuotationDetail implements OnInit {
   }
   
   deleteRoom(id: string) {
+    if (this.isQuotationReadOnly()) return;
     this.quotationService.deleteRoom(id).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Habitación eliminada' });
@@ -6729,6 +6813,7 @@ export class QuotationDetail implements OnInit {
   }
   
   deleteActivity(id: string) {
+    if (this.isQuotationReadOnly()) return;
     this.quotationService.deleteActivity(id).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Actividad eliminada' });
