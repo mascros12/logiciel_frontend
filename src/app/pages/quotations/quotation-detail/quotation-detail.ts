@@ -274,6 +274,8 @@ export class QuotationDetail implements OnInit {
   private tabRestoredFromUrl = false;
   /** Sub-tab Ficha AA restaurado desde `?fichaTab=`. */
   private fichaTabRestoredFromUrl = false;
+  /** Versión restaurada desde `?version=` (p. ej. recarga en Ficha AA). */
+  private versionRestoredFromUrl: string | null = null;
 
   // Versión seleccionada para ver
   selectedVersionId = signal<string | null>(null);
@@ -415,6 +417,8 @@ export class QuotationDetail implements OnInit {
   fichaDemandeMariageDay = signal('');
   fichaReveCostaRica = signal(false);
   fichaDejaVisiteCR = signal(false);
+  fichaAutre = signal(false);
+  fichaAutreText = signal('');
 
   fichaTotals = computed(() => {
     const f = this.fichaFileAA();
@@ -652,6 +656,9 @@ export class QuotationDetail implements OnInit {
       this.fichaTabRestoredFromUrl = true;
       this.fichaAATab.set(fichaTab);
     }
+
+    const version = (this.route.snapshot.queryParamMap.get('version') || '').trim();
+    this.versionRestoredFromUrl = version || null;
   }
 
   private syncTabToRoute(tab: 'agenda' | 'cotizacion' | 'fileaa'): void {
@@ -667,6 +674,15 @@ export class QuotationDetail implements OnInit {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { fichaTab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private syncVersionToRoute(versionId: string | null): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { version: versionId || null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
@@ -785,6 +801,7 @@ export class QuotationDetail implements OnInit {
     if (!exists || String(this.selectedVersionId()) === vid) return;
 
     this.selectedVersionId.set(vid);
+    this.syncVersionToRoute(vid);
     const currentId = q.current_version?.id ? String(q.current_version.id) : null;
     if (vid === currentId) {
       this.lines.set(this.sortLinesByDate(q.lines ?? []));
@@ -827,8 +844,17 @@ export class QuotationDetail implements OnInit {
         const versionStillExists = q.versions?.some(
           (v) => String(v.id) === String(prevVersionId)
         );
-        const keepViewingOther =
-          prevVersionId && String(prevVersionId) !== currentId && versionStillExists;
+        const urlVersionId = this.versionRestoredFromUrl;
+        const urlVersionExists =
+          !!urlVersionId &&
+          !!q.versions?.some((v) => String(v.id) === String(urlVersionId));
+        const restoreId =
+          versionStillExists && prevVersionId
+            ? prevVersionId
+            : urlVersionExists
+              ? urlVersionId
+              : null;
+        const keepViewingOther = !!restoreId;
 
         const finishWithLines = (lines: QuotationLine[]) => {
           this.lines.set(this.sortLinesByDate(lines));
@@ -839,23 +865,29 @@ export class QuotationDetail implements OnInit {
         };
 
         if (keepViewingOther) {
-          this.selectedVersionId.set(prevVersionId);
-          this.quotationService.getVersionLines(q.id, prevVersionId).subscribe({
-            next: (lines) => {
-              const arr = Array.isArray(lines) ? lines : (lines as { lines?: QuotationLine[] })?.lines ?? [];
-              finishWithLines(arr);
-            },
-            error: () => {
-              this.lines.set(this.sortLinesByDate(q.lines ?? []));
-              this.selectedVersionId.set(currentId);
-              this.loading.set(false);
-              this.loadSummary();
-            },
-          });
+          this.selectedVersionId.set(restoreId);
+          this.syncVersionToRoute(restoreId);
+          if (String(restoreId) === String(currentId)) {
+            finishWithLines(q.lines ?? []);
+          } else {
+            this.quotationService.getVersionLines(q.id, restoreId!).subscribe({
+              next: (lines) => {
+                const arr = Array.isArray(lines) ? lines : (lines as { lines?: QuotationLine[] })?.lines ?? [];
+                finishWithLines(arr);
+              },
+              error: () => {
+                this.lines.set(this.sortLinesByDate(q.lines ?? []));
+                this.selectedVersionId.set(currentId);
+                this.loading.set(false);
+                this.loadSummary();
+              },
+            });
+          }
         } else {
           // Primera apertura del detalle: siempre versión 1 (si existe); tras recargas en la misma vista se mantiene la selección.
-          const targetVersionId = !prevVersionId && v1Id ? v1Id : currentId;
+          const targetVersionId = !prevVersionId && !urlVersionExists && v1Id ? v1Id : currentId;
           this.selectedVersionId.set(targetVersionId);
+          this.syncVersionToRoute(targetVersionId);
           if (targetVersionId && String(targetVersionId) === String(currentId)) {
             finishWithLines(q.lines ?? []);
           } else if (targetVersionId) {
@@ -1382,6 +1414,7 @@ export class QuotationDetail implements OnInit {
       next: (v) => {
         this.showNewVersion.set(false);
         this.selectedVersionId.set(v.id);
+        this.syncVersionToRoute(v.id);
         this.recalculateVersion(q.id, v.id, {
           repriceInherited: false,
           successMessage: `Versión V${v.version_number} creada y recalculada`,
@@ -1528,6 +1561,7 @@ export class QuotationDetail implements OnInit {
         : versionId?.value ?? versionId?.id ?? null;
 
     this.selectedVersionId.set(normalizedId);
+    this.syncVersionToRoute(normalizedId);
     const q = this.quotation()!;
     if (!normalizedId) return;
 
@@ -3267,6 +3301,11 @@ export class QuotationDetail implements OnInit {
 
   onFichaDemandeMariageToggle(checked: boolean): void {
     if (!checked) this.fichaDemandeMariageDay.set('');
+    this.syncFichaChecklistToFicha();
+  }
+
+  onFichaAutreToggle(checked: boolean): void {
+    if (!checked) this.fichaAutreText.set('');
     this.syncFichaChecklistToFicha();
   }
 
@@ -6310,6 +6349,7 @@ export class QuotationDetail implements OnInit {
     'Demande en mariage',
     'Rêve de venir depuis longtemps',
     'A déjà visité le Costa Rica (pas avec nous)',
+    'Autre',
     'Date spéciale',
     // Legacy (fichas ya generadas)
     'Déjà voyagé avec nous',
@@ -6363,6 +6403,10 @@ export class QuotationDetail implements OnInit {
     }
     if (this.fichaReveCostaRica()) lines.push('Rêve de venir depuis longtemps');
     if (this.fichaDejaVisiteCR()) lines.push('A déjà visité le Costa Rica (pas avec nous)');
+    if (this.fichaAutre()) {
+      const text = (this.fichaAutreText() || '').trim();
+      if (text) lines.push(`Autre: ${text}`);
+    }
     return lines;
   }
 
@@ -6429,6 +6473,8 @@ export class QuotationDetail implements OnInit {
     this.fichaDemandeMariageDay.set('');
     this.fichaReveCostaRica.set(false);
     this.fichaDejaVisiteCR.set(false);
+    this.fichaAutre.set(false);
+    this.fichaAutreText.set('');
   }
 
   private hydrateChecklistFromFicha(ficha: FileAAWithDetails | null): void {
@@ -6500,6 +6546,12 @@ export class QuotationDetail implements OnInit {
         'Déjà visité le Costa Rica',
       ),
     );
+    const autre = findLine('Autre');
+    if (autre) {
+      this.fichaAutre.set(true);
+      const i = autre.indexOf(':');
+      this.fichaAutreText.set(i >= 0 ? autre.slice(i + 1).trim() : '');
+    }
   }
 
   validateFichaClient(q: QuotationFull): string[] {

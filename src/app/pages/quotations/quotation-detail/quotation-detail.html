@@ -1020,6 +1020,26 @@
                   <p-checkbox [binary]="true" [ngModel]="fichaDejaVisiteCR()" (ngModelChange)="fichaDejaVisiteCR.set(!!$event); onFichaChecklistChange()" />
                   <span>A déjà visité le Costa Rica (pas avec nous)</span>
                 </label>
+                <div class="ficha-check-row ficha-check-row--with-input">
+                  <label class="ficha-check-inline">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="fichaAutre()"
+                      (ngModelChange)="fichaAutre.set(!!$event); onFichaAutreToggle(!!$event)"
+                    />
+                    <span>Autre</span>
+                  </label>
+                  @if (fichaAutre()) {
+                    <input
+                      pInputText
+                      class="ficha-check-input"
+                      [ngModel]="fichaAutreText()"
+                      (ngModelChange)="fichaAutreText.set($event ?? '')"
+                      (blur)="onFichaChecklistChange()"
+                      placeholder="Préciser"
+                    />
+                  }
+                </div>
               </div>
             </div>
             }
