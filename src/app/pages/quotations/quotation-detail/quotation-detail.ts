@@ -6318,6 +6318,11 @@ export class QuotationDetail implements OnInit {
     const ver = this.selectedVersion();
     const q = this.quotation();
     const versionId = ver?.id ?? q?.current_version?.id;
+    const checklistObs = this.buildChecklistObservationLines().join('\n').trim();
+    const existingUserObs = this.stripChecklistBlock(
+      this.fichaFileAA()?.observations ?? this.fichaObservationsDraft() ?? '',
+    );
+    const observations = [existingUserObs, checklistObs].filter(Boolean).join('\n').trim();
     return {
       ...(versionId ? { version_id: versionId } : {}),
       family_members: this.fichaFamilyRows().map((m) => {
@@ -6330,6 +6335,7 @@ export class QuotationDetail implements OnInit {
         room_type: r.room_type,
         quantity: Math.min(50, Math.max(1, Math.floor(Number(r.quantity) || 1))),
       })),
+      ...(observations ? { observations } : {}),
     };
   }
 
@@ -6815,8 +6821,8 @@ export class QuotationDetail implements OnInit {
         this.fichaFileAA.set(generated);
         this.syncFichaVisibleDetailsList();
         this.hydrateChecklistFromFicha(generated);
-        this.applyChecklistToFicha(generated);
         this.hydrateFichaFreeTextDrafts(generated);
+        this.fichaObservationsDraft.set((generated.observations ?? '').toString());
         this.fichaAATab.set('ficha');
         this.messageService.add({
           severity: 'success',

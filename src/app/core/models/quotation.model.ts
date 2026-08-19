@@ -84,6 +84,8 @@ export interface FileAAGenerateRequest {
   version_id?: string;
   family_members: FichaFamilyMemberRow[];
   room_requirements: FichaRoomRequirementRow[];
+  /** Líneas del checklist operativo (se guardan en `FileAA.observations`). */
+  observations?: string | null;
 }
 
 export type FileAADetailCategory = 'vehicle' | 'room' | 'activity';
