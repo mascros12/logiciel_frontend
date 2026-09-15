@@ -274,13 +274,19 @@ export function fichaAaDetailVisibleInTable(d: {
       return false;
     }
   }
-  if (d.category !== 'vehicle') return true;
-  const cat = vehicleCategoryFromExtras(d.observation_extras);
-  if (!cat || !FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat)) return true;
-  const mergedInto = String(
-    d.observation_extras?.[FICHA_MERGED_INTO_VEHICLE_DETAIL_ID_KEY] ?? '',
-  ).trim();
-  return !mergedInto;
+  if (d.category === 'vehicle') {
+    const mergedHotel = String(
+      d.observation_extras?.['merged_into_hotel_detail_id'] ?? '',
+    ).trim();
+    if (mergedHotel) return false;
+    const cat = vehicleCategoryFromExtras(d.observation_extras);
+    if (!cat || !FICHA_AA_MERGED_VEHICLE_CATEGORIES.has(cat)) return true;
+    const mergedInto = String(
+      d.observation_extras?.[FICHA_MERGED_INTO_VEHICLE_DETAIL_ID_KEY] ?? '',
+    ).trim();
+    return !mergedInto;
+  }
+  return true;
 }
 
 /** Ruta Taxi Marítimo: ``proveedor : origen - dest1 - dest2``. */

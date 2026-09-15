@@ -1842,6 +1842,11 @@ export class QuotationDetail implements OnInit {
     );
   }
 
+  private fichaVehicleMergedIntoHotel(d: FileAADetailRow): boolean {
+    if (d.category !== 'vehicle') return false;
+    return String(d.observation_extras?.['merged_into_hotel_detail_id'] ?? '').trim().length > 0;
+  }
+
   fichaActivitiesMergedIntoHotel(hotelId: string): FileAADetailRow[] {
     const f = this.fichaFileAA();
     if (!f) return [];
@@ -1854,16 +1859,32 @@ export class QuotationDetail implements OnInit {
     );
   }
 
+  fichaVehiclesMergedIntoHotel(hotelId: string): FileAADetailRow[] {
+    const f = this.fichaFileAA();
+    if (!f) return [];
+    const hid = hotelId.trim();
+    return (f.details ?? []).filter(
+      (d) =>
+        d.category === 'vehicle' &&
+        d.row_status !== 'red' &&
+        String(d.observation_extras?.['merged_into_hotel_detail_id'] ?? '').trim() === hid,
+    );
+  }
+
   fichaHotelHasUnion(hotel: FileAADetailRow): boolean {
     if (hotel.category !== 'room') return false;
     if (this.fichaAttachedActivityIds(hotel).length > 0) return true;
-    return this.fichaActivitiesMergedIntoHotel(hotel.id).length > 0;
+    if (this.fichaAttachedVehicleIds(hotel).length > 0) return true;
+    if (this.fichaActivitiesMergedIntoHotel(hotel.id).length > 0) return true;
+    return this.fichaVehiclesMergedIntoHotel(hotel.id).length > 0;
   }
 
   fichaHotelUnionActivityLabels(hotel: FileAADetailRow): string[] {
     const ids = new Set([
       ...this.fichaAttachedActivityIds(hotel),
+      ...this.fichaAttachedVehicleIds(hotel),
       ...this.fichaActivitiesMergedIntoHotel(hotel.id).map((a) => a.id),
+      ...this.fichaVehiclesMergedIntoHotel(hotel.id).map((v) => v.id),
     ]);
     const f = this.fichaFileAA();
     if (!f) return [];
@@ -1871,7 +1892,11 @@ export class QuotationDetail implements OnInit {
       .map((id) => (f.details ?? []).find((d) => d.id === id))
       .filter((d): d is FileAADetailRow => !!d)
       .map((d) =>
-        this.stripHtml(this.fichaDetailServiceLines(d)[0] || d.name || 'Actividad'),
+        this.stripHtml(
+          this.fichaDetailServiceLines(d)[0] ||
+            d.name ||
+            (d.category === 'vehicle' ? 'Vehículo' : 'Actividad'),
+        ),
       );
   }
 
@@ -1892,7 +1917,13 @@ export class QuotationDetail implements OnInit {
         ...this.fichaActivitiesMergedIntoHotel(hotel.id).map((a) => a.id),
       ]),
     ];
-    if (!activityIds.length) return of(undefined);
+    const vehicleIds = [
+      ...new Set([
+        ...this.fichaAttachedVehicleIds(hotel),
+        ...this.fichaVehiclesMergedIntoHotel(hotel.id).map((v) => v.id),
+      ]),
+    ];
+    if (!activityIds.length && !vehicleIds.length) return of(undefined);
     let chain: Observable<FileAAWithDetails | void> = of(undefined);
     for (const actId of activityIds) {
       const act = f?.details?.find((d) => d.id === actId);
@@ -1904,10 +1935,20 @@ export class QuotationDetail implements OnInit {
         concatMap(() => this.quotationService.detachActivityFromHotel(hotelId, actId)),
       );
     }
+    for (const vehId of vehicleIds) {
+      const veh = f?.details?.find((d) => d.id === vehId);
+      const mergedHotelId = String(
+        veh?.observation_extras?.['merged_into_hotel_detail_id'] ?? hotel.id,
+      ).trim();
+      const hotelId = mergedHotelId || hotel.id;
+      chain = chain.pipe(
+        concatMap(() => this.quotationService.detachVehicleFromHotel(hotelId, vehId)),
+      );
+    }
     if (mode === 'deleteActivities') {
-      for (const actId of activityIds) {
+      for (const childId of [...activityIds, ...vehicleIds]) {
         chain = chain.pipe(
-          concatMap(() => this.quotationService.deleteFileAADetail(actId)),
+          concatMap(() => this.quotationService.deleteFileAADetail(childId)),
         );
       }
     }
@@ -2011,7 +2052,19 @@ export class QuotationDetail implements OnInit {
     );
   }
 
+  canFichaCombineVehicle(d: FileAADetailRow): boolean {
+    return (
+      d.category === 'vehicle' &&
+      d.row_status !== 'red' &&
+      !this.fichaVehicleMergedIntoHotel(d) &&
+      fichaAaDetailVisibleInTable(d)
+    );
+  }
+
   canShowFichaCombineButton(d: FileAADetailRow): boolean {
+    if (this.canFichaCombineVehicle(d)) {
+      return this.fichaCombineHotelOptions().length > 0;
+    }
     return (
       this.canFichaCombineActivity(d) &&
       (this.fichaCombineHotelOptions().length > 0 ||
@@ -2058,9 +2111,16 @@ export class QuotationDetail implements OnInit {
       }));
   }
 
-  openFichaCombineDialog(activity: FileAADetailRow): void {
-    if (!this.canFichaCombineActivity(activity)) return;
-    this.fichaCombineActivityRow.set(activity);
+  openFichaCombineDialog(source: FileAADetailRow): void {
+    if (this.canFichaCombineVehicle(source)) {
+      this.fichaCombineActivityRow.set(source);
+      this.fichaCombineTargetKind.set('hotel');
+      this.fichaCombineSelectedTargetId.set(null);
+      this.showFichaCombineDialog.set(true);
+      return;
+    }
+    if (!this.canFichaCombineActivity(source)) return;
+    this.fichaCombineActivityRow.set(source);
     this.fichaCombineTargetKind.set(null);
     this.fichaCombineSelectedTargetId.set(null);
     this.showFichaCombineDialog.set(true);
@@ -2073,37 +2133,96 @@ export class QuotationDetail implements OnInit {
   }
 
   fichaCombineTargetOptions(): { id: string; label: string }[] {
-    const activity = this.fichaCombineActivityRow();
+    const source = this.fichaCombineActivityRow();
     const kind = this.fichaCombineTargetKind();
-    if (!activity || !kind) return [];
+    if (!source || !kind) return [];
     if (kind === 'hotel') return this.fichaCombineHotelOptions();
-    return this.fichaCombineActivityTargetOptions(activity);
+    if (source.category !== 'activity') return [];
+    return this.fichaCombineActivityTargetOptions(source);
   }
 
   submitFichaCombine(): void {
-    const activity = this.fichaCombineActivityRow();
+    const source = this.fichaCombineActivityRow();
     const kind = this.fichaCombineTargetKind();
     const targetId = this.fichaCombineSelectedTargetId();
-    if (!activity || !kind || !targetId) return;
+    if (!source || !kind || !targetId) return;
     const ficha = this.fichaFileAA();
     const target = ficha?.details?.find((row) => row.id === targetId);
     if (!target) return;
     this.showFichaCombineDialog.set(false);
     if (kind === 'hotel' && target.category === 'room') {
-      this.confirmAttachActivityToHotel(activity, target);
+      if (source.category === 'vehicle') {
+        this.confirmAttachVehicleToHotel(source, target);
+        return;
+      }
+      this.confirmAttachActivityToHotel(source, target);
       return;
     }
-    if (kind === 'activity' && target.category === 'activity') {
-      this.confirmAttachActivityToActivity(activity, target);
+    if (
+      kind === 'activity' &&
+      source.category === 'activity' &&
+      target.category === 'activity'
+    ) {
+      this.confirmAttachActivityToActivity(source, target);
     }
   }
 
   fichaCombineActivityLabel(): string {
-    const activity = this.fichaCombineActivityRow();
-    if (!activity) return '';
+    const source = this.fichaCombineActivityRow();
+    if (!source) return '';
     return this.stripHtml(
-      this.fichaDetailServiceLines(activity)[0] || activity.name || 'Actividad',
+      this.fichaDetailServiceLines(source)[0] ||
+        source.name ||
+        (source.category === 'vehicle' ? 'Vehículo' : 'Actividad'),
     );
+  }
+
+  private confirmAttachVehicleToHotel(
+    vehicle: FileAADetailRow,
+    hotel: FileAADetailRow,
+  ): void {
+    const vehLabel = this.stripHtml(
+      this.fichaDetailServiceLines(vehicle)[0] || vehicle.name || 'Vehículo',
+    );
+    const hotelLabel = this.stripHtml(
+      this.fichaDetailServiceLines(hotel)[0] || hotel.name || 'Hotel',
+    );
+    this.confirmationService.confirm({
+      message: `¿Desea añadir el vehículo «${vehLabel}» al hotel «${hotelLabel}»? Se agregará a las observaciones del hotel con su fecha, se sumará al precio sistema del hotel y el vehículo dejará de mostrarse en la tabla (en Word/PDF seguirá en línea aparte con Net «---»).`,
+      header: 'Incorporar vehículo al hotel',
+      icon: 'pi pi-question-circle',
+      acceptLabel: 'Sí, incorporar',
+      rejectLabel: 'Cancelar',
+      reject: () => this.scheduleFichaDetailDragBodyRemount(),
+      accept: () => {
+        this.fichaDetailReorderSaving.set(true);
+        this.quotationService.attachVehicleToHotel(hotel.id, vehicle.id).subscribe({
+          next: (updated) => {
+            this.fichaFileAA.set(updated);
+            this.syncFichaVisibleDetailsList();
+            delete this.hotelFichaObsDraft[hotel.id];
+            this.scheduleFichaDetailDragBodyRemount();
+            this.fichaDetailReorderSaving.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Vehículo incorporado al hotel',
+            });
+          },
+          error: (err) => {
+            this.scheduleFichaDetailDragBodyRemount();
+            this.fichaDetailReorderSaving.set(false);
+            const d = err.error?.detail;
+            this.messageService.add({
+              severity: 'error',
+              summary:
+                typeof d === 'string'
+                  ? d
+                  : 'No se pudo incorporar el vehículo al hotel',
+            });
+          },
+        });
+      },
+    });
   }
 
   private confirmAttachActivityToHotel(
@@ -2201,6 +2320,12 @@ export class QuotationDetail implements OnInit {
     return raw.map((id) => String(id)).filter((id) => id.trim().length > 0);
   }
 
+  fichaAttachedVehicleIds(hotel: FileAADetailRow): string[] {
+    const raw = hotel.observation_extras?.['attached_vehicle_detail_ids'];
+    if (!Array.isArray(raw)) return [];
+    return raw.map((id) => String(id)).filter((id) => id.trim().length > 0);
+  }
+
   /** @deprecated Use fichaAttachedActivityIds */
   fichaHotelAttachedActivityIds(hotel: FileAADetailRow): string[] {
     return this.fichaAttachedActivityIds(hotel);
@@ -2231,7 +2356,9 @@ export class QuotationDetail implements OnInit {
     if (anchor.category !== 'room' && anchor.category !== 'activity') return false;
     if (this.fichaAttachedActivityIds(anchor).length > 0) return true;
     if (anchor.category === 'room') {
-      return this.fichaActivitiesMergedIntoHotel(anchor.id).length > 0;
+      if (this.fichaAttachedVehicleIds(anchor).length > 0) return true;
+      if (this.fichaActivitiesMergedIntoHotel(anchor.id).length > 0) return true;
+      return this.fichaVehiclesMergedIntoHotel(anchor.id).length > 0;
     }
     return false;
   }
@@ -2244,12 +2371,19 @@ export class QuotationDetail implements OnInit {
     const f = this.fichaFileAA();
     if (!f) return [];
     const attachedIds = new Set(this.fichaAttachedActivityIds(anchor));
+    const vehicleIds = new Set<string>();
     if (anchor.category === 'room') {
       for (const row of this.fichaActivitiesMergedIntoHotel(anchor.id)) {
         attachedIds.add(row.id);
       }
+      for (const id of this.fichaAttachedVehicleIds(anchor)) {
+        vehicleIds.add(id);
+      }
+      for (const row of this.fichaVehiclesMergedIntoHotel(anchor.id)) {
+        vehicleIds.add(row.id);
+      }
     }
-    return (f.details ?? [])
+    const activityOpts = (f.details ?? [])
       .filter((row) => row.category === 'activity' && attachedIds.has(row.id))
       .map((row) => ({
         id: row.id,
@@ -2257,6 +2391,15 @@ export class QuotationDetail implements OnInit {
           this.fichaDetailServiceLines(row).join(' · ') || row.name || 'Actividad',
         ),
       }));
+    const vehicleOpts = (f.details ?? [])
+      .filter((row) => row.category === 'vehicle' && vehicleIds.has(row.id))
+      .map((row) => ({
+        id: row.id,
+        label: this.stripHtml(
+          this.fichaDetailServiceLines(row).join(' · ') || row.name || 'Vehículo',
+        ),
+      }));
+    return [...activityOpts, ...vehicleOpts];
   }
 
   fichaHotelAttachedActivityOptions(hotel: FileAADetailRow): { id: string; label: string }[] {
@@ -2308,29 +2451,40 @@ export class QuotationDetail implements OnInit {
 
   private confirmDetachActivity(
     anchor: FileAADetailRow,
-    activity: FileAADetailRow,
+    child: FileAADetailRow,
   ): void {
-    const actLabel = this.stripHtml(
-      this.fichaDetailServiceLines(activity)[0] || activity.name || 'Actividad',
+    const childLabel = this.stripHtml(
+      this.fichaDetailServiceLines(child)[0] ||
+        child.name ||
+        (child.category === 'vehicle' ? 'Vehículo' : 'Actividad'),
     );
     const anchorLabel = this.stripHtml(
       this.fichaDetailServiceLines(anchor)[0] || anchor.name || 'Servicio',
     );
     const isHotel = anchor.category === 'room';
+    const isVehicle = child.category === 'vehicle';
+    const childNoun = isVehicle ? 'vehículo' : 'actividad';
     this.confirmationService.confirm({
       message: isHotel
-        ? `¿Desea descombinar la actividad «${actLabel}» del hotel «${anchorLabel}»? Se quitará de las observaciones del hotel, se restará del precio sistema y la actividad volverá a mostrarse en la tabla con su importe Net en Word/PDF.`
-        : `¿Desea descombinar la actividad «${actLabel}» de «${anchorLabel}»? Se restará del precio sistema, se actualizarán fechas y nombres, y la actividad volverá a mostrarse en la tabla con su importe Net en Word/PDF.`,
-      header: isHotel ? 'Descombinar actividad del hotel' : 'Descombinar actividad',
+        ? `¿Desea descombinar ${isVehicle ? 'el' : 'la'} ${childNoun} «${childLabel}» del hotel «${anchorLabel}»? Se quitará de las observaciones del hotel, se restará del precio sistema y ${isVehicle ? 'el vehículo' : 'la actividad'} volverá a mostrarse en la tabla con su importe Net en Word/PDF.`
+        : `¿Desea descombinar la actividad «${childLabel}» de «${anchorLabel}»? Se restará del precio sistema, se actualizarán fechas y nombres, y la actividad volverá a mostrarse en la tabla con su importe Net en Word/PDF.`,
+      header: isHotel
+        ? isVehicle
+          ? 'Descombinar vehículo del hotel'
+          : 'Descombinar actividad del hotel'
+        : 'Descombinar actividad',
       icon: 'pi pi-question-circle',
       acceptLabel: 'Sí, descombinar',
       rejectLabel: 'Cancelar',
       reject: () => this.scheduleFichaDetailDragBodyRemount(),
       accept: () => {
         this.fichaDetailReorderSaving.set(true);
-        const req$ = isHotel
-          ? this.quotationService.detachActivityFromHotel(anchor.id, activity.id)
-          : this.quotationService.detachActivityFromActivity(anchor.id, activity.id);
+        const req$ =
+          isHotel && isVehicle
+            ? this.quotationService.detachVehicleFromHotel(anchor.id, child.id)
+            : isHotel
+              ? this.quotationService.detachActivityFromHotel(anchor.id, child.id)
+              : this.quotationService.detachActivityFromActivity(anchor.id, child.id);
         req$.subscribe({
           next: (updated) => {
             this.fichaFileAA.set(updated);
@@ -2345,7 +2499,9 @@ export class QuotationDetail implements OnInit {
             this.messageService.add({
               severity: 'success',
               summary: isHotel
-                ? 'Actividad descombinada del hotel'
+                ? isVehicle
+                  ? 'Vehículo descombinado del hotel'
+                  : 'Actividad descombinada del hotel'
                 : 'Actividad descombinada',
             });
           },
@@ -2359,7 +2515,9 @@ export class QuotationDetail implements OnInit {
                 typeof d === 'string'
                   ? d
                   : isHotel
-                    ? 'No se pudo descombinar la actividad del hotel'
+                    ? isVehicle
+                      ? 'No se pudo descombinar el vehículo del hotel'
+                      : 'No se pudo descombinar la actividad del hotel'
                     : 'No se pudo descombinar la actividad',
             });
           },
@@ -4222,6 +4380,18 @@ export class QuotationDetail implements OnInit {
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       const o = raw as Record<string, unknown>;
       const s = (k: string) => String(o[k] ?? '');
+      const toIntOrNull = (v: unknown): number | null => {
+        if (v === null || v === undefined || v === '') return null;
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : null;
+      };
+      let cantidad = toIntOrNull(o['ficha_cantidad_personas']);
+      if (
+        this.fichaVehicleCategory(d) === 'Taxi Maritimo' &&
+        (cantidad === null || cantidad < 1)
+      ) {
+        cantidad = this.fichaTotalTravelersCount() || 1;
+      }
       return {
         luggage_cover: !!o['luggage_cover'],
         pickup_detail: s('pickup_detail'),
@@ -4238,11 +4408,29 @@ export class QuotationDetail implements OnInit {
         ficha_fecha_devolucion: s('ficha_fecha_devolucion'),
         ficha_hora_devolucion: s('ficha_hora_devolucion'),
         ficha_pick_up: s('ficha_pick_up'),
+        ficha_drop_off_ida: s('ficha_drop_off_ida'),
+        ficha_pick_up_vuelta: s('ficha_pick_up_vuelta'),
         ficha_drop_off: s('ficha_drop_off'),
+        ficha_cantidad_personas: cantidad,
         ficha_interbus_fechas: s('ficha_interbus_fechas'),
       };
     }
+    if (this.fichaVehicleCategory(d) === 'Taxi Maritimo') {
+      return {
+        ...def,
+        ficha_cantidad_personas: this.fichaTotalTravelersCount() || 1,
+      };
+    }
     return def;
+  }
+
+  /** Adultos + niños de la cabecera de la Ficha AA. */
+  fichaTotalTravelersCount(): number {
+    const ficha = this.fichaFileAA();
+    if (!ficha) return 0;
+    const na = Number(ficha.quantity_adults) || 0;
+    const nc = Number(ficha.quantity_children) || 0;
+    return Math.max(0, na + nc);
   }
 
   /** Referencia estable para ngModel en filas vehículo (Ficha AA). */
@@ -4520,12 +4708,36 @@ export class QuotationDetail implements OnInit {
       ficha_fecha_devolucion: row.ficha_fecha_devolucion ?? '',
       ficha_hora_devolucion: row.ficha_hora_devolucion ?? '',
       ficha_pick_up: row.ficha_pick_up ?? '',
+      ficha_drop_off_ida: row.ficha_drop_off_ida ?? '',
+      ficha_pick_up_vuelta: row.ficha_pick_up_vuelta ?? '',
       ficha_drop_off: row.ficha_drop_off ?? '',
       ficha_interbus_fechas: row.ficha_interbus_fechas ?? '',
     };
     const notesTrim = row.notes.trim();
     if (this.fichaVehicleCategory(d) === 'Taxi Maritimo') {
       delete observation_extras['vehicle_ficha_aa_subtitle'];
+      const defaultPax = this.fichaTotalTravelersCount() || 1;
+      let qty = Number(row.ficha_cantidad_personas);
+      if (!Number.isFinite(qty) || qty < 1) qty = defaultPax;
+      qty = Math.trunc(qty);
+      row.ficha_cantidad_personas = qty;
+      observation_extras['ficha_cantidad_personas'] = qty;
+
+      let unit = Number(prev['vehicle_net_unit']);
+      if (!Number.isFinite(unit) || unit < 0) {
+        const prevQtyRaw = Number(prev['ficha_cantidad_personas']);
+        const prevQty =
+          Number.isFinite(prevQtyRaw) && prevQtyRaw >= 1 ? Math.trunc(prevQtyRaw) : qty;
+        const currentTotal = Number(d.total_price ?? 0);
+        unit =
+          Number.isFinite(currentTotal) && prevQty > 0
+            ? currentTotal / prevQty
+            : 0;
+      }
+      unit = Math.round(unit * 100) / 100;
+      observation_extras['vehicle_net_unit'] = String(unit);
+      const totalPrice = Math.round(unit * qty * 100) / 100;
+
       const dates = formatTaxiMaritimoFichaDatesCell(
         row.ficha_fecha_ida,
         row.ficha_fecha_vuelta,
@@ -4534,6 +4746,7 @@ export class QuotationDetail implements OnInit {
         observation_extras,
         observations: notesTrim ? notesTrim : null,
         dates,
+        total_price: totalPrice,
       });
       return;
     }
@@ -5478,6 +5691,31 @@ export class QuotationDetail implements OnInit {
     const raw = target instanceof HTMLInputElement ? target.value : '';
     const v = parseFloat(String(raw).replace(',', '.'));
     if (!Number.isFinite(v)) return;
+    if (this.fichaVehicleCategory(row) === 'Taxi Maritimo') {
+      const prev =
+        row.observation_extras &&
+        typeof row.observation_extras === 'object' &&
+        !Array.isArray(row.observation_extras)
+          ? { ...(row.observation_extras as Record<string, unknown>) }
+          : {};
+      const draft = this.ensureVehicleFichaObsDraft(row);
+      let qty = Number(draft.ficha_cantidad_personas);
+      if (!Number.isFinite(qty) || qty < 1) {
+        qty = this.fichaTotalTravelersCount() || 1;
+      }
+      qty = Math.trunc(qty);
+      const unit = Math.round((v / qty) * 100) / 100;
+      draft.ficha_cantidad_personas = qty;
+      this.patchFileDetail(row.id, {
+        total_price: v,
+        observation_extras: {
+          ...prev,
+          ficha_cantidad_personas: qty,
+          vehicle_net_unit: String(unit),
+        },
+      });
+      return;
+    }
     this.patchFileDetail(row.id, { total_price: v });
   }
 

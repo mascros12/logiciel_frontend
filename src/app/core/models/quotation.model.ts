@@ -107,10 +107,16 @@ export interface FileAADetailVehicleObsState {
   ficha_hora_recogida?: string;
   ficha_fecha_devolucion?: string;
   ficha_hora_devolucion?: string;
-  /** Taxi Marítimo: texto opcional junto a la fecha de ida (columna Fechas). */
+  /** Taxi Marítimo: texto opcional Pick up de la ida (columna Fechas). */
   ficha_pick_up?: string;
-  /** Taxi Marítimo: texto opcional junto a la fecha de vuelta (columna Fechas). */
+  /** Taxi Marítimo: texto opcional Drop off de la ida (columna Fechas). */
+  ficha_drop_off_ida?: string;
+  /** Taxi Marítimo: texto opcional Pick up de la vuelta (columna Fechas). */
+  ficha_pick_up_vuelta?: string;
+  /** Taxi Marítimo: texto opcional Drop off de la vuelta (columna Fechas). */
   ficha_drop_off?: string;
+  /** Taxi Marítimo: pax que multiplican el precio sistema (default = viajeros de la ficha). */
+  ficha_cantidad_personas?: number | null;
   /** Interbus: fechas por trayecto (una por línea, alineada con ``vehicle_ficha_aa_subtitle``). */
   ficha_interbus_fechas?: string;
 }

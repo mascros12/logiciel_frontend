@@ -240,6 +240,20 @@ export class QuotationService {
     );
   }
 
+  attachVehicleToHotel(hotelDetailId: string, vehicleDetailId: string) {
+    return this.http.post<FileAAWithDetails>(
+      `${this.url}/details/${hotelDetailId}/attach-vehicle/${vehicleDetailId}`,
+      {},
+    );
+  }
+
+  detachVehicleFromHotel(hotelDetailId: string, vehicleDetailId: string) {
+    return this.http.post<FileAAWithDetails>(
+      `${this.url}/details/${hotelDetailId}/detach-vehicle/${vehicleDetailId}`,
+      {},
+    );
+  }
+
   detachActivityFromActivity(anchorDetailId: string, activityDetailId: string) {
     return this.http.post<FileAAWithDetails>(
       `${this.url}/details/${anchorDetailId}/detach-activity-from-activity/${activityDetailId}`,

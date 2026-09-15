@@ -1950,14 +1950,30 @@
                                         [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_pick_up" (blur)="commitVehicleFichaObs(d)" />
                                     </div>
                                     <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Drop off</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_drop_off_ida" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
                                       <label class="ficha-obs-label">Vuelta — Fecha</label>
                                       <input pInputText class="ficha-cell-input"
                                         [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_fecha_vuelta" (blur)="commitVehicleFichaObs(d)" />
                                     </div>
                                     <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Pick up</label>
+                                      <input pInputText class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_pick_up_vuelta" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
                                       <label class="ficha-obs-label">Drop off</label>
                                       <input pInputText class="ficha-cell-input"
                                         [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_drop_off" (blur)="commitVehicleFichaObs(d)" />
+                                    </div>
+                                    <div class="ficha-obs-block">
+                                      <label class="ficha-obs-label">Cantidad de Personas</label>
+                                      <input pInputText type="number" min="1" class="ficha-cell-input"
+                                        [(ngModel)]="ensureVehicleFichaObsDraft(d).ficha_cantidad_personas"
+                                        (blur)="commitVehicleFichaObs(d)" />
                                     </div>
                                   </div>
                                 }
@@ -2446,7 +2462,7 @@
                                   [rounded]="true"
                                   size="small"
                                   severity="secondary"
-                                  pTooltip="Combinar con hotel o actividad"
+                                  [pTooltip]="d.category === 'vehicle' ? 'Combinar con hotel' : 'Combinar con hotel o actividad'"
                                   tooltipPosition="top"
                                   [disabled]="fichaDetailReorderSaving()"
                                   (onClick)="openFichaCombineDialog(d)"
@@ -2459,7 +2475,7 @@
                                   [rounded]="true"
                                   size="small"
                                   severity="warn"
-                                  [pTooltip]="d.row_status === 'red' ? 'Descombinar actividad (fila sustituida)' : 'Descombinar actividad incorporada'"
+                                  [pTooltip]="d.row_status === 'red' ? 'Descombinar servicio (fila sustituida)' : 'Descombinar servicio incorporado'"
                                   tooltipPosition="top"
                                   [disabled]="fichaDetailReorderSaving()"
                                   (onClick)="onFichaDetachClick(d)"
@@ -2719,22 +2735,43 @@
   </ng-template>
 </p-dialog>
 
-<!-- Combinar actividad con hotel o actividad -->
+<!-- Combinar actividad/vehículo con hotel o actividad -->
 <p-dialog
   styleClass="ficha-combine-dialog"
-  header="Combinar actividad"
+  [header]="fichaCombineActivityRow()?.category === 'vehicle' ? 'Combinar vehículo' : 'Combinar actividad'"
   [visible]="showFichaCombineDialog()"
   (visibleChange)="showFichaCombineDialog.set($event)"
   [modal]="true"
   [style]="{ width: 'min(520px, 96vw)' }"
   (onHide)="onFichaCombineDialogHide()"
 >
-  @if (fichaCombineActivityRow(); as activity) {
+  @if (fichaCombineActivityRow(); as source) {
     <p class="ficha-add-dialog-hint">
-      Actividad:
+      {{ source.category === 'vehicle' ? 'Vehículo' : 'Actividad' }}:
       <strong>{{ fichaCombineActivityLabel() }}</strong>
     </p>
-    @if (fichaCombineHotelOptions().length === 0 && fichaCombineActivityTargetOptions(activity).length === 0) {
+    @if (source.category === 'vehicle') {
+      @if (fichaCombineHotelOptions().length === 0) {
+        <p class="ficha-add-empty">No hay hoteles disponibles para combinar en esta ficha.</p>
+      } @else {
+        <p class="ficha-add-pick-hint">Seleccione el hotel destino.</p>
+        <label class="ficha-add-select-label" for="ficha-combine-target-sel">Destino</label>
+        <p-select
+          inputId="ficha-combine-target-sel"
+          [options]="fichaCombineHotelOptions()"
+          [ngModel]="fichaCombineSelectedTargetId()"
+          (ngModelChange)="fichaCombineSelectedTargetId.set($event)"
+          dataKey="id"
+          optionLabel="label"
+          optionValue="id"
+          placeholder="Seleccione hotel…"
+          styleClass="w-full"
+          appendTo="body"
+          [filter]="true"
+          filterBy="label"
+        />
+      }
+    } @else if (fichaCombineHotelOptions().length === 0 && fichaCombineActivityTargetOptions(source).length === 0) {
       <p class="ficha-add-empty">No hay filas disponibles para combinar en esta ficha.</p>
     } @else {
       <p class="ficha-add-pick-hint">¿Con qué tipo de servicio desea combinarla?</p>
@@ -2747,7 +2784,7 @@
             (onClick)="fichaCombineTargetKind.set('hotel'); fichaCombineSelectedTargetId.set(null)"
           />
         }
-        @if (fichaCombineActivityTargetOptions(activity).length > 0) {
+        @if (fichaCombineActivityTargetOptions(source).length > 0) {
           <p-button
             label="Actividad"
             icon="pi pi-map"
@@ -2841,10 +2878,10 @@
   </ng-template>
 </p-dialog>
 
-<!-- Descombinar actividad incorporada -->
+<!-- Descombinar servicio incorporado -->
 <p-dialog
   styleClass="ficha-combine-dialog"
-  header="Descombinar actividad"
+  header="Descombinar servicio"
   [visible]="showFichaDetachDialog()"
   (visibleChange)="showFichaDetachDialog.set($event)"
   [modal]="true"
@@ -2857,10 +2894,10 @@
       <strong>{{ fichaDetachAnchorLabel() }}</strong>
     </p>
     @if (fichaAttachedActivityOptions(anchor).length === 0) {
-      <p class="ficha-add-empty">No hay actividades incorporadas.</p>
+      <p class="ficha-add-empty">No hay servicios incorporados.</p>
     } @else {
-      <p class="ficha-add-pick-hint">Seleccione la actividad que desea descombinar.</p>
-      <label class="ficha-add-select-label" for="ficha-detach-activity-sel">Actividad</label>
+      <p class="ficha-add-pick-hint">Seleccione el servicio que desea descombinar.</p>
+      <label class="ficha-add-select-label" for="ficha-detach-activity-sel">Servicio</label>
       <p-select
         inputId="ficha-detach-activity-sel"
         [options]="fichaAttachedActivityOptions(anchor)"
@@ -2869,7 +2906,7 @@
         dataKey="id"
         optionLabel="label"
         optionValue="id"
-        placeholder="Seleccione actividad…"
+        placeholder="Seleccione servicio…"
         styleClass="w-full"
         appendTo="body"
         [filter]="true"
@@ -2947,7 +2984,7 @@
 >
   @if (fichaUnionActionContext(); as ctx) {
     <p class="ficha-add-dialog-hint">
-      Esta habitación tiene actividades incorporadas:
+      Esta habitación tiene servicios incorporados:
     </p>
     <ul class="ficha-add-dialog-bullets">
       @for (label of fichaHotelUnionActivityLabels(ctx.anchor); track label) {
@@ -2956,9 +2993,9 @@
     </ul>
     <p class="ficha-add-dialog-hint">
       @if (ctx.mode === 'delete') {
-        ¿Desea separarlas y eliminar solo el hotel, o eliminar también las actividades?
+        ¿Desea separarlos y eliminar solo el hotel, o eliminar también los servicios unidos?
       } @else {
-        ¿Desea separarlas y reemplazar solo el hotel, o eliminar también las actividades al reemplazar?
+        ¿Desea separarlos y reemplazar solo el hotel, o eliminar también los servicios unidos al reemplazar?
       }
     </p>
   }
