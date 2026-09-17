@@ -40,7 +40,30 @@
     </nav>
   
     <div class="sidebar-footer">
-      <button class="nav-item logout-btn" (click)="auth.logout()">
+      @if (canShowSettings()) {
+        <button
+          type="button"
+          class="nav-item settings-btn"
+          [class.collapsed]="collapsed()"
+          [class.active]="settingsActive()"
+          [title]="collapsed() ? 'Configuraciones' : ''"
+          (click)="settingsMenu.toggle($event)"
+        >
+          <i class="pi pi-cog"></i>
+          @if (!collapsed()) {
+            <span>Configuraciones</span>
+            <i class="pi pi-angle-up settings-chevron"></i>
+          }
+        </button>
+        <p-menu
+          #settingsMenu
+          [model]="settingsMenuItems"
+          [popup]="true"
+          appendTo="body"
+          styleClass="sidebar-settings-menu"
+        />
+      }
+      <button class="nav-item logout-btn" [class.collapsed]="collapsed()" (click)="auth.logout()">
         <i class="pi pi-sign-out"></i>
         @if (!collapsed()) {
           <span>Cerrar sesión</span>

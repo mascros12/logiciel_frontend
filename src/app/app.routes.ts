@@ -80,6 +80,14 @@ export const routes: Routes = [
           import('./pages/users/user-list/user-list')
             .then(m => m.UserList)
       },
+      {
+        path: 'configuraciones/zonas',
+        canActivate: [authGuard],
+        data: { roles: ['admin'] },
+        loadComponent: () =>
+          import('./pages/settings/zones/zone-list/zone-list')
+            .then(m => m.ZoneList)
+      },
     ]
   },
   { path: '**', redirectTo: '' }

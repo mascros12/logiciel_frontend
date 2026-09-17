@@ -1,0 +1,101 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="page-container">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="page-title">Zonas</h2>
+    <div class="flex items-center gap-3">
+      <span class="p-input-icon-left zone-search">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          type="text"
+          placeholder="Buscar por nombre o provincia..."
+          [(ngModel)]="searchTerm"
+        />
+      </span>
+      <p-button label="Nueva zona" icon="pi pi-plus" (onClick)="openCreate()" />
+    </div>
+  </div>
+
+  <p-table
+    [value]="filteredZones()"
+    [loading]="loading()"
+    styleClass="p-datatable-gridlines"
+    [paginator]="true"
+    [rows]="rowsPerPage"
+    [rowsPerPageOptions]="rowsPerPageOptions"
+    dataKey="id"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Nombre</th>
+        <th style="width: 160px">Provincia</th>
+        <th style="width: 140px">Creado</th>
+        <th style="width: 8rem">Acciones</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-z>
+      <tr>
+        <td>{{ z.name }}</td>
+        <td>{{ provinceLabel(z.province) }}</td>
+        <td>{{ z.created_at | date: 'dd/MM/yyyy' }}</td>
+        <td>
+          <div class="flex gap-2">
+            <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="openEdit(z)" />
+            <p-button
+              icon="pi pi-trash"
+              [text]="true"
+              size="small"
+              severity="danger"
+              (onClick)="confirmDelete($event, z)"
+            />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="4" class="text-center">No hay zonas registradas</td></tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-dialog
+  [header]="editing() ? 'Editar zona' : 'Nueva zona'"
+  [visible]="showDialog()"
+  (visibleChange)="showDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(440px, 96vw)' }"
+>
+  <form [formGroup]="form" class="zone-form">
+    <div class="field">
+      <label>Nombre *</label>
+      <input pInputText formControlName="name" class="w-full" placeholder="Nombre de la zona" />
+    </div>
+
+    <div class="field">
+      <label>Provincia *</label>
+      <p-select
+        formControlName="province"
+        [options]="provinces"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Seleccionar"
+        appendTo="body"
+        styleClass="w-full"
+      />
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" [text]="true" (onClick)="showDialog.set(false)" />
+    <p-button
+      [label]="editing() ? 'Guardar cambios' : 'Crear zona'"
+      icon="pi pi-check"
+      [loading]="saving()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>
