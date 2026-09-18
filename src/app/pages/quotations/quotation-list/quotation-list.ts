@@ -24,6 +24,7 @@ import { ContactService } from '../../../core/services/contact.service';
 import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import { SelectModule } from 'primeng/select';
 import { AuthService } from '../../../core/auth/auth.service';
+import { AppSettingsService } from '../../../core/services/app-settings.service';
 import { formatQuotationVersionLabel } from '../../../core/utils/quotation-version-label';
 import {
   apiErrorSummary,
@@ -120,6 +121,7 @@ export class QuotationList implements OnInit {
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
     private authService: AuthService,
+    private settingsService: AppSettingsService,
   ) {
     this.createForm = this.fb.group({
       name: ['', Validators.required],
@@ -128,7 +130,7 @@ export class QuotationList implements OnInit {
       from_date: [null, Validators.required],
       to_date: [null, Validators.required],
       notes: ['', Validators.required],
-      commission: [1.92],
+      commission: [this.settingsService.defaultQuotationCommission()],
       email: [''],
       source: [null, Validators.required],
       budget: [null],
@@ -146,6 +148,7 @@ export class QuotationList implements OnInit {
 
   ngOnInit() {
     this.listState = readListStateFromRoute(this.route);
+    this.settingsService.get().subscribe();
     this.load();
   }
 
@@ -203,8 +206,17 @@ export class QuotationList implements OnInit {
   }
 
   openCreate() {
-    this.createForm.reset({ commission: 1.92, notes: '' });
+    const commission = this.settingsService.defaultQuotationCommission();
+    this.createForm.reset({ commission, notes: '' });
     this.showCreateDialog.set(true);
+    this.settingsService.get().subscribe({
+      next: (s) => {
+        if (!this.showCreateDialog()) return;
+        this.createForm.patchValue({
+          commission: Number(s.default_quotation_commission),
+        });
+      },
+    });
   }
 
   fieldStyleClass(control: AbstractControl | null | undefined): string {

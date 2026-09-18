@@ -25,6 +25,7 @@ export interface Activity {
   reservation_email?: string | null;
   seasons: ActivitySeason[];
   created_at: string;
+  updated_at: string;
 }
 
 export interface ActivityListResponse {

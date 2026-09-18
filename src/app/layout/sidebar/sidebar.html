@@ -41,27 +41,42 @@
   
     <div class="sidebar-footer">
       @if (canShowSettings()) {
-        <button
-          type="button"
-          class="nav-item settings-btn"
-          [class.collapsed]="collapsed()"
-          [class.active]="settingsActive()"
-          [title]="collapsed() ? 'Configuraciones' : ''"
-          (click)="settingsMenu.toggle($event)"
-        >
-          <i class="pi pi-cog"></i>
-          @if (!collapsed()) {
-            <span>Configuraciones</span>
-            <i class="pi pi-angle-up settings-chevron"></i>
+        <div class="settings-block" [class.is-expanded]="settingsExpanded() && !collapsed()">
+          <button
+            type="button"
+            class="nav-item settings-btn"
+            [class.collapsed]="collapsed()"
+            [class.active]="settingsActive()"
+            [attr.aria-expanded]="settingsExpanded() && !collapsed()"
+            [title]="collapsed() ? 'Configuraciones' : ''"
+            (click)="toggleSettings()"
+          >
+            <i class="pi pi-cog"></i>
+            @if (!collapsed()) {
+              <span>Configuraciones</span>
+              <i
+                class="pi settings-chevron"
+                [class.pi-angle-up]="settingsExpanded()"
+                [class.pi-angle-down]="!settingsExpanded()"
+              ></i>
+            }
+          </button>
+
+          @if (settingsExpanded() && !collapsed()) {
+            <div class="settings-submenu" role="group" aria-label="Configuraciones">
+              @for (item of settingsItems; track item.route) {
+                <a
+                  [routerLink]="item.route"
+                  routerLinkActive="active"
+                  class="nav-item settings-subitem"
+                >
+                  <i [class]="item.icon"></i>
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            </div>
           }
-        </button>
-        <p-menu
-          #settingsMenu
-          [model]="settingsMenuItems"
-          [popup]="true"
-          appendTo="body"
-          styleClass="sidebar-settings-menu"
-        />
+        </div>
       }
       <button class="nav-item logout-btn" [class.collapsed]="collapsed()" (click)="auth.logout()">
         <i class="pi pi-sign-out"></i>

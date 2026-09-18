@@ -46,6 +46,9 @@
     dataKey="id"
     [(selection)]="selectedVehicles"
     selectionMode="multiple"
+    sortMode="single"
+    sortField="updated_at"
+    [sortOrder]="-1"
   >
     <ng-template pTemplate="header">
       <tr>
@@ -54,7 +57,12 @@
             <p-tableHeaderCheckbox />
           </th>
         }
-        <th>Vehículo</th>
+        <th pSortableColumn="name" title="Ordenar por nombre">
+          <span class="sortable-header">
+            Vehículo
+            <p-sortIcon field="name" />
+          </span>
+        </th>
         <th style="width:80px">Asientos</th>
         <th style="width:80px">M. Bodega</th>
         <th style="width:90px">M. Mano</th>
@@ -63,6 +71,12 @@
           <th>Precio diario (<span style="color: darkred">Pico</span>/<span style="color: darkorange">Alta</span>/<span style="color: darkgreen">Baja</span>)</th>
           <th>Precio semanal (<span style="color: darkred">Pico</span>/<span style="color: darkorange">Alta</span>/<span style="color: darkgreen">Baja</span>)</th>
         }
+        <th pSortableColumn="updated_at" title="Ordenar por última actualización" style="width: 9rem">
+          <span class="sortable-header">
+            Actualizado
+            <p-sortIcon field="updated_at" />
+          </span>
+        </th>
         @if (showActionsColumn()) {
           <th style="width:120px">Acciones</th>
         }
@@ -119,6 +133,7 @@
               </div>
             </td>
             @if (year === getSeasonYears()[0]) {
+              <td [attr.rowspan]="getSeasonYears().length">{{ v.updated_at | date:'dd/MM/yyyy' }}</td>
               <td [attr.rowspan]="getSeasonYears().length" data-row-action>
                 <div class="flex gap-1">
                   @if (canManageVehicles()) {
@@ -143,6 +158,7 @@
           <td class="text-center">{{ v.seats }}</td>
           <td class="text-center">{{ v.bag }}</td>
           <td class="text-center">{{ v.carryon_bag }}</td>
+          <td>{{ v.updated_at | date:'dd/MM/yyyy' }}</td>
           @if (canEditProviderEmail()) {
             <td>
               <p-button

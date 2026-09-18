@@ -46,6 +46,9 @@
     dataKey="id"
     [(selection)]="selectedHotels"
     selectionMode="multiple"
+    sortMode="single"
+    sortField="updated_at"
+    [sortOrder]="-1"
   >
     <ng-template pTemplate="header">
       <tr>
@@ -54,11 +57,22 @@
             <p-tableHeaderCheckbox />
           </th>
         }
-        <th>Hotel</th>
+        <th pSortableColumn="name" title="Ordenar por nombre">
+          <span class="sortable-header">
+            Hotel
+            <p-sortIcon field="name" />
+          </span>
+        </th>
         <th style="width:120px">Provincia</th>
         @if (canManageHotels()) {
           <th style="width:100px">Comisión</th>
         }
+        <th pSortableColumn="updated_at" title="Ordenar por última actualización" style="width: 9rem">
+          <span class="sortable-header">
+            Actualizado
+            <p-sortIcon field="updated_at" />
+          </span>
+        </th>
         @if (showActionsColumn()) {
           <th style="width:110px">Acciones</th>
         }
@@ -89,6 +103,7 @@
         @if (canManageHotels()) {
           <td>{{ h.commission | number:'1.2-2' }}</td>
         }
+        <td>{{ h.updated_at | date:'dd/MM/yyyy' }}</td>
         @if (showActionsColumn()) {
           <td>
             <div class="flex gap-1" (click)="$event.stopPropagation()">
@@ -115,7 +130,7 @@
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td [attr.colspan]="(canManageHotels() ? 4 : 2) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay hoteles registrados</td></tr>
+      <tr><td [attr.colspan]="(canManageHotels() ? 5 : 3) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay hoteles registrados</td></tr>
     </ng-template>
   </p-table>
 </div>

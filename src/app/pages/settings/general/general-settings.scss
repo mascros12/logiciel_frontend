@@ -1,0 +1,52 @@
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.page-header {
+  margin-bottom: 1.25rem;
+}
+
+.page-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--p-text-muted-color);
+  font-size: 0.95rem;
+}
+
+.settings-card {
+  max-width: 32rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 10px;
+  background: var(--p-content-background, #fff);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  label {
+    font-weight: 600;
+  }
+}
+
+.field-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+  line-height: 1.4;
+}
+
+.commission-input {
+  max-width: 12rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-start;
+}

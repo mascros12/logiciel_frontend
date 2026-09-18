@@ -37,7 +37,7 @@ import { TooltipModule } from 'primeng/tooltip';
   selector: 'app-activity-list',
   standalone: true,
   imports: [
-    DecimalPipe, ReactiveFormsModule, FormsModule,
+    DatePipe, DecimalPipe, ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TagModule, SelectModule,

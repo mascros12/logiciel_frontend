@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -45,7 +45,7 @@ import { TooltipModule } from 'primeng/tooltip';
   selector: 'app-vehicle-list',
   standalone: true,
   imports: [
-    ReactiveFormsModule, FormsModule,
+    DatePipe, ReactiveFormsModule, FormsModule,
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
@@ -501,8 +501,8 @@ export class VehicleList implements OnInit {
   }
 
   emptyTableColspan(): number {
-    if (this.canManageVehicles()) return 9;
-    return 4 + (this.canEditProviderEmail() ? 1 : 0);
+    if (this.canManageVehicles()) return 10;
+    return 5 + (this.canEditProviderEmail() ? 1 : 0);
   }
 
   private filterBySearch<T>(items: T[], term: string): T[] {

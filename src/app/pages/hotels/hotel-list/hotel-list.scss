@@ -3,6 +3,12 @@
   font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
+.sortable-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
 .quotation-search {
   width: min(100%, 360px);
   position: relative;

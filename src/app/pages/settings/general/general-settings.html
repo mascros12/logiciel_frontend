@@ -1,0 +1,39 @@
+<p-toast />
+
+<div class="page-container">
+  <div class="page-header">
+    <h2 class="page-title">Configuración general</h2>
+    <p class="page-subtitle">
+      Parámetros globales de la aplicación. Solo administradores pueden modificarlos.
+    </p>
+  </div>
+
+  <form [formGroup]="form" class="settings-card" (ngSubmit)="submit()">
+    <div class="field">
+      <label for="default_quotation_commission">Comisión default de cotizaciones *</label>
+      <p class="field-hint">
+        Multiplicador aplicado al crear nuevas cotizaciones (ej. 1.92 = 92% de margen).
+        Las cotizaciones existentes no se modifican.
+      </p>
+      <p-inputNumber
+        inputId="default_quotation_commission"
+        formControlName="default_quotation_commission"
+        [min]="1"
+        [minFractionDigits]="2"
+        [maxFractionDigits]="4"
+        [disabled]="loading()"
+        styleClass="w-full commission-input"
+      />
+    </div>
+
+    <div class="actions">
+      <p-button
+        type="submit"
+        label="Guardar"
+        icon="pi pi-check"
+        [loading]="saving()"
+        [disabled]="loading() || form.invalid || form.pristine"
+      />
+    </div>
+  </form>
+</div>

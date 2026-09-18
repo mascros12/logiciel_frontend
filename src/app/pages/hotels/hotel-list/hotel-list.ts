@@ -17,7 +17,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
 import { Hotel, HotelCategory } from '../../../core/models/hotel.model';
 import { FormsModule } from '@angular/forms';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
 import {
@@ -42,7 +42,7 @@ import { ProviderReservationEmailDialogComponent } from '../../../shared/compone
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, SelectModule, TagModule, TooltipModule,
-    DecimalPipe, RichTextPipe, ProviderReservationEmailDialogComponent,
+    DatePipe, DecimalPipe, RichTextPipe, ProviderReservationEmailDialogComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-list.html',

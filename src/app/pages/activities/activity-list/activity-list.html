@@ -46,6 +46,9 @@
     dataKey="id"
     [(selection)]="selectedActivities"
     selectionMode="multiple"
+    sortMode="single"
+    sortField="updated_at"
+    [sortOrder]="-1"
   >
   <ng-template pTemplate="header">
     <tr>
@@ -54,12 +57,23 @@
           <p-tableHeaderCheckbox />
         </th>
       }
-      <th>Actividad</th>
+      <th pSortableColumn="name" title="Ordenar por nombre">
+        <span class="sortable-header">
+          Actividad
+          <p-sortIcon field="name" />
+        </span>
+      </th>
       @if (canManageActivities()) {
         <th style="width: 110px;">Precio Adulto</th>
         <th style="width: 110px;">Precio Niño</th>
         <th style="width: 90px;">Comisión</th>
       }
+      <th pSortableColumn="updated_at" title="Ordenar por última actualización" style="width: 9rem">
+        <span class="sortable-header">
+          Actualizado
+          <p-sortIcon field="updated_at" />
+        </span>
+      </th>
       @if (showActionsColumn()) {
         <th style="width: 100px;">Acciones</th>
       }
@@ -90,6 +104,7 @@
         </td>
         <td>{{ a.commission | number:'1.2-2' }}</td>
       }
+      <td>{{ a.updated_at | date:'dd/MM/yyyy' }}</td>
       @if (showActionsColumn()) {
         <td>
           <div class="flex gap-2">
@@ -116,7 +131,7 @@
 
   <ng-template pTemplate="emptymessage">
     <tr>
-      <td [attr.colspan]="(canManageActivities() ? 5 : 1) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay actividades registradas</td>
+      <td [attr.colspan]="(canManageActivities() ? 6 : 2) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay actividades registradas</td>
     </tr>
   </ng-template>
 </p-table>

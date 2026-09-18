@@ -81,6 +81,14 @@ export const routes: Routes = [
             .then(m => m.UserList)
       },
       {
+        path: 'configuraciones/generales',
+        canActivate: [authGuard],
+        data: { roles: ['admin'] },
+        loadComponent: () =>
+          import('./pages/settings/general/general-settings')
+            .then(m => m.GeneralSettings)
+      },
+      {
         path: 'configuraciones/zonas',
         canActivate: [authGuard],
         data: { roles: ['admin'] },

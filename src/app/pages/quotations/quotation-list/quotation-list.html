@@ -98,7 +98,12 @@
             <p-sortIcon field="name" />
           </span>
         </th>
-        <th style="width: 11rem">Viaje</th>
+        <th pSortableColumn="from_date" title="Ordenar por fecha de inicio del viaje" style="width: 11rem">
+          <span class="sortable-header">
+            Inicio viaje
+            <p-sortIcon field="from_date" />
+          </span>
+        </th>
         <th style="width: 7rem">Versión</th>
         <th pSortableColumn="created_by_name" title="Ordenar por creador">
           <span class="sortable-header">

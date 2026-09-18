@@ -34,6 +34,7 @@ import { HotelService } from '../../../core/services/hotel.service';
 import { ActivityService } from '../../../core/services/activity.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ContactService } from '../../../core/services/contact.service';
+import { AppSettingsService } from '../../../core/services/app-settings.service';
 import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import {
   QuotationFull, QuotationVersion, QuotationLine,
@@ -552,6 +553,7 @@ export class QuotationDetail implements OnInit {
     private activityService: ActivityService,
     private vehicleService: VehicleService,
     private contactService: ContactService,
+    private settingsService: AppSettingsService,
   ) {
     this.vehicleForm = this.fb.group({
       vehicle:    [null, Validators.required],
@@ -595,7 +597,7 @@ export class QuotationDetail implements OnInit {
       departure_time: [''],
       flight_number_arrival: [''],
       flight_number_departure: [''],
-      commission: [1.92],
+      commission: [this.settingsService.defaultQuotationCommission()],
       shared: [false],
       source: [null],
       budget: [null],
@@ -1602,7 +1604,7 @@ export class QuotationDetail implements OnInit {
       departure_time: this.formatTime(q.departure_time) || '',
       flight_number_arrival: q.flight_number_arrival ?? '',
       flight_number_departure: q.flight_number_departure ?? '',
-      commission: q.commission ?? 1.92,
+      commission: q.commission ?? this.settingsService.defaultQuotationCommission(),
       shared: q.shared ?? false,
       source: q.contact_source ?? null,
       budget: q.contact_budget ?? null,

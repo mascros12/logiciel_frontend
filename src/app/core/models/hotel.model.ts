@@ -39,6 +39,7 @@ export interface RoomSeason {
     reservation_email?: string | null;
     rooms: Room[];
     created_at: string;
+    updated_at: string;
   }
   
   export interface HotelListResponse {

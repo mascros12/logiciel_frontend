@@ -55,6 +55,7 @@ export interface VehicleSeason {
     reservation_email?: string | null;
     seasons: VehicleSeason[];
     created_at: string;
+    updated_at: string;
   }
   
   export interface VehicleListResponse {
