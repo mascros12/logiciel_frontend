@@ -30,6 +30,10 @@ import {
   readListStateFromRoute,
 } from '../../../core/utils/list-url-state';
 import { canEditProviderReservationEmail } from '../../../core/utils/catalog-provider-email';
+import {
+  downloadCatalogExcel,
+  stripRichTextMarkers,
+} from '../../../core/utils/catalog-excel-export';
 import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -333,6 +337,25 @@ export class ActivityList implements OnInit {
   canManageActivities(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  /** Solo rol admin (no admin_proveedores). */
+  isAdmin(): boolean {
+    return this.auth.currentUser()?.role === 'admin';
+  }
+
+  exportExcel(): void {
+    if (!this.isAdmin()) return;
+    downloadCatalogExcel({
+      filename: 'actividades',
+      sheetName: 'Actividades',
+      rows: this.activities(),
+      columns: [
+        { header: 'Nombre', value: (a) => stripRichTextMarkers(a.name) },
+        // Añadir más columnas aquí, p. ej.:
+        // { header: 'Nombre ES', value: (a) => a.name_es ?? '' },
+      ],
+    });
   }
 
   canEditProviderEmail(): boolean {

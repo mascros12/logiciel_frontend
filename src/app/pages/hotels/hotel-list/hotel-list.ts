@@ -32,6 +32,10 @@ import {
   readListStateFromRoute,
 } from '../../../core/utils/list-url-state';
 import { canEditProviderReservationEmail } from '../../../core/utils/catalog-provider-email';
+import {
+  downloadCatalogExcel,
+  stripRichTextMarkers,
+} from '../../../core/utils/catalog-excel-export';
 import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
 
 @Component({
@@ -284,6 +288,25 @@ export class HotelList implements OnInit {
   canManageHotels(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  /** Solo rol admin (no admin_proveedores). */
+  isAdmin(): boolean {
+    return this.auth.currentUser()?.role === 'admin';
+  }
+
+  exportExcel(): void {
+    if (!this.isAdmin()) return;
+    downloadCatalogExcel({
+      filename: 'hoteles',
+      sheetName: 'Hoteles',
+      rows: this.hotels(),
+      columns: [
+        { header: 'Nombre', value: (h) => stripRichTextMarkers(h.name) },
+        // Añadir más columnas aquí, p. ej.:
+        // { header: 'Provincia', value: (h) => h.province ?? '' },
+      ],
+    });
   }
 
   canEditProviderEmail(): boolean {

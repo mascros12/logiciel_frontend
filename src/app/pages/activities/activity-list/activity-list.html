@@ -18,6 +18,18 @@
           (ngModelChange)="onSearchChange()"
         />
       </span>
+      @if (isAdmin()) {
+        <p-button
+          label="Excel"
+          icon="pi pi-file-excel"
+          severity="success"
+          [outlined]="true"
+          [disabled]="!activities().length"
+          pTooltip="Descargar nombres (solo admin)"
+          tooltipPosition="bottom"
+          (onClick)="exportExcel()"
+        />
+      }
       @if (canManageActivities()) {
         <p-button
           label="Eliminar seleccionados"

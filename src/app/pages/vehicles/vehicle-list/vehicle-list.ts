@@ -38,6 +38,10 @@ import {
   readListStateFromRoute,
 } from '../../../core/utils/list-url-state';
 import { canEditProviderReservationEmail } from '../../../core/utils/catalog-provider-email';
+import {
+  downloadCatalogExcel,
+  stripRichTextMarkers,
+} from '../../../core/utils/catalog-excel-export';
 import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -453,6 +457,25 @@ export class VehicleList implements OnInit {
   canManageVehicles(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'admin_proveedores';
+  }
+
+  /** Solo rol admin (no admin_proveedores). */
+  isAdmin(): boolean {
+    return this.auth.currentUser()?.role === 'admin';
+  }
+
+  exportExcel(): void {
+    if (!this.isAdmin()) return;
+    downloadCatalogExcel({
+      filename: 'vehiculos',
+      sheetName: 'Vehiculos',
+      rows: this.vehicles(),
+      columns: [
+        { header: 'Nombre', value: (v) => stripRichTextMarkers(v.name) },
+        // Añadir más columnas aquí, p. ej.:
+        // { header: 'Marca', value: (v) => v.brand ?? '' },
+      ],
+    });
   }
 
   canEditProviderEmail(): boolean {
