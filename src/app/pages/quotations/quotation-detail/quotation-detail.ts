@@ -440,6 +440,7 @@ export class QuotationDetail implements OnInit {
   ];
 
   readonly fichaRoomTypeOptions = [
+    { label: 'Single', value: 'single' as FichaRoomType },
     { label: 'Doble', value: 'double' as FichaRoomType },
     { label: 'Triple', value: 'triple' as FichaRoomType },
     { label: 'Cuádruple', value: 'quadruple' as FichaRoomType },
@@ -3496,7 +3497,7 @@ export class QuotationDetail implements OnInit {
     const o = this.asRecord(raw);
     const rt = String(o['room_type'] || 'double') as FichaRoomType;
     const qty = Math.min(50, Math.max(1, Math.floor(Number(o['quantity']) || 1)));
-    const allowed: FichaRoomType[] = ['double', 'triple', 'quadruple', 'quintuple', 'mixed'];
+    const allowed: FichaRoomType[] = ['single', 'double', 'triple', 'quadruple', 'quintuple', 'mixed'];
     return {
       room_type: allowed.includes(rt) ? rt : 'double',
       quantity: qty,
@@ -3719,6 +3720,7 @@ export class QuotationDetail implements OnInit {
     const rows = this.fichaRoomRows();
     if (!rows.length) return [];
     const labels: Record<FichaRoomType, string> = {
+      single: 'single',
       double: 'double',
       triple: 'triple',
       quadruple: 'quadruple',

@@ -65,7 +65,7 @@ export interface QuotationVersion {
 
 export type FichaMemberRole = 'child' | 'adult';
 export type FichaAdultCategory = 'young' | 'regular' | 'senior';
-export type FichaRoomType = 'double' | 'triple' | 'quadruple' | 'quintuple' | 'mixed';
+export type FichaRoomType = 'single' | 'double' | 'triple' | 'quadruple' | 'quintuple' | 'mixed';
 
 /** Fila UI / API para composición familiar (Ficha AA) */
 export interface FichaFamilyMemberRow {
