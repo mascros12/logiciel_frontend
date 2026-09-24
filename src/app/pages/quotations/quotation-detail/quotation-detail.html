@@ -1093,6 +1093,16 @@
                     [loading]="downloadingFichaPdf()"
                     (onClick)="downloadFichaAAPdf()"
                   />
+                  @if (canDeleteFileAA()) {
+                    <p-button
+                      label="Eliminar Ficha AA"
+                      icon="pi pi-trash"
+                      severity="danger"
+                      [outlined]="true"
+                      [loading]="saving()"
+                      (onClick)="confirmDeleteFileAA()"
+                    />
+                  }
                 }
               </div>
             } @else {

@@ -279,6 +279,11 @@ export class QuotationService {
     return this.http.delete<void>(`${this.url}/details/${detailId}`);
   }
 
+  /** Archiva la Ficha AA completa (soft-delete). */
+  deleteFileAA(fileId: string) {
+    return this.http.delete<void>(`${this.url}/file-aa/${fileId}`);
+  }
+
   /** Restaura una fila marcada en rojo (sustitución / baja) a estado normal. */
   restoreFileAADetail(detailId: string) {
     return this.http.post<FileAADetailRow>(`${this.url}/details/${detailId}/restore`, {});

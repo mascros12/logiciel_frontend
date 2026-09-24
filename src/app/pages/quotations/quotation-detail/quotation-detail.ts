@@ -246,6 +246,7 @@ export class QuotationDetail implements OnInit {
   loadingSummary = signal(false);
   isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
   isOperaciones = computed(() => this.auth.currentUser()?.role === 'operaciones');
+  canDeleteFileAA = computed(() => this.isAdmin() || this.isOperaciones());
   /** Al salir de Ficha AA hacia Agenda/Cotización: elegir versión (admin y operaciones). */
   canPickVersionWhenLeavingFicha = computed(() => this.isAdmin() || this.isOperaciones());
   /** Editar y guardar `file_aa_name` desde la Ficha AA (catálogo + fila). */
@@ -7080,6 +7081,50 @@ export class QuotationDetail implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: typeof msg === 'string' ? msg : 'Error al generar Ficha AA',
+        });
+      },
+    });
+  }
+
+  confirmDeleteFileAA(): void {
+    if (!this.canDeleteFileAA() || !this.fichaFileAA()) return;
+    this.confirmationService.confirm({
+      message:
+        '¿Eliminar esta Ficha AA? Se archivará y podrá generar una nueva desde la configuración.',
+      header: 'Eliminar Ficha AA',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.deleteFileAA(),
+    });
+  }
+
+  private deleteFileAA(): void {
+    const q = this.quotation();
+    const ficha = this.fichaFileAA();
+    if (!q || !ficha || !this.canDeleteFileAA()) return;
+    this.saving.set(true);
+    this.quotationService.deleteFileAA(ficha.id).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.clearAllVehicleFichaObsDrafts();
+        this.fichaFileAA.set(null);
+        this.fichaVisibleDetailsList.set([]);
+        this.resetChecklistDraft();
+        this.hydrateFichaFreeTextDrafts(null);
+        this.fichaAATab.set('config');
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Ficha AA eliminada',
+          detail: 'Puede generar una nueva cuando esté lista.',
+        });
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: err.error?.detail ?? 'No se pudo eliminar la Ficha AA',
         });
       },
     });
