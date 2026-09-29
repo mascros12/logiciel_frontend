@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
 import { Subject, of } from 'rxjs';
 import { catchError, debounceTime, finalize, map, switchMap } from 'rxjs/operators';
 import { ProductContentService, httpErrorText } from '../../../core/services/product-content.service';
@@ -15,7 +17,9 @@ import {
 import {
   categoryLabel,
   contentStatusLabel,
+  enrichmentStatusLabel,
   localesLabel,
+  missingFieldsLabel,
   provinceLabel,
 } from '../../../core/utils/product-content-labels';
 
@@ -27,6 +31,9 @@ interface ContentListEntry {
   has_content: boolean;
   locales: string[];
   pending_review: boolean;
+  catalog_complete: boolean;
+  missing_fields: string[];
+  enrichment_status: string | null;
   province: string | null;
   category: string | null;
   name_es: string | null;
@@ -37,7 +44,7 @@ interface ContentListEntry {
 @Component({
   selector: 'app-content-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, TableModule, InputTextModule],
+  imports: [FormsModule, RouterLink, TableModule, InputTextModule, SelectModule, TooltipModule],
   templateUrl: './content-list.html',
   styleUrl: './content-list.scss',
 })
@@ -54,6 +61,13 @@ export class ContentList implements OnInit {
   readonly first = signal((this.readPage() - 1) * this.rows());
   readonly query = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   readonly queryDraft = signal(this.query());
+  readonly catalogStatus = signal(this.route.snapshot.queryParamMap.get('catalog') ?? 'all');
+  readonly missingField = signal(this.route.snapshot.queryParamMap.get('missing') ?? 'all');
+  readonly catalogOptions = [
+    { label: 'Todos', value: 'all' },
+    { label: 'Datos completos', value: 'complete' },
+    { label: 'Datos incompletos', value: 'incomplete' },
+  ];
   readonly items = signal<ContentListEntry[]>([]);
   readonly total = signal(0);
   readonly loading = signal(false);
@@ -110,6 +124,34 @@ export class ContentList implements OnInit {
     this.search$.next(value);
   }
 
+  onCatalogStatus(value: string): void {
+    this.catalogStatus.set(value || 'all');
+    if (value === 'complete') this.missingField.set('all');
+    this.first.set(0);
+    this.lastKey = '';
+    this.schedule();
+  }
+
+  onMissingField(value: string): void {
+    this.missingField.set(value || 'all');
+    if (value && value !== 'all') this.catalogStatus.set('incomplete');
+    this.first.set(0);
+    this.lastKey = '';
+    this.schedule();
+  }
+
+  missingOptions(): { label: string; value: string }[] {
+    const specific = {
+      hotels: [
+        { label: 'Sin categoría', value: 'category' },
+        { label: 'Sin provincia', value: 'province' },
+      ],
+      activities: [{ label: 'Sin categoría', value: 'category' }],
+      vehicles: [{ label: 'Sin categoría', value: 'category' }],
+    }[this.kind];
+    return [{ label: 'Cualquier dato', value: 'all' }, ...specific];
+  }
+
   onLazy(event: TableLazyLoadEvent): void {
     this.first.set(event.first ?? 0);
     this.rows.set(event.rows ?? 20);
@@ -148,13 +190,25 @@ export class ContentList implements OnInit {
   }
 
   columnCount(): number {
-    if (this.kind === 'hotels') return 6;
-    return 7;
+    if (this.kind === 'hotels') return 7;
+    return 8;
+  }
+
+  quality(row: ContentListEntry): string {
+    return row.catalog_complete ? 'Datos completos' : 'Datos incompletos';
+  }
+
+  missingTip(row: ContentListEntry): string {
+    return `Falta: ${missingFieldsLabel(row.missing_fields)}`;
+  }
+
+  enrichment(row: ContentListEntry): string {
+    return enrichmentStatusLabel(row.enrichment_status);
   }
 
   private schedule(): void {
     const page = Math.floor(this.first() / this.rows()) + 1;
-    const key = `${this.kind}|${this.query()}|${page}|${this.rows()}`;
+    const key = `${this.kind}|${this.query()}|${this.catalogStatus()}|${this.missingField()}|${page}|${this.rows()}`;
     this.syncUrl(page);
     if (key === this.lastKey) return;
     this.lastKey = key;
@@ -165,17 +219,19 @@ export class ContentList implements OnInit {
     const page = Math.floor(this.first() / this.rows()) + 1;
     const size = this.rows();
     const q = this.query();
+    const catalog = this.catalogStatus();
+    const missing = this.missingField();
     if (this.kind === 'hotels') {
-      return this.service.listHotels(page, size, q).pipe(
+      return this.service.listHotels(page, size, q, catalog, missing).pipe(
         map((res) => ({ items: res.items.map((item) => this.hotelEntry(item)), total: res.total })),
       );
     }
     if (this.kind === 'activities') {
-      return this.service.listActivities(page, size, q).pipe(
+      return this.service.listActivities(page, size, q, catalog, missing).pipe(
         map((res) => ({ items: res.items.map((item) => this.activityEntry(item)), total: res.total })),
       );
     }
-    return this.service.listVehicles(page, size, q).pipe(
+    return this.service.listVehicles(page, size, q, catalog, missing).pipe(
       map((res) => ({ items: res.items.map((item) => this.vehicleEntry(item)), total: res.total })),
     );
   }
@@ -187,6 +243,9 @@ export class ContentList implements OnInit {
       has_content: item.has_content,
       locales: item.locales,
       pending_review: item.pending_review,
+      catalog_complete: item.catalog_complete,
+      missing_fields: item.missing_fields,
+      enrichment_status: item.enrichment_status,
       province: item.province,
       category: item.category,
       name_es: null,
@@ -202,6 +261,9 @@ export class ContentList implements OnInit {
       has_content: item.has_content,
       locales: item.locales,
       pending_review: item.pending_review,
+      catalog_complete: item.catalog_complete,
+      missing_fields: item.missing_fields,
+      enrichment_status: item.enrichment_status,
       province: item.province,
       category: item.category,
       name_es: item.name_es,
@@ -217,6 +279,9 @@ export class ContentList implements OnInit {
       has_content: item.has_content,
       locales: item.locales,
       pending_review: item.pending_review,
+      catalog_complete: item.catalog_complete,
+      missing_fields: item.missing_fields,
+      enrichment_status: item.enrichment_status,
       province: null,
       category: item.category,
       name_es: null,
@@ -231,6 +296,8 @@ export class ContentList implements OnInit {
       replaceUrl: true,
       queryParams: {
         q: this.query() || null,
+        catalog: this.catalogStatus() !== 'all' ? this.catalogStatus() : null,
+        missing: this.missingField() !== 'all' ? this.missingField() : null,
         page: page > 1 ? page : null,
         rows: this.rows() !== 20 ? this.rows() : null,
       },

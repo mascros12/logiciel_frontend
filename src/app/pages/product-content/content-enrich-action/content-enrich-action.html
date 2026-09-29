@@ -1,0 +1,18 @@
+<p-toast />
+<div class="enrich-action">
+  <p-button
+    type="button"
+    label="Enriquecer con IA"
+    icon="pi pi-sparkles"
+    [outlined]="true"
+    [loading]="busy()"
+    [disabled]="busy() || active()"
+    (onClick)="enrich()"
+  />
+  @if (label(); as text) {
+    <p class="state-line" role="status">{{ text }}</p>
+  }
+  @if (active()) {
+    <button type="button" class="refresh-btn" (click)="refresh.emit()">Actualizar estado</button>
+  }
+</div>

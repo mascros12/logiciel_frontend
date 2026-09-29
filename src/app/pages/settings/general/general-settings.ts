@@ -3,27 +3,41 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { AppSettings } from '../../../core/models/app-settings.model';
+import { BulkPreview } from '../../../core/models/product-content.model';
 import { AppSettingsService } from '../../../core/services/app-settings.service';
+import { ProductContentService } from '../../../core/services/product-content.service';
 
 @Component({
   selector: 'app-general-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, ButtonModule, InputNumberModule, ToastModule],
-  providers: [MessageService],
+  imports: [
+    ReactiveFormsModule,
+    ButtonModule,
+    InputNumberModule,
+    ToastModule,
+    ConfirmDialogModule,
+  ],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './general-settings.html',
   styleUrl: './general-settings.scss',
 })
 export class GeneralSettings implements OnInit {
   loading = signal(false);
   saving = signal(false);
+  enrichmentLoading = signal(false);
+  enrichmentRunning = signal(false);
+  preview = signal<BulkPreview | null>(null);
   form: FormGroup;
 
   constructor(
     private fb: FormBuilder,
     private settingsService: AppSettingsService,
+    private contentService: ProductContentService,
     private messageService: MessageService,
+    private confirmation: ConfirmationService,
   ) {
     this.form = this.fb.group({
       default_quotation_commission: [
@@ -35,6 +49,7 @@ export class GeneralSettings implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.loadPreview();
   }
 
   load(): void {
@@ -51,6 +66,64 @@ export class GeneralSettings implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'No se pudo cargar la configuración',
+        });
+      },
+    });
+  }
+
+  loadPreview(): void {
+    this.enrichmentLoading.set(true);
+    this.contentService.previewEnrichment().subscribe({
+      next: (preview) => {
+        this.preview.set(preview);
+        this.enrichmentLoading.set(false);
+      },
+      error: () => {
+        this.enrichmentLoading.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se pudo calcular el enriquecimiento',
+        });
+      },
+    });
+  }
+
+  confirmEnrichment(): void {
+    const total = this.preview()?.eligible.total ?? 0;
+    if (!total) return;
+    this.confirmation.confirm({
+      header: 'Enriquecimiento general',
+      message:
+        `Se crearán ${total} tareas de enriquecimiento. ` +
+        'Cada tarea puede consumir servicios externos.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Ejecutar',
+      rejectLabel: 'Cancelar',
+      accept: () => this.executeEnrichment(),
+    });
+  }
+
+  private executeEnrichment(): void {
+    this.enrichmentRunning.set(true);
+    this.contentService.runEnrichment().subscribe({
+      next: (result) => {
+        this.enrichmentRunning.set(false);
+        const skipped =
+          result.skipped_active +
+          result.skipped_pending_review +
+          result.skipped_already_enriched;
+        this.messageService.add({
+          severity: 'success',
+          summary: `Se agregaron ${result.queued} productos a la cola.`,
+          detail: skipped ? `Omitidos: ${skipped}.` : undefined,
+        });
+        this.loadPreview();
+      },
+      error: () => {
+        this.enrichmentRunning.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se pudo encolar el enriquecimiento',
         });
       },
     });

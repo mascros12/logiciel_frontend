@@ -8,17 +8,19 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { ProductContentService, httpErrorText } from '../../../core/services/product-content.service';
 import { RoomContentDetail } from '../../../core/models/product-content.model';
-import { CAPACITY_OPTIONS } from '../../../core/utils/product-content-labels';
+import { CAPACITY_OPTIONS, missingFieldsLabel, roomCatalog, visibleEnrichmentStatus } from '../../../core/utils/product-content-labels';
 import {
   ClassificationDraft,
   buildClassificationWrite,
 } from '../../../core/utils/product-content-payload';
 import { ContentEditor } from '../content-editor/content-editor';
+import { ContentEnrichAction } from '../content-enrich-action/content-enrich-action';
 
 @Component({
   selector: 'app-room-content-page',
@@ -31,8 +33,10 @@ import { ContentEditor } from '../content-editor/content-editor';
     SelectModule,
     SkeletonModule,
     ToastModule,
+    TooltipModule,
     RichTextPipe,
     ContentEditor,
+    ContentEnrichAction,
   ],
   providers: [MessageService],
   templateUrl: './room-content-page.html',
@@ -95,8 +99,15 @@ export class RoomContentPage implements OnInit {
     this.saving.set(true);
     this.service.saveRoomClassification(room.id, body).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (view) => {
+        const quality = roomCatalog(view.capacity_type, view.room_class);
         this.room.update((current) => current
-          ? { ...current, capacity_type: view.capacity_type, room_class: view.room_class }
+          ? {
+              ...current,
+              capacity_type: view.capacity_type,
+              room_class: view.room_class,
+              catalog_complete: quality.catalog_complete,
+              missing_fields: quality.missing_fields,
+            }
           : current);
         this.setClassification(view.capacity_type ?? 'unknown', view.room_class ?? '');
         this.saving.set(false);
@@ -110,6 +121,24 @@ export class RoomContentPage implements OnInit {
           detail: httpErrorText(err),
         });
       },
+    });
+  }
+
+  enrichmentStatus(item: RoomContentDetail): string | null {
+    return visibleEnrichmentStatus(item);
+  }
+
+  missingTip(fields: string[]): string {
+    return `Falta: ${missingFieldsLabel(fields)}`;
+  }
+
+  refresh(): void {
+    const current = this.room();
+    if (!current) return;
+    this.service.getRoom(current.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((fresh) => {
+      if (!fresh) return;
+      this.room.set({ ...current, ...fresh, content: current.content });
+      this.setClassification(fresh.capacity_type ?? 'unknown', fresh.room_class ?? '');
     });
   }
 

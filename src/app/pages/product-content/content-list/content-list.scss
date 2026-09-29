@@ -30,6 +30,18 @@
   }
 }
 .text-center { text-align: center; }
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.quality-note {
+  color: #9a6700;
+  cursor: help;
+}
+:host ::ng-deep .row-incomplete > td {
+  background: #fff8ef;
+}
 .pending-note {
   display: block;
   margin-top: 0.2rem;

@@ -1,4 +1,5 @@
 <p-toast />
+<p-confirmDialog />
 
 <div class="page-container">
   <div class="page-header">
@@ -36,4 +37,42 @@
       />
     </div>
   </form>
+
+  <section class="settings-card enrichment-card">
+    <h3>Enriquecimiento de contenido</h3>
+    <p class="field-hint">
+      Crea tareas para productos que todavía no tienen una investigación en cola,
+      en proceso o pendiente de revisión. No modifica el contenido oficial ni los datos del catálogo.
+    </p>
+    @if (enrichmentLoading()) {
+      <p>Calculando productos…</p>
+    } @else if (preview(); as item) {
+      <p class="eligible-total">Productos pendientes de enriquecimiento: {{ item.eligible.total }}</p>
+      <ul class="breakdown">
+        <li>Hoteles: {{ item.eligible.hotels }}</li>
+        <li>Habitaciones: {{ item.eligible.rooms }}</li>
+        <li>Actividades: {{ item.eligible.activities }}</li>
+        <li>Vehículos: {{ item.eligible.vehicles }}</li>
+      </ul>
+    }
+    <div class="actions">
+      <p-button
+        type="button"
+        label="Ejecutar enriquecimiento general"
+        icon="pi pi-sparkles"
+        [outlined]="true"
+        [loading]="enrichmentRunning()"
+        [disabled]="enrichmentLoading() || !preview()?.eligible?.total"
+        (onClick)="confirmEnrichment()"
+      />
+      <p-button
+        type="button"
+        label="Actualizar conteo"
+        icon="pi pi-refresh"
+        [text]="true"
+        [disabled]="enrichmentLoading()"
+        (onClick)="loadPreview()"
+      />
+    </div>
+  </section>
 </div>

@@ -25,9 +25,20 @@
           @if (coordinates(item); as coords) {
             <span class="meta-item"><i class="pi pi-map"></i> {{ coords }}</span>
           }
+          @if (item.catalog_complete) {
+            <span class="meta-item">Datos completos</span>
+          } @else {
+            <span class="meta-item quality-note" [pTooltip]="missingTip(item.missing_fields)">Datos incompletos</span>
+          }
         </div>
       </div>
     </div>
+    <app-content-enrich-action
+      entityType="hotels"
+      [entityId]="item.id"
+      [status]="enrichmentStatus(item)"
+      (refresh)="refresh()"
+    />
   </header>
 
   <div class="detail-body">
@@ -36,15 +47,25 @@
       [entityId]="item.id"
       [content]="item.content"
       attributeKind="hotel"
-      [pending]="!!item.pending_run"
     />
 
     <section class="section-card">
-      <h3 class="section-title">Habitaciones</h3>
+      <div class="section-heading">
+        <h3 class="section-title">Habitaciones</h3>
+        <p-select
+          [options]="roomFilters"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="roomFilter()"
+          (ngModelChange)="roomFilter.set($event)"
+          appendTo="body"
+          ariaLabel="Filtro de habitaciones"
+        />
+      </div>
       @if (item.rooms.length === 0) {
         <p class="empty-note">Sin habitaciones registradas.</p>
       } @else {
-        <p-table [value]="item.rooms" styleClass="p-datatable-gridlines" [rowHover]="true">
+        <p-table [value]="visibleRooms(item.rooms)" styleClass="p-datatable-gridlines" [rowHover]="true">
           <ng-template pTemplate="header">
             <tr>
               <th>Habitación</th>
@@ -56,8 +77,13 @@
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-room>
-            <tr>
-              <td>{{ room.name }}</td>
+            <tr [class.row-incomplete]="!room.catalog_complete">
+              <td>
+                {{ room.name }}
+                @if (!room.catalog_complete) {
+                  <span class="quality-note" [pTooltip]="missingTip(room.missing_fields)">Datos incompletos</span>
+                }
+              </td>
               <td>{{ capacity(room.capacity_type) }}</td>
               <td>{{ room.room_class || 'Sin definir' }}</td>
               <td>{{ status(room.has_content) }}</td>

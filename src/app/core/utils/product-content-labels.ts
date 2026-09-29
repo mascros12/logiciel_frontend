@@ -116,3 +116,50 @@ export function coordinateText(
   if (!latitude || !longitude) return null;
   return `${latitude}, ${longitude}`;
 }
+
+export const MISSING_FIELD_LABELS: Record<string, string> = {
+  category: 'Categoría',
+  province: 'Provincia',
+  capacity_type: 'Tipo de capacidad',
+  room_class: 'Clase',
+};
+
+export function missingFieldsLabel(fields: readonly string[]): string {
+  return fields.map((field) => MISSING_FIELD_LABELS[field] ?? field).join(', ');
+}
+
+export function enrichmentStatusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case 'queued':
+      return 'En cola';
+    case 'running':
+      return 'Procesando';
+    case 'pending_review':
+      return 'Pendiente de revisión';
+    case 'failed':
+      return 'Error';
+    default:
+      return '';
+  }
+}
+
+export function visibleEnrichmentStatus(detail: {
+  active_run?: { status: string } | null;
+  pending_run?: { status: string } | null;
+  latest_run?: { status: string } | null;
+}): string | null {
+  if (detail.active_run) return detail.active_run.status;
+  if (detail.pending_run) return detail.pending_run.status;
+  if (detail.latest_run?.status === 'failed') return 'failed';
+  return null;
+}
+
+export function roomCatalog(
+  capacity: string | null | undefined,
+  roomClass: string | null | undefined,
+): { catalog_complete: boolean; missing_fields: string[] } {
+  const missing: string[] = [];
+  if (!capacity) missing.push('capacity_type');
+  if (!roomClass?.trim()) missing.push('room_class');
+  return { catalog_complete: missing.length === 0, missing_fields: missing };
+}

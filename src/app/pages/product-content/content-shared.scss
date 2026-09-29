@@ -34,7 +34,17 @@
   border-radius: 10px;
   background: var(--p-content-background, #fff);
 }
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  .section-title { margin: 0; }
+}
 .section-title { margin: 0 0 0.85rem; font-size: 1rem; font-weight: 600; }
+.quality-note { display: block; color: #9a6700; font-size: 0.8rem; cursor: help; }
+:host ::ng-deep .row-incomplete > td { background: #fff8ef; }
 .field { display: flex; flex-direction: column; gap: 0.4rem; }
 .field-grid {
   display: grid;

@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { ProductContentService, httpErrorText } from '../../../core/services/product-content.service';
 import {
@@ -13,16 +14,19 @@ import {
 import {
   categoryLabel,
   coordinateText,
+  missingFieldsLabel,
   provinceLabel,
+  visibleEnrichmentStatus,
 } from '../../../core/utils/product-content-labels';
 import { ContentEditor } from '../content-editor/content-editor';
+import { ContentEnrichAction } from '../content-enrich-action/content-enrich-action';
 
 type CatalogKind = 'activities' | 'vehicles';
 
 @Component({
   selector: 'app-catalog-content-page',
   standalone: true,
-  imports: [RouterLink, SkeletonModule, RichTextPipe, ContentEditor],
+  imports: [RouterLink, SkeletonModule, TooltipModule, RichTextPipe, ContentEditor, ContentEnrichAction],
   templateUrl: './catalog-content-page.html',
   styleUrls: ['../content-shared.scss'],
 })
@@ -102,5 +106,29 @@ export class CatalogContentPage implements OnInit {
 
   coordinates(latitude: string | null, longitude: string | null): string | null {
     return coordinateText(latitude, longitude);
+  }
+
+  enrichmentStatus(item: ActivityContentDetail | VehicleContentDetail): string | null {
+    return visibleEnrichmentStatus(item);
+  }
+
+  missingTip(fields: string[]): string {
+    return `Falta: ${missingFieldsLabel(fields)}`;
+  }
+
+  refresh(): void {
+    if (this.kind === 'activities') {
+      const current = this.activity();
+      if (!current) return;
+      this.service.getActivity(current.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((fresh) => {
+        if (fresh) this.activity.set({ ...current, ...fresh, content: current.content });
+      });
+      return;
+    }
+    const current = this.vehicle();
+    if (!current) return;
+    this.service.getVehicle(current.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((fresh) => {
+      if (fresh) this.vehicle.set({ ...current, ...fresh, content: current.content });
+    });
   }
 }

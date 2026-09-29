@@ -47,6 +47,9 @@ export interface ContentListFlags {
   has_content: boolean;
   locales: ContentLocaleCode[];
   pending_review: boolean;
+  catalog_complete: boolean;
+  missing_fields: string[];
+  enrichment_status: EnrichmentStatus | null;
 }
 
 export interface HotelContentListItem extends ContentListFlags {
@@ -90,6 +93,8 @@ export interface RoomContentSummary {
   room_class: string | null;
   has_content: boolean;
   locales: ContentLocaleCode[];
+  catalog_complete: boolean;
+  missing_fields: string[];
 }
 
 export interface HotelContentDetail {
@@ -103,6 +108,9 @@ export interface HotelContentDetail {
   content: ProductContentView | null;
   pending_run: EnrichmentRunSummary | null;
   latest_run: EnrichmentRunSummary | null;
+  active_run: EnrichmentRunSummary | null;
+  catalog_complete: boolean;
+  missing_fields: string[];
   rooms: RoomContentSummary[];
 }
 
@@ -116,6 +124,9 @@ export interface RoomContentDetail {
   content: ProductContentView | null;
   pending_run: EnrichmentRunSummary | null;
   latest_run: EnrichmentRunSummary | null;
+  active_run: EnrichmentRunSummary | null;
+  catalog_complete: boolean;
+  missing_fields: string[];
 }
 
 export interface RoomClassificationView {
@@ -139,6 +150,9 @@ export interface ActivityContentDetail {
   content: ProductContentView | null;
   pending_run: EnrichmentRunSummary | null;
   latest_run: EnrichmentRunSummary | null;
+  active_run: EnrichmentRunSummary | null;
+  catalog_complete: boolean;
+  missing_fields: string[];
 }
 
 export interface VehicleContentDetail {
@@ -152,6 +166,32 @@ export interface VehicleContentDetail {
   content: ProductContentView | null;
   pending_run: EnrichmentRunSummary | null;
   latest_run: EnrichmentRunSummary | null;
+  active_run: EnrichmentRunSummary | null;
+  catalog_complete: boolean;
+  missing_fields: string[];
+}
+
+export interface BulkTypeCounts {
+  hotels: number;
+  rooms: number;
+  activities: number;
+  vehicles: number;
+  total: number;
+}
+
+export interface BulkPreview {
+  mode: 'missing';
+  eligible: BulkTypeCounts;
+}
+
+export interface BulkEnqueueResponse {
+  mode: 'missing';
+  eligible: number;
+  queued: number;
+  skipped_active: number;
+  skipped_pending_review: number;
+  skipped_already_enriched: number;
+  queued_by_type: BulkTypeCounts;
 }
 
 export interface ContentLocaleWrite {

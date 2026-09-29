@@ -20,9 +20,20 @@
         <h2 [innerHTML]="item.name | richText"></h2>
         <div class="header-meta">
           <a class="meta-item" [routerLink]="['/contenido/hoteles', item.hotel_id]">{{ item.hotel_name }}</a>
+          @if (item.catalog_complete) {
+            <span class="meta-item">Datos completos</span>
+          } @else {
+            <span class="meta-item quality-note" [pTooltip]="missingTip(item.missing_fields)">Datos incompletos</span>
+          }
         </div>
       </div>
     </div>
+    <app-content-enrich-action
+      entityType="rooms"
+      [entityId]="item.id"
+      [status]="enrichmentStatus(item)"
+      (refresh)="refresh()"
+    />
   </header>
 
   <div class="detail-body">
@@ -67,7 +78,6 @@
       [entityId]="item.id"
       [content]="item.content"
       attributeKind="none"
-      [pending]="!!item.pending_run"
     />
   </div>
 }

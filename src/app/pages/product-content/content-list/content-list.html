@@ -4,6 +4,26 @@
       <h2 class="page-title">{{ heading }}</h2>
       <p class="subtitle">Contenido oficial. Sin precios.</p>
     </div>
+    <div class="filters">
+      <p-select
+        [options]="catalogOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="catalogStatus()"
+        (ngModelChange)="onCatalogStatus($event)"
+        appendTo="body"
+        ariaLabel="Completitud del catálogo"
+      />
+      <p-select
+        [options]="missingOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="missingField()"
+        (ngModelChange)="onMissingField($event)"
+        appendTo="body"
+        ariaLabel="Dato faltante"
+      />
+    </div>
     <span class="p-input-icon-left quotation-search">
       <i class="pi pi-search"></i>
       <input
@@ -51,13 +71,14 @@
           <th>Provincia</th>
         }
         <th>Categoría</th>
+        <th>Datos</th>
         <th>Contenido</th>
         <th>Idiomas</th>
         <th>Acción</th>
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-row>
-      <tr>
+      <tr [class.row-incomplete]="!row.catalog_complete">
         <td>{{ row.name }}</td>
         @if (kind === 'activities') {
           <td>{{ row.name_es || '—' }}</td>
@@ -71,9 +92,18 @@
         }
         <td>{{ category(row.category) }}</td>
         <td>
+          @if (row.catalog_complete) {
+            <span>Datos completos</span>
+          } @else {
+            <span class="quality-note" [pTooltip]="missingTip(row)" tooltipPosition="top">
+              Datos incompletos
+            </span>
+          }
+        </td>
+        <td>
           <span>{{ status(row) }}</span>
-          @if (row.pending_review) {
-            <span class="pending-note">Enrichment pendiente</span>
+          @if (enrichment(row); as enrichmentLabel) {
+            <span class="pending-note">{{ enrichmentLabel }}</span>
           }
         </td>
         <td>{{ languages(row) }}</td>

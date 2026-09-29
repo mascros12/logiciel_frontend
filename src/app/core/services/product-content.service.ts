@@ -4,6 +4,8 @@ import { apiUrl } from '../config/api.config';
 import {
   ActivityContentDetail,
   ActivityContentListResponse,
+  BulkEnqueueResponse,
+  BulkPreview,
   HotelContentDetail,
   HotelContentListResponse,
   ProductContentView,
@@ -21,9 +23,9 @@ export class ProductContentService {
   private readonly http = inject(HttpClient);
   private readonly url = apiUrl('/product-content');
 
-  listHotels(page: number, pageSize: number, q: string) {
+  listHotels(page: number, pageSize: number, q: string, catalogStatus: string | null, missingField: string | null) {
     return this.http.get<HotelContentListResponse>(`${this.url}/hotels`, {
-      params: this.listParams(page, pageSize, q),
+      params: this.listParams(page, pageSize, q, catalogStatus, missingField),
     });
   }
 
@@ -31,9 +33,9 @@ export class ProductContentService {
     return this.http.get<HotelContentDetail>(`${this.url}/hotels/${id}`);
   }
 
-  listActivities(page: number, pageSize: number, q: string) {
+  listActivities(page: number, pageSize: number, q: string, catalogStatus: string | null, missingField: string | null) {
     return this.http.get<ActivityContentListResponse>(`${this.url}/activities`, {
-      params: this.listParams(page, pageSize, q),
+      params: this.listParams(page, pageSize, q, catalogStatus, missingField),
     });
   }
 
@@ -41,9 +43,9 @@ export class ProductContentService {
     return this.http.get<ActivityContentDetail>(`${this.url}/activities/${id}`);
   }
 
-  listVehicles(page: number, pageSize: number, q: string) {
+  listVehicles(page: number, pageSize: number, q: string, catalogStatus: string | null, missingField: string | null) {
     return this.http.get<VehicleContentListResponse>(`${this.url}/vehicles`, {
-      params: this.listParams(page, pageSize, q),
+      params: this.listParams(page, pageSize, q, catalogStatus, missingField),
     });
   }
 
@@ -59,6 +61,21 @@ export class ProductContentService {
     return this.http.put<ProductContentView>(`${this.url}/${entityType}/${entityId}`, body);
   }
 
+  requestEnrichment(entityType: ProductEntityPath, entityId: string) {
+    return this.http.post<{ id: string; status: string }>(
+      `${this.url}/${entityType}/${entityId}/enrichment-runs`,
+      {},
+    );
+  }
+
+  previewEnrichment() {
+    return this.http.get<BulkPreview>(`${this.url}/enrichment-runs/bulk-preview`);
+  }
+
+  runEnrichment() {
+    return this.http.post<BulkEnqueueResponse>(`${this.url}/enrichment-runs/bulk`, {});
+  }
+
   saveRoomClassification(roomId: string, body: RoomClassificationWrite) {
     return this.http.put<RoomClassificationView>(
       `${this.url}/rooms/${roomId}/classification`,
@@ -66,10 +83,22 @@ export class ProductContentService {
     );
   }
 
-  private listParams(page: number, pageSize: number, q: string): HttpParams {
+  private listParams(
+    page: number,
+    pageSize: number,
+    q: string,
+    catalogStatus: string | null,
+    missingField: string | null,
+  ): HttpParams {
     let params = new HttpParams().set('page', page).set('page_size', pageSize);
     const term = q.trim();
     if (term) params = params.set('q', term);
+    if (catalogStatus && catalogStatus !== 'all') {
+      params = params.set('catalog_status', catalogStatus);
+    }
+    if (missingField && missingField !== 'all') {
+      params = params.set('missing_field', missingField);
+    }
     return params;
   }
 }

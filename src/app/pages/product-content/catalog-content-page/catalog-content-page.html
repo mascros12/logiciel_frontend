@@ -28,9 +28,20 @@
           @if (coordinates(item.latitude, item.longitude); as coords) {
             <span class="meta-item"><i class="pi pi-map"></i> {{ coords }}</span>
           }
+          @if (item.catalog_complete) {
+            <span class="meta-item">Datos completos</span>
+          } @else {
+            <span class="meta-item quality-note" [pTooltip]="missingTip(item.missing_fields)">Datos incompletos</span>
+          }
         </div>
       </div>
     </div>
+    <app-content-enrich-action
+      entityType="activities"
+      [entityId]="item.id"
+      [status]="enrichmentStatus(item)"
+      (refresh)="refresh()"
+    />
   </header>
   <div class="detail-body">
     <app-content-editor
@@ -38,7 +49,6 @@
       [entityId]="item.id"
       [content]="item.content"
       attributeKind="activity"
-      [pending]="!!item.pending_run"
     />
   </div>
 } @else if (vehicle(); as item) {
@@ -55,9 +65,20 @@
           <span class="meta-item">{{ item.bag }} maletas</span>
           <span class="meta-item">{{ item.carryon_bag }} de mano</span>
           <span class="meta-item"><i class="pi pi-tag"></i> {{ category('vehicle', item.category) }}</span>
+          @if (item.catalog_complete) {
+            <span class="meta-item">Datos completos</span>
+          } @else {
+            <span class="meta-item quality-note" [pTooltip]="missingTip(item.missing_fields)">Datos incompletos</span>
+          }
         </div>
       </div>
     </div>
+    <app-content-enrich-action
+      entityType="vehicles"
+      [entityId]="item.id"
+      [status]="enrichmentStatus(item)"
+      (refresh)="refresh()"
+    />
   </header>
   <div class="detail-body">
     <app-content-editor
@@ -65,7 +86,6 @@
       [entityId]="item.id"
       [content]="item.content"
       attributeKind="vehicle"
-      [pending]="!!item.pending_run"
     />
   </div>
 }
