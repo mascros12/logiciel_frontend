@@ -1,0 +1,74 @@
+@if (loading()) {
+  <div class="page-container">
+    <p-skeleton height="60px" styleClass="mb-3" />
+    <p-skeleton height="320px" />
+  </div>
+} @else if (error(); as message) {
+  <div class="error-banner" role="alert">
+    <p>{{ message }}</p>
+    <a routerLink="/contenido/hoteles">Volver a hoteles</a>
+  </div>
+} @else if (hotel(); as item) {
+  <header class="detail-header">
+    <div class="header-left">
+      <a class="back-btn" routerLink="/contenido/hoteles" aria-label="Volver a hoteles">
+        <i class="pi pi-arrow-left"></i>
+      </a>
+      <div>
+        <h2 [innerHTML]="item.name | richText"></h2>
+        <div class="header-meta">
+          <span class="meta-item"><i class="pi pi-map-marker"></i> {{ province(item.province) }}</span>
+          <span class="meta-item"><i class="pi pi-star"></i> {{ category(item.category) }}</span>
+          @if (item.address) {
+            <span class="meta-item"><i class="pi pi-home"></i> {{ item.address }}</span>
+          }
+          @if (coordinates(item); as coords) {
+            <span class="meta-item"><i class="pi pi-map"></i> {{ coords }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="detail-body">
+    <app-content-editor
+      entityType="hotels"
+      [entityId]="item.id"
+      [content]="item.content"
+      attributeKind="hotel"
+      [pending]="!!item.pending_run"
+    />
+
+    <section class="section-card">
+      <h3 class="section-title">Habitaciones</h3>
+      @if (item.rooms.length === 0) {
+        <p class="empty-note">Sin habitaciones registradas.</p>
+      } @else {
+        <p-table [value]="item.rooms" styleClass="p-datatable-gridlines" [rowHover]="true">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Habitación</th>
+              <th>Tipo de capacidad</th>
+              <th>Clase</th>
+              <th>Contenido</th>
+              <th>Idiomas</th>
+              <th>Acción</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-room>
+            <tr>
+              <td>{{ room.name }}</td>
+              <td>{{ capacity(room.capacity_type) }}</td>
+              <td>{{ room.room_class || 'Sin definir' }}</td>
+              <td>{{ status(room.has_content) }}</td>
+              <td>{{ languages(room.locales) }}</td>
+              <td>
+                <a class="edit-link" [routerLink]="['/contenido/habitaciones', room.room_id]">Editar</a>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </section>
+  </div>
+}

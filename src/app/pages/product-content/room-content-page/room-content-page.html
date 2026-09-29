@@ -1,0 +1,73 @@
+<p-toast />
+
+@if (loading()) {
+  <div class="page-container">
+    <p-skeleton height="60px" styleClass="mb-3" />
+    <p-skeleton height="320px" />
+  </div>
+} @else if (error(); as message) {
+  <div class="error-banner" role="alert">
+    <p>{{ message }}</p>
+    <a routerLink="/contenido/hoteles">Volver a hoteles</a>
+  </div>
+} @else if (room(); as item) {
+  <header class="detail-header">
+    <div class="header-left">
+      <a class="back-btn" [routerLink]="['/contenido/hoteles', item.hotel_id]" aria-label="Volver al hotel">
+        <i class="pi pi-arrow-left"></i>
+      </a>
+      <div>
+        <h2 [innerHTML]="item.name | richText"></h2>
+        <div class="header-meta">
+          <a class="meta-item" [routerLink]="['/contenido/hoteles', item.hotel_id]">{{ item.hotel_name }}</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="detail-body">
+    <section class="section-card">
+      <h3 class="section-title">Clasificación</h3>
+      <p class="field-hint">
+        El tipo de capacidad no es la ocupación máxima. La clase es un texto libre, por ejemplo Standard, Deluxe, Suite o Bungalow.
+      </p>
+      <form [formGroup]="classification" (ngSubmit)="saveClassification()">
+        <div class="field-grid">
+          <div class="field">
+            <label for="capacity_type">Tipo de capacidad</label>
+            <p-select
+              inputId="capacity_type"
+              formControlName="capacity_type"
+              [options]="capacityOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </div>
+          <div class="field">
+            <label for="room_class">Clase</label>
+            <input pInputText id="room_class" formControlName="room_class" class="w-full" maxlength="151" />
+          </div>
+        </div>
+        <div class="actions">
+          <p-button
+            type="submit"
+            label="Guardar clasificación"
+            icon="pi pi-check"
+            [loading]="saving()"
+            [disabled]="saving() || classification.invalid || !hasClassificationChanges()"
+          />
+        </div>
+      </form>
+    </section>
+
+    <app-content-editor
+      entityType="rooms"
+      [entityId]="item.id"
+      [content]="item.content"
+      attributeKind="none"
+      [pending]="!!item.pending_run"
+    />
+  </div>
+}

@@ -1,0 +1,21 @@
+.section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem 0;
+
+  a {
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    text-decoration: none;
+    color: var(--p-text-color);
+    border: 1px solid var(--p-content-border-color);
+    background: var(--p-content-background, #fff);
+  }
+
+  a.active {
+    background: var(--app-primary);
+    color: #fff;
+    border-color: var(--app-primary);
+  }
+}

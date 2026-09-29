@@ -1,0 +1,125 @@
+<p-toast />
+
+@if (ready()) {
+  <form [formGroup]="form" class="editor" (ngSubmit)="save()">
+    <section class="section-card">
+      <h3 class="section-title">Contenido</h3>
+      <p class="field-hint">
+        Cada idioma se guarda por separado. Un texto que dejes vacío se borra; un campo que no toques se conserva.
+      </p>
+      <p-tabs [value]="localeTab()" (valueChange)="onLocaleTab($event)">
+        <p-tablist>
+          <p-tab value="es">Español</p-tab>
+          <p-tab value="fr">Français</p-tab>
+        </p-tablist>
+        <p-tabpanels>
+          <p-tabpanel value="es">
+            <div formGroupName="es" class="locale-fields">
+              <div class="field">
+                <label for="short-es">Descripción corta</label>
+                <textarea pInputTextarea id="short-es" rows="2" class="w-full" formControlName="short_description"></textarea>
+              </div>
+              <div class="field">
+                <label for="desc-es">Descripción</label>
+                <textarea pInputTextarea id="desc-es" rows="5" class="w-full" formControlName="description"></textarea>
+              </div>
+              <div class="field">
+                <span class="field-label" id="points-es-label">Puntos destacados</span>
+                <div class="point-list" formArrayName="selling_points" role="group" aria-labelledby="points-es-label">
+                  @for (point of points('es').controls; track $index; let i = $index) {
+                    <div class="point-row">
+                      <label class="sr-only" [attr.for]="'point-es-' + i">Punto {{ i + 1 }} en español</label>
+                      <input pInputText [id]="'point-es-' + i" class="w-full" [formControlName]="i" />
+                      <p-button type="button" icon="pi pi-arrow-up" [text]="true" severity="secondary" ariaLabel="Subir punto" pTooltip="Subir" [disabled]="i === 0" (onClick)="movePoint('es', i, -1)" />
+                      <p-button type="button" icon="pi pi-arrow-down" [text]="true" severity="secondary" ariaLabel="Bajar punto" pTooltip="Bajar" [disabled]="i === points('es').length - 1" (onClick)="movePoint('es', i, 1)" />
+                      <p-button type="button" icon="pi pi-trash" [text]="true" severity="danger" ariaLabel="Eliminar punto" pTooltip="Eliminar" (onClick)="removePoint('es', i)" />
+                    </div>
+                  }
+                </div>
+                <p-button type="button" label="Agregar punto" icon="pi pi-plus" [outlined]="true" (onClick)="addPoint('es')" />
+              </div>
+              <div class="field">
+                <label for="reco-es">Recomendación</label>
+                <textarea pInputTextarea id="reco-es" rows="3" class="w-full" formControlName="recommendation"></textarea>
+              </div>
+            </div>
+          </p-tabpanel>
+          <p-tabpanel value="fr">
+            <div formGroupName="fr" class="locale-fields">
+              <div class="field">
+                <label for="short-fr">Descripción corta</label>
+                <textarea pInputTextarea id="short-fr" rows="2" class="w-full" formControlName="short_description"></textarea>
+              </div>
+              <div class="field">
+                <label for="desc-fr">Descripción</label>
+                <textarea pInputTextarea id="desc-fr" rows="5" class="w-full" formControlName="description"></textarea>
+              </div>
+              <div class="field">
+                <span class="field-label" id="points-fr-label">Puntos destacados</span>
+                <div class="point-list" formArrayName="selling_points" role="group" aria-labelledby="points-fr-label">
+                  @for (point of points('fr').controls; track $index; let i = $index) {
+                    <div class="point-row">
+                      <label class="sr-only" [attr.for]="'point-fr-' + i">Punto {{ i + 1 }} en francés</label>
+                      <input pInputText [id]="'point-fr-' + i" class="w-full" [formControlName]="i" />
+                      <p-button type="button" icon="pi pi-arrow-up" [text]="true" severity="secondary" ariaLabel="Subir punto" pTooltip="Subir" [disabled]="i === 0" (onClick)="movePoint('fr', i, -1)" />
+                      <p-button type="button" icon="pi pi-arrow-down" [text]="true" severity="secondary" ariaLabel="Bajar punto" pTooltip="Bajar" [disabled]="i === points('fr').length - 1" (onClick)="movePoint('fr', i, 1)" />
+                      <p-button type="button" icon="pi pi-trash" [text]="true" severity="danger" ariaLabel="Eliminar punto" pTooltip="Eliminar" (onClick)="removePoint('fr', i)" />
+                    </div>
+                  }
+                </div>
+                <p-button type="button" label="Agregar punto" icon="pi pi-plus" [outlined]="true" (onClick)="addPoint('fr')" />
+              </div>
+              <div class="field">
+                <label for="reco-fr">Recomendación</label>
+                <textarea pInputTextarea id="reco-fr" rows="3" class="w-full" formControlName="recommendation"></textarea>
+              </div>
+            </div>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
+    </section>
+
+    @if (fields().length > 0) {
+      <section class="section-card" formGroupName="attributes">
+        <h3 class="section-title">Características</h3>
+        <p class="field-hint">
+          Sin definir quita esa característica. No es lo mismo que No: No es un valor conocido.
+        </p>
+        <div class="attribute-grid">
+          @for (field of fields(); track field.key) {
+            <div class="field">
+              <label [attr.for]="'attr-' + field.key">{{ field.label }}</label>
+              <p-select
+                [inputId]="'attr-' + field.key"
+                [formControlName]="field.key"
+                [options]="field.options"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                styleClass="w-full"
+              />
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="section-card">
+      <h3 class="section-title">Estado</h3>
+      <p class="state-line">{{ content() ? 'Con contenido oficial' : 'Sin contenido oficial' }}</p>
+      @if (pending()) {
+        <p class="state-line" role="status">Enrichment pendiente</p>
+      }
+      @if (validationError(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+      <p-button
+        type="submit"
+        label="Guardar"
+        icon="pi pi-check"
+        [loading]="saving()"
+        [disabled]="saving() || !hasChanges() || !!validationError()"
+      />
+    </section>
+  </form>
+}

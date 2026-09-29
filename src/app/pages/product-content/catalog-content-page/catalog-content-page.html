@@ -1,0 +1,71 @@
+@if (loading()) {
+  <div class="page-container">
+    <p-skeleton height="60px" styleClass="mb-3" />
+    <p-skeleton height="320px" />
+  </div>
+} @else if (error(); as message) {
+  <div class="error-banner" role="alert">
+    <p>{{ message }}</p>
+    <a [routerLink]="listLink">{{ listLabel }}</a>
+  </div>
+} @else if (kind === 'activities' && activity(); as item) {
+  <header class="detail-header">
+    <div class="header-left">
+      <a class="back-btn" [routerLink]="listLink" [attr.aria-label]="listLabel">
+        <i class="pi pi-arrow-left"></i>
+      </a>
+      <div>
+        <h2 [innerHTML]="item.name | richText"></h2>
+        <div class="header-meta">
+          @if (item.name_es) {
+            <span class="meta-item">{{ item.name_es }}</span>
+          }
+          <span class="meta-item"><i class="pi pi-map-marker"></i> {{ province(item.province) }}</span>
+          <span class="meta-item"><i class="pi pi-tag"></i> {{ category('activity', item.category) }}</span>
+          @if (item.address) {
+            <span class="meta-item"><i class="pi pi-home"></i> {{ item.address }}</span>
+          }
+          @if (coordinates(item.latitude, item.longitude); as coords) {
+            <span class="meta-item"><i class="pi pi-map"></i> {{ coords }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="detail-body">
+    <app-content-editor
+      entityType="activities"
+      [entityId]="item.id"
+      [content]="item.content"
+      attributeKind="activity"
+      [pending]="!!item.pending_run"
+    />
+  </div>
+} @else if (vehicle(); as item) {
+  <header class="detail-header">
+    <div class="header-left">
+      <a class="back-btn" [routerLink]="listLink" [attr.aria-label]="listLabel">
+        <i class="pi pi-arrow-left"></i>
+      </a>
+      <div>
+        <h2 [innerHTML]="item.name | richText"></h2>
+        <div class="header-meta">
+          <span class="meta-item"><i class="pi pi-bookmark"></i> {{ item.brand }}</span>
+          <span class="meta-item">{{ item.seats }} asientos</span>
+          <span class="meta-item">{{ item.bag }} maletas</span>
+          <span class="meta-item">{{ item.carryon_bag }} de mano</span>
+          <span class="meta-item"><i class="pi pi-tag"></i> {{ category('vehicle', item.category) }}</span>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="detail-body">
+    <app-content-editor
+      entityType="vehicles"
+      [entityId]="item.id"
+      [content]="item.content"
+      attributeKind="vehicle"
+      [pending]="!!item.pending_run"
+    />
+  </div>
+}

@@ -1,0 +1,6 @@
+<nav class="section-nav" aria-label="Contenido">
+  <a routerLink="/contenido/hoteles" [class.active]="section() === 'hoteles'" [attr.aria-current]="section() === 'hoteles' ? 'page' : null">Hoteles</a>
+  <a routerLink="/contenido/actividades" [class.active]="section() === 'actividades'" [attr.aria-current]="section() === 'actividades' ? 'page' : null">Actividades</a>
+  <a routerLink="/contenido/vehiculos" [class.active]="section() === 'vehiculos'" [attr.aria-current]="section() === 'vehiculos' ? 'page' : null">Vehículos</a>
+</nav>
+<router-outlet />

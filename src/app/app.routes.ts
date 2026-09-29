@@ -118,6 +118,72 @@ export const routes: Routes = [
           import('./pages/settings/providers/provider-list/provider-list')
             .then(m => m.ProviderList)
       },
+      {
+        path: 'contenido',
+        title: 'Logiciel - Contenido',
+        canActivate: [authGuard],
+        data: { roles: ['admin', 'operaciones'] },
+        loadComponent: () =>
+          import('./pages/product-content/content-shell/content-shell')
+            .then(m => m.ContentShell),
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'hoteles' },
+          {
+            path: 'hoteles',
+            title: 'Logiciel - Contenido de hoteles',
+            data: { kind: 'hotels' },
+            loadComponent: () =>
+              import('./pages/product-content/content-list/content-list')
+                .then(m => m.ContentList)
+          },
+          {
+            path: 'hoteles/:id',
+            title: 'Logiciel - Contenido del hotel',
+            loadComponent: () =>
+              import('./pages/product-content/hotel-content-page/hotel-content-page')
+                .then(m => m.HotelContentPage)
+          },
+          {
+            path: 'habitaciones/:id',
+            title: 'Logiciel - Contenido de la habitación',
+            loadComponent: () =>
+              import('./pages/product-content/room-content-page/room-content-page')
+                .then(m => m.RoomContentPage)
+          },
+          {
+            path: 'actividades',
+            title: 'Logiciel - Contenido de actividades',
+            data: { kind: 'activities' },
+            loadComponent: () =>
+              import('./pages/product-content/content-list/content-list')
+                .then(m => m.ContentList)
+          },
+          {
+            path: 'actividades/:id',
+            title: 'Logiciel - Contenido de la actividad',
+            data: { kind: 'activities' },
+            loadComponent: () =>
+              import('./pages/product-content/catalog-content-page/catalog-content-page')
+                .then(m => m.CatalogContentPage)
+          },
+          {
+            path: 'vehiculos',
+            title: 'Logiciel - Contenido de vehículos',
+            data: { kind: 'vehicles' },
+            loadComponent: () =>
+              import('./pages/product-content/content-list/content-list')
+                .then(m => m.ContentList)
+          },
+          {
+            path: 'vehiculos/:id',
+            title: 'Logiciel - Contenido del vehículo',
+            data: { kind: 'vehicles' },
+            loadComponent: () =>
+              import('./pages/product-content/catalog-content-page/catalog-content-page')
+                .then(m => m.CatalogContentPage)
+          },
+        ]
+      },
     ]
   },
   { path: '**', redirectTo: '' }

@@ -34,6 +34,7 @@ export class Sidebar {
     { label: 'Hoteles', icon: 'pi pi-building', route: '/hoteles' },
     { label: 'Vehículos', icon: 'pi pi-car', route: '/vehiculos' },
     { label: 'Actividades', icon: 'pi pi-map-marker', route: '/actividades' },
+    { label: 'Contenido', icon: 'pi pi-book', route: '/contenido', roles: ['admin', 'operaciones'] },
     { label: 'Cotizaciones', icon: 'pi pi-file', route: '/cotizaciones' },
     { label: 'Usuarios', icon: 'pi pi-users', route: '/usuarios', roles: ['admin'] },
   ];

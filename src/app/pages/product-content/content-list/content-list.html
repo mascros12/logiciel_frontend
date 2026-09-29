@@ -1,0 +1,97 @@
+<div class="page-container">
+  <div class="page-toolbar">
+    <div>
+      <h2 class="page-title">{{ heading }}</h2>
+      <p class="subtitle">Contenido oficial. Sin precios.</p>
+    </div>
+    <span class="p-input-icon-left quotation-search">
+      <i class="pi pi-search"></i>
+      <input
+        pInputText
+        type="search"
+        [attr.aria-label]="'Buscar ' + heading"
+        [placeholder]="searchPlaceholder"
+        [ngModel]="queryDraft()"
+        (ngModelChange)="onQueryChange($event)"
+      />
+    </span>
+  </div>
+
+  @if (error(); as message) {
+    <div class="error-banner" role="alert">
+      <span>{{ message }}</span>
+      <button type="button" class="retry-btn" (click)="retry()">Reintentar</button>
+    </div>
+  }
+
+  <p-table
+    [value]="items()"
+    [lazy]="true"
+    [loading]="loading()"
+    [paginator]="true"
+    [rows]="rows()"
+    [first]="first()"
+    [totalRecords]="total()"
+    [rowsPerPageOptions]="rowOptions"
+    (onLazyLoad)="onLazy($event)"
+    styleClass="p-datatable-gridlines"
+    [rowHover]="true"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Nombre</th>
+        @if (kind === 'activities') {
+          <th>Nombre en español</th>
+        }
+        @if (kind === 'vehicles') {
+          <th>Marca</th>
+          <th>Asientos</th>
+        }
+        @if (kind !== 'vehicles') {
+          <th>Provincia</th>
+        }
+        <th>Categoría</th>
+        <th>Contenido</th>
+        <th>Idiomas</th>
+        <th>Acción</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>{{ row.name }}</td>
+        @if (kind === 'activities') {
+          <td>{{ row.name_es || '—' }}</td>
+        }
+        @if (kind === 'vehicles') {
+          <td>{{ row.brand }}</td>
+          <td>{{ row.seats }}</td>
+        }
+        @if (kind !== 'vehicles') {
+          <td>{{ province(row.province) }}</td>
+        }
+        <td>{{ category(row.category) }}</td>
+        <td>
+          <span>{{ status(row) }}</span>
+          @if (row.pending_review) {
+            <span class="pending-note">Enrichment pendiente</span>
+          }
+        </td>
+        <td>{{ languages(row) }}</td>
+        <td>
+          <a class="edit-link" [routerLink]="detailLink(row.id)">Editar</a>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td [attr.colspan]="columnCount()" class="text-center">
+          @if (loading()) {
+            Cargando…
+          } @else {
+            No hay resultados.
+          }
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
