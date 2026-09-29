@@ -35,6 +35,13 @@ import {
   stripRichTextMarkers,
 } from '../../../core/utils/catalog-excel-export';
 import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import {
+  coordinatePairValidator,
+  formatCoordinate,
+  latitudeValidator,
+  longitudeValidator,
+} from '../../../core/utils/coordinate.util';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
@@ -45,7 +52,7 @@ import { TooltipModule } from 'primeng/tooltip';
     TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TagModule, SelectModule,
-    RichTextPipe, ProviderReservationEmailDialogComponent, TooltipModule,
+    RichTextPipe, ProviderReservationEmailDialogComponent, TooltipModule, FieldErrorComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './activity-list.html',
@@ -97,6 +104,9 @@ export class ActivityList implements OnInit {
       name_es: ['', Validators.required],
       province: [null],
       address: [''],
+      phone: ['', Validators.maxLength(25)],
+      longitude: ['', longitudeValidator],
+      latitude: ['', latitudeValidator],
       category: [''],
       provider: [''],
       commission: [1.92],
@@ -105,7 +115,7 @@ export class ActivityList implements OnInit {
       rack_adult_price: [0, Validators.required],  // ← calculado
       net_child_price: [0, Validators.required],
       rack_child_price: [0, Validators.required], // ← calculado
-    });
+    }, { validators: coordinatePairValidator });
 
     this.form.get('net_adult_price')!.valueChanges.subscribe(() => this.calcRackFromNet());
     this.form.get('net_child_price')!.valueChanges.subscribe(() => this.calcRackFromNet());
@@ -178,6 +188,9 @@ export class ActivityList implements OnInit {
       rack_child_price: 0,
       reservation_email: '',
       provider: '',
+      phone: '',
+      longitude: '',
+      latitude: '',
     });
     this.showDialog.set(true);
   }
@@ -215,6 +228,9 @@ export class ActivityList implements OnInit {
       name_es: activity.name_es,
       province: activity.province,
       address: activity.address,
+      phone: activity.phone ?? '',
+      longitude: formatCoordinate(activity.longitude),
+      latitude: formatCoordinate(activity.latitude),
       category: activity.category,
       provider: activity.provider ?? '',
       commission: activity.commission,
@@ -228,7 +244,10 @@ export class ActivityList implements OnInit {
   }
 
   submit() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.saving.set(true);
   
     const raw = this.form.getRawValue();

@@ -178,6 +178,28 @@
       <input pInputText formControlName="address" class="w-full" placeholder="Heredia, Santo Domingo" />
     </div>
     <div class="field">
+      <label for="hotel-phone">Teléfono</label>
+      <input pInputText id="hotel-phone" formControlName="phone" class="w-full" placeholder="8888-0000" />
+      <app-field-error [control]="form.get('phone')" label="Teléfono" />
+    </div>
+    <div class="coord-row">
+      <div class="field">
+        <label for="hotel-lng">Longitud</label>
+        <input pInputText id="hotel-lng" formControlName="longitude" class="w-full" placeholder="-84.09000" inputmode="decimal" />
+        <app-field-error [control]="form.get('longitude')" label="Longitud" />
+      </div>
+      <div class="field">
+        <label for="hotel-lat">Latitud</label>
+        <input pInputText id="hotel-lat" formControlName="latitude" class="w-full" placeholder="9.93000" inputmode="decimal" />
+        <app-field-error [control]="form.get('latitude')" label="Latitud" />
+      </div>
+    </div>
+    @if (form.hasError('coordinatePair') && (form.touched || form.dirty)) {
+      <small class="coord-error">Indique longitud y latitud, o deje ambas vacías.</small>
+    } @else if (!form.get('longitude')?.invalid && !form.get('latitude')?.invalid) {
+      <small class="coord-hint">Coordenadas con al menos 5 decimales.</small>
+    }
+    <div class="field">
       <label>Categoría</label>
       <p-select
         formControlName="category"

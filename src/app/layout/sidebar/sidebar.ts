@@ -42,6 +42,7 @@ export class Sidebar {
   settingsItems: SettingsNavItem[] = [
     { label: 'Generales', icon: 'pi pi-sliders-h', route: '/configuraciones/generales' },
     { label: 'Zonas', icon: 'pi pi-map', route: '/configuraciones/zonas' },
+    { label: 'Proveedores', icon: 'pi pi-briefcase', route: '/configuraciones/proveedores' },
   ];
 
   private readonly settingsExpandedManual = signal<boolean | null>(null);

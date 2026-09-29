@@ -16,6 +16,7 @@ export function controlErrorMessage(
   const e = control.errors;
   if (e['required']) return `${label} es obligatorio.`;
   if (e['email']) return `${label} no es un correo válido.`;
+  if (e['coordinateDecimals']) return `${label} debe tener entre 5 y 7 decimales.`;
   if (e['min']) return `${label} debe ser al menos ${e['min'].min}.`;
   if (e['max']) return `${label} debe ser como máximo ${e['max'].max}.`;
   if (e['minlength']) {

@@ -37,6 +37,13 @@ import {
   stripRichTextMarkers,
 } from '../../../core/utils/catalog-excel-export';
 import { ProviderReservationEmailDialogComponent } from '../../../shared/components/provider-reservation-email-dialog/provider-reservation-email-dialog.component';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import {
+  coordinatePairValidator,
+  formatCoordinate,
+  latitudeValidator,
+  longitudeValidator,
+} from '../../../core/utils/coordinate.util';
 
 @Component({
   selector: 'app-hotel-list',
@@ -47,6 +54,7 @@ import { ProviderReservationEmailDialogComponent } from '../../../shared/compone
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, SelectModule, TagModule, TooltipModule,
     DatePipe, DecimalPipe, RichTextPipe, ProviderReservationEmailDialogComponent,
+    FieldErrorComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-list.html',
@@ -102,10 +110,13 @@ export class HotelList implements OnInit {
       name: ['', Validators.required],
       province: [null],
       address: [''],
+      phone: ['', Validators.maxLength(25)],
+      longitude: ['', longitudeValidator],
+      latitude: ['', latitudeValidator],
       category: [null as HotelCategory | null],
       commission: [1.2],
       reservation_email: [''],
-    });
+    }, { validators: coordinatePairValidator });
   }
 
   ngOnInit() {
@@ -165,7 +176,14 @@ export class HotelList implements OnInit {
 
   openCreate() {
     this.editingHotel.set(null);
-    this.form.reset({ commission: 1.2, reservation_email: '', category: null });
+    this.form.reset({
+      commission: 1.2,
+      reservation_email: '',
+      category: null,
+      phone: '',
+      longitude: '',
+      latitude: '',
+    });
     this.showDialog.set(true);
   }
 
@@ -176,6 +194,9 @@ export class HotelList implements OnInit {
       name: h.name,
       province: h.province,
       address: h.address ?? '',
+      phone: h.phone ?? '',
+      longitude: formatCoordinate(h.longitude),
+      latitude: formatCoordinate(h.latitude),
       category: this.parseCategory(h.category),
       commission: h.commission,
       reservation_email: h.reservation_email ?? '',
@@ -189,7 +210,10 @@ export class HotelList implements OnInit {
   }
 
   submit() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.saving.set(true);
     const id = this.editingHotel()?.id;
     const req = id

@@ -1,5 +1,6 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, computed, effect, input, signal } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
+import { Observable, merge } from 'rxjs';
 import { controlErrorMessage, controlShowError } from '../../../core/utils/form-validation.util';
 
 @Component({
@@ -26,6 +27,31 @@ export class FieldErrorComponent {
   control = input<AbstractControl | null | undefined>(null);
   label = input('');
 
-  visible = computed(() => controlShowError(this.control()));
-  text = computed(() => controlErrorMessage(this.control(), this.label()) ?? '');
+  /** El control de Angular no es una signal: hay que reaccionar a sus eventos. */
+  private readonly revision = signal(0);
+
+  constructor() {
+    effect((onCleanup) => {
+      const ctrl = this.control();
+      if (!ctrl) return;
+      const streams: Observable<unknown>[] = [ctrl.statusChanges, ctrl.valueChanges];
+      if ('events' in ctrl && ctrl.events) {
+        streams.push(ctrl.events as Observable<unknown>);
+      }
+      const sub = merge(...streams).subscribe(() => {
+        this.revision.update((value) => value + 1);
+      });
+      onCleanup(() => sub.unsubscribe());
+    });
+  }
+
+  visible = computed(() => {
+    this.revision();
+    return controlShowError(this.control());
+  });
+
+  text = computed(() => {
+    this.revision();
+    return controlErrorMessage(this.control(), this.label()) ?? '';
+  });
 }

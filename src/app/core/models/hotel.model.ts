@@ -33,6 +33,9 @@ export interface RoomSeason {
     file_aa_name?: string | null;
     province: string | null;
     address: string | null;
+    phone?: string | null;
+    longitude?: string | null;
+    latitude?: string | null;
     category: HotelCategory | null;
     commission: number;
     /** Correo para envío de reservas (Ficha AA) */
@@ -54,6 +57,9 @@ export interface RoomSeason {
     file_aa_name?: string | null;
     province?: string;
     address?: string;
+    phone?: string | null;
+    longitude?: string | null;
+    latitude?: string | null;
     category?: HotelCategory | null;
     commission?: number;
     reservation_email?: string | null;

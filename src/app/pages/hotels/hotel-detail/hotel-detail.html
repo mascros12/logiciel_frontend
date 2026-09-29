@@ -19,6 +19,10 @@
         <div class="header-meta">
           @if (h.province) { <span class="meta-item"><i class="pi pi-map-marker"></i> {{ h.province }}</span> }
           @if (h.address)  { <span class="meta-item"><i class="pi pi-home"></i> {{ h.address }}</span> }
+          @if (h.phone) { <span class="meta-item"><i class="pi pi-phone"></i> {{ h.phone }}</span> }
+          @if (h.latitude && h.longitude) {
+            <span class="meta-item"><i class="pi pi-map"></i> {{ h.latitude }}, {{ h.longitude }}</span>
+          }
           @if (h.category) { <span class="meta-item"><i class="pi pi-star"></i> {{ hotelCategoryLabel(h.category) }}</span> }
           @if (canManageHotels()) {
             <span class="meta-item"><i class="pi pi-percentage"></i> Comisión: {{ h.commission | number:'1.2-2' }}</span>
@@ -224,6 +228,28 @@
       <label>Dirección / Ciudad</label>
       <input pInputText formControlName="address" class="w-full" placeholder="Heredia, Santo Domingo" />
     </div>
+    <div class="field">
+      <label for="hotel-meta-phone">Teléfono</label>
+      <input pInputText id="hotel-meta-phone" formControlName="phone" class="w-full" placeholder="8888-0000" />
+      <app-field-error [control]="hotelMetaForm.get('phone')" label="Teléfono" />
+    </div>
+    <div class="coord-row">
+      <div class="field">
+        <label for="hotel-meta-lng">Longitud</label>
+        <input pInputText id="hotel-meta-lng" formControlName="longitude" class="w-full" placeholder="-84.09000" inputmode="decimal" />
+        <app-field-error [control]="hotelMetaForm.get('longitude')" label="Longitud" />
+      </div>
+      <div class="field">
+        <label for="hotel-meta-lat">Latitud</label>
+        <input pInputText id="hotel-meta-lat" formControlName="latitude" class="w-full" placeholder="9.93000" inputmode="decimal" />
+        <app-field-error [control]="hotelMetaForm.get('latitude')" label="Latitud" />
+      </div>
+    </div>
+    @if (hotelMetaForm.hasError('coordinatePair') && (hotelMetaForm.touched || hotelMetaForm.dirty)) {
+      <small class="coord-error">Indique longitud y latitud, o deje ambas vacías.</small>
+    } @else if (!hotelMetaForm.get('longitude')?.invalid && !hotelMetaForm.get('latitude')?.invalid) {
+      <small class="coord-hint">Coordenadas con al menos 5 decimales.</small>
+    }
     <div class="field">
       <label>Categoría</label>
       <p-select

@@ -28,6 +28,13 @@ import {
   HotelSeason,
 } from '../../../core/models/hotel.model';
 import { DatePipe, DecimalPipe, Location } from '@angular/common';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import {
+  coordinatePairValidator,
+  formatCoordinate,
+  latitudeValidator,
+  longitudeValidator,
+} from '../../../core/utils/coordinate.util';
 @Component({
   selector: 'app-hotel-detail',
   standalone: true,
@@ -36,7 +43,7 @@ import { DatePipe, DecimalPipe, Location } from '@angular/common';
     InputTextModule, InputNumberModule, ToastModule,
     ConfirmDialogModule, TabsModule, SelectModule,
     DatePickerModule, TagModule, SkeletonModule, TooltipModule,
-    DatePipe, DecimalPipe, RichTextPipe,
+    DatePipe, DecimalPipe, RichTextPipe, FieldErrorComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hotel-detail.html',
@@ -168,10 +175,13 @@ export class HotelDetail implements OnInit {
       name: ['', Validators.required],
       province: [null as string | null],
       address: [''],
+      phone: ['', Validators.maxLength(25)],
+      longitude: ['', longitudeValidator],
+      latitude: ['', latitudeValidator],
       category: [null as HotelCategory | null],
       commission: [1.2, Validators.required],
       reservation_email: [''],
-    });
+    }, { validators: coordinatePairValidator });
   }
 
   ngOnInit() {
@@ -462,6 +472,9 @@ export class HotelDetail implements OnInit {
       name: h.name,
       province: h.province,
       address: h.address ?? '',
+      phone: h.phone ?? '',
+      longitude: formatCoordinate(h.longitude),
+      latitude: formatCoordinate(h.latitude),
       category: this.parseHotelCategory(h.category),
       commission: h.commission,
       reservation_email: h.reservation_email ?? '',
@@ -470,7 +483,10 @@ export class HotelDetail implements OnInit {
   }
 
   submitHotelMeta() {
-    if (this.hotelMetaForm.invalid) return;
+    if (this.hotelMetaForm.invalid) {
+      this.hotelMetaForm.markAllAsTouched();
+      return;
+    }
     const h = this.hotel();
     if (!h) return;
     this.savingHotelMeta.set(true);
