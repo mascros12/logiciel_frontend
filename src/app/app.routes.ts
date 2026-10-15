@@ -1,7 +1,14 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { carnetUnsavedGuard } from './pages/carnet/carnet-editor/carnet-unsaved.guard';
 
 export const routes: Routes = [
+  {
+    path: 'c/:token',
+    title: 'Carnet de route',
+    loadComponent: () =>
+      import('./pages/carnet/carnet-public/carnet-public').then(m => m.CarnetPublic)
+  },
   {
     path: 'login',
     title: 'Logiciel - Inicio de sesión',
@@ -30,6 +37,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/quotations/quotation-list/quotation-list')
             .then(m => m.QuotationList)
+      },
+      {
+        path: 'cotizaciones/:quotationId/carnet/:carnetId',
+        title: 'Logiciel - Carnet de Route',
+        canActivate: [authGuard],
+        canDeactivate: [carnetUnsavedGuard],
+        data: { roles: ['admin', 'operaciones'] },
+        loadComponent: () =>
+          import('./pages/carnet/carnet-editor/carnet-editor')
+            .then(m => m.CarnetEditor)
       },
       {
         path: 'cotizaciones/:id',

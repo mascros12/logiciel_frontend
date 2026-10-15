@@ -18,7 +18,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(requestWithAuth).pipe(
     catchError((err) => {
-      if (err?.status === 401 && !isAuthEndpoint) {
+      const isPublicCarnet = req.url.includes('/public/carnets/');
+      if (err?.status === 401 && !isAuthEndpoint && !isPublicCarnet) {
         authService.clearSession();
         router.navigate(['/login']);
       }

@@ -1,0 +1,20 @@
+<main class="carnet-public">
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else if (missing() || !document()) {
+    <section class="carnet-public__missing">
+      <h1>Carnet de route</h1>
+      <p>Ce carnet n'est pas disponible.</p>
+    </section>
+  } @else {
+    <div class="carnet-public__bar">
+      <button type="button" (click)="download()" [disabled]="downloading()">
+        {{ downloading() ? 'Préparation…' : 'Télécharger le PDF' }}
+      </button>
+      @if (pdfError()) {
+        <p>Le PDF n'est pas disponible.</p>
+      }
+    </div>
+    <app-carnet-preview [document]="document()!" [mode]="'published'" />
+  }
+</main>

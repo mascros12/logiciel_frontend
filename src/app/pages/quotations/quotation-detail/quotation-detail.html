@@ -1093,6 +1093,15 @@
                     [loading]="downloadingFichaPdf()"
                     (onClick)="downloadFichaAAPdf()"
                   />
+                  @if (canOpenCarnet()) {
+                    <p-button
+                      [label]="carnetActionLabel()"
+                      icon="pi pi-map"
+                      [outlined]="true"
+                      [loading]="openingCarnet()"
+                      (onClick)="openCarnet()"
+                    />
+                  }
                   @if (canDeleteFileAA()) {
                     <p-button
                       label="Eliminar Ficha AA"

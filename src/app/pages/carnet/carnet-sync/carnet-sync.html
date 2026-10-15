@@ -1,0 +1,120 @@
+<section class="carnet-sync" aria-labelledby="carnet-sync-title">
+  <header class="carnet-sync__header">
+    <div>
+      <h2 id="carnet-sync-title">Modifications de la Fiche AA</h2>
+      <p>La comparación no publica ni modifica el Carnet del viajero.</p>
+    </div>
+    <p-button label="Cerrar" [outlined]="true" (onClick)="closed.emit()" />
+  </header>
+
+  @if (loading()) {
+    <p>Calculando diferencias…</p>
+  } @else if (error() && !proposal()) {
+    <p role="alert">{{ error() }}</p>
+  } @else if (proposal(); as proposal) {
+    @if (!proposal.available) {
+      <p role="status">{{ proposal.reason }}</p>
+    }
+    @if (proposal.coverage !== 'complete') {
+      <p role="status">
+        La comparación es parcial. Revise a mano los campos sin baseline anterior.
+      </p>
+    }
+    @for (warning of proposal.warnings; track warning) {
+      <p class="carnet-sync__warning" role="status">{{ warning }}</p>
+    }
+    @if (proposal.kept.length) {
+      <div>
+        <h3>Valores personalizados que se conservan</h3>
+        <ul>
+          @for (item of proposal.kept; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </div>
+    }
+    @if (conflicts().length) {
+      <div>
+        <h3>Campos con conflicto</h3>
+        <ul>
+          @for (action of conflicts(); track action.id) {
+            <li>
+              {{ action.title }}: borrador «{{ action.draft_value }}», Ficha AA «{{ action.source_value }}»
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <label class="carnet-sync__group">
+      <input
+        type="checkbox"
+        [checked]="safeGroup()"
+        (change)="toggleSafeGroup($any($event.target).checked)"
+      />
+      Aplicar juntos los cambios seguros
+    </label>
+
+    @for (group of groups(); track group.title) {
+      <div>
+        <h3>{{ group.title }}</h3>
+        <ul class="carnet-sync__list">
+          @for (action of group.actions; track action.id) {
+            <li>
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="checked(action.id)"
+                  (change)="toggle(action.id, $any($event.target).checked)"
+                />
+                <span>
+                  <strong>{{ action.title }}</strong>
+                  <small>{{ label(action) }}</small>
+                  @if (action.note) {
+                    <small>{{ action.note }}</small>
+                  }
+                  @if (action.field) {
+                    <small>
+                      Anterior: {{ action.baseline || '—' }} · Borrador: {{ action.draft_value || '—' }} · Ficha AA:
+                      {{ action.source_value || '—' }}
+                    </small>
+                  }
+                </span>
+              </label>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (!proposal.actions.length && proposal.available) {
+      <p>No hay cambios pendientes respecto del baseline conocido.</p>
+    }
+
+    <div class="carnet-sync__actions">
+      <p-button label="Ver resultado" [outlined]="true" [disabled]="busy()" (onClick)="showPreview()" />
+      <p-button
+        label="Aplicar selección"
+        [disabled]="busy() || !preview()"
+        (onClick)="apply()"
+      />
+      <p-button
+        label="Reemplazar el borrador"
+        severity="danger"
+        [outlined]="true"
+        [disabled]="busy() || !proposal.actions.length"
+        (onClick)="askReplaceAll()"
+      />
+    </div>
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+    @if (preview(); as document) {
+      <p role="status">
+        Vista previa del borrador. Quedarían {{ previewPending() }} cambios sin aplicar.
+        Publicar sigue siendo un paso aparte.
+      </p>
+      <app-carnet-preview [document]="document" [unsaved]="true" />
+    }
+  }
+</section>

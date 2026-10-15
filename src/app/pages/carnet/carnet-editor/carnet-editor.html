@@ -1,0 +1,373 @@
+<p-toast />
+<p-confirmDialog />
+
+<section class="carnet-editor">
+  <header class="carnet-editor__header">
+    <div>
+      <p class="carnet-editor__kicker">Carnet de Route</p>
+      <h1>{{ heading() }}</h1>
+      <p class="carnet-editor__meta">
+        Ficha AA {{ fileAaId() || '—' }}
+        · {{ phaseLabel() }}
+        @if (updatedAt()) {
+          · Última modificación {{ updatedAt() | date: 'dd/MM/yyyy HH:mm' }}
+        }
+      </p>
+    </div>
+    <div class="carnet-editor__actions">
+      <span class="carnet-editor__save-state" [class.is-dirty]="dirty()">
+        {{ dirty() ? 'Cambios sin guardar' : 'Guardado' }}
+      </span>
+      <span class="carnet-editor__source">{{ statusLabel() }}</span>
+      <a
+        class="carnet-editor__back"
+        [routerLink]="['/cotizaciones', quotationId]"
+        [queryParams]="{ tab: 'fileaa' }"
+      >Volver a la Ficha AA</a>
+      <p-button
+        [label]="previewing() ? 'Editor' : 'Vista previa'"
+        icon="pi pi-eye"
+        [outlined]="true"
+        (onClick)="previewing.set(!previewing())"
+      />
+      <p-button
+        label="Guardar"
+        icon="pi pi-save"
+        [loading]="saving()"
+        [disabled]="!dirty() || validation().length > 0"
+        (onClick)="save()"
+      />
+      <p-button
+        label="PDF borrador"
+        icon="pi pi-file-pdf"
+        [outlined]="true"
+        [loading]="downloading()"
+        [disabled]="!document()"
+        (onClick)="downloadDraft()"
+      />
+      <p-button
+        label="Publicar"
+        icon="pi pi-send"
+        [loading]="publishing()"
+        [disabled]="!document() || dirty() || validation().length > 0"
+        (onClick)="askPublish()"
+      />
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="carnet-editor__status">Cargando el Carnet…</p>
+  } @else if (loadError()) {
+    <p class="carnet-editor__status carnet-editor__status--error">{{ loadError() }}</p>
+    <p-button label="Reintentar" (onClick)="reload()" />
+  } @else if (document(); as doc) {
+    @if (conflict()) {
+      <div class="carnet-editor__banner carnet-editor__banner--warn" role="status">
+        <p>Otro usuario modificó el Carnet. Los cambios de esta pantalla se conservan y no se ha sobrescrito la versión remota.</p>
+        <div>
+          <p-button label="Recuperar versión del servidor" [outlined]="true" (onClick)="recoverServer()" />
+          <p-button label="Conservar mi versión en pantalla" [text]="true" (onClick)="dismissConflict()" />
+        </div>
+      </div>
+    }
+    @if (sourceStatus() === 'changed') {
+      <div class="carnet-editor__banner" role="status">
+        <p>La Ficha AA contiene cambios posteriores a la generación de este Carnet</p>
+        <p-button
+          label="Examiner les modifications de la Fiche AA"
+          [outlined]="true"
+          [disabled]="dirty()"
+          (onClick)="examining.set(true)"
+        />
+        @if (dirty()) {
+          <p>Guarde el borrador antes de comparar.</p>
+        }
+      </div>
+    }
+    @if (examining() && state(); as current) {
+      <app-carnet-sync
+        [carnetId]="carnetId"
+        [lockVersion]="current.lockVersion"
+        (applied)="onSynced($event)"
+        (closed)="examining.set(false)"
+      />
+    }
+    <section class="carnet-editor__publish">
+      <div>
+        <h2>Publicación</h2>
+        <p>{{ phaseLabel() }}</p>
+        @if (publication()?.revision_number) {
+          <p>
+            Revisión {{ publication()!.revision_number }}
+            @if (publication()?.published_at) {
+              · {{ publication()!.published_at | date: 'dd/MM/yyyy HH:mm' }}
+            }
+          </p>
+        }
+        @if (publication()?.link_state === 'revoked') {
+          <p>El enlace público está revocado.</p>
+        }
+      </div>
+      <div class="carnet-editor__actions">
+        @if (publicPath()) {
+          <p-button label="Copiar enlace" icon="pi pi-copy" [outlined]="true" (onClick)="copyLink()" />
+          <p-button label="Abrir versión publicada" icon="pi pi-external-link" [outlined]="true" (onClick)="openPublished()" />
+          <p-button label="Revocar enlace" icon="pi pi-ban" severity="danger" [outlined]="true" (onClick)="askRevoke()" />
+          <p-button label="Rotar enlace" icon="pi pi-refresh" [outlined]="true" (onClick)="askRotate()" />
+        } @else if (publication()?.link_state === 'revoked') {
+          <p-button label="Rotar enlace" icon="pi pi-refresh" [outlined]="true" (onClick)="askRotate()" />
+        }
+      </div>
+      @if (revisions().length) {
+        <ol class="carnet-editor__history">
+          @for (item of revisions(); track item.revision_number) {
+            <li class="carnet-editor__history-item">
+              <span>Revisión {{ item.revision_number }} · {{ item.created_at | date: 'dd/MM/yyyy HH:mm' }}</span>
+              <button type="button" (click)="downloadRevision(item.revision_number)">PDF</button>
+            </li>
+          }
+        </ol>
+      }
+    </section>
+
+    @if (validation().length) {
+      <ul class="carnet-editor__errors">
+        @for (error of validation(); track error) {
+          <li>{{ error }}</li>
+        }
+      </ul>
+    }
+
+    @if (previewing()) {
+      <app-carnet-preview [document]="doc" [unsaved]="dirty()" />
+    } @else {
+      <div class="carnet-editor__layout">
+        <aside class="carnet-editor__structure">
+          <div class="carnet-editor__add">
+            <p-select
+              [options]="addable"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="addChoice()"
+              (ngModelChange)="add($event)"
+              placeholder="Añadir bloque"
+              appendTo="body"
+            />
+          </div>
+          <div
+            cdkDropList
+            class="carnet-editor__list"
+            (cdkDropListDropped)="dropStructure($event)"
+          >
+            @for (block of structure(); track block.id) {
+              <div
+                class="carnet-editor__row"
+                cdkDrag
+                [class.is-selected]="selectedId() === block.id"
+                [class.is-hidden]="!block.visible"
+              >
+                <button type="button" class="carnet-editor__row-main" (click)="select(block.id)">
+                  <span class="carnet-editor__type">{{ labels[block.type] }}</span>
+                  <span>{{ titleOf(block) }}</span>
+                  @if (edited(block)) {
+                    <span class="carnet-editor__edited">Editado</span>
+                  }
+                  @if (!block.visible) {
+                    <span class="carnet-editor__edited">Oculto</span>
+                  }
+                </button>
+                <button type="button" cdkDragHandle class="carnet-editor__icon" aria-label="Reordenar">↕</button>
+                <button type="button" class="carnet-editor__icon" (click)="toggleVisible(block)">
+                  {{ block.visible ? 'Ocultar' : 'Mostrar' }}
+                </button>
+                <button type="button" class="carnet-editor__icon" (click)="askRemove(block)">Eliminar</button>
+              </div>
+            }
+          </div>
+
+          <h2>Días</h2>
+          @for (day of days(); track day.id) {
+            <section class="carnet-editor__day">
+              <button type="button" class="carnet-editor__day-toggle" (click)="toggleDay(day.id)">
+                {{ isDayOpen(day.id) ? '▾' : '▸' }} {{ titleOf(day) }}
+              </button>
+              @if (isDayOpen(day.id)) {
+                <div
+                  class="carnet-editor__entries"
+                  cdkDropList
+                  [id]="'day-' + day.id"
+                  [cdkDropListData]="day.id"
+                  [cdkDropListConnectedTo]="dayDropIds()"
+                  (cdkDropListDropped)="dropEntry($event)"
+                >
+                  @for (entry of entries(day); track entry.block_id) {
+                    <div class="carnet-editor__entry" cdkDrag>
+                      <span cdkDragHandle>{{ entryTitle(entry.block_id) }}</span>
+                      <span class="carnet-editor__type">{{ entryRole(entry.role) }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
+        </aside>
+
+        <div class="carnet-editor__form">
+          @if (selected(); as block) {
+            <header class="carnet-editor__form-head">
+              <h2>{{ labels[block.type] }}</h2>
+              @if (edited(block)) {
+                <p-tag value="Contenido editado" severity="warn" />
+              }
+              @if (block.source_detail_id) {
+                <p class="carnet-editor__ref">Servicio de origen conservado</p>
+              }
+            </header>
+
+            @switch (block.type) {
+              @case ('cover') {
+                <label>Título <input pInputText [value]="text(block, 'title')" (input)="onText(block.id, 'title', inputValue($event))" /></label>
+                <label>Subtítulo <input pInputText [value]="text(block, 'subtitle')" (input)="onText(block.id, 'subtitle', inputValue($event))" /></label>
+              }
+              @case ('general') {
+                <label>Título del viaje <input pInputText [value]="text(block, 'trip_title')" (input)="onText(block.id, 'trip_title', inputValue($event))" /></label>
+                <label>Inicio <input type="date" [value]="date(block, 'start_date')" (input)="onDate(block.id, 'start_date', inputValue($event))" /></label>
+                <label>Fin <input type="date" [value]="date(block, 'end_date')" (input)="onDate(block.id, 'end_date', inputValue($event))" /></label>
+                <label>Titular <input pInputText [value]="text(block, 'holder_name')" (input)="onText(block.id, 'holder_name', inputValue($event))" /></label>
+                <label>Adultos <input type="number" min="0" [value]="number(block, 'adults')" (input)="onInt(block.id, 'adults', numberValue($event))" /></label>
+                <label>Niños <input type="number" min="0" [value]="number(block, 'children')" (input)="onInt(block.id, 'children', numberValue($event))" /></label>
+                <label>Edades de los niños <input pInputText [value]="ages(block)" (input)="onAges(block.id, inputValue($event))" /></label>
+                @for (flight of flights(block); track flight.id) {
+                  <fieldset>
+                    <legend>{{ flight.movement === 'arrival' ? 'Llegada' : 'Salida' }}</legend>
+                    <label>Vuelo <input pInputText [value]="flight.flight_number.value ?? ''" (input)="onFlight(block.id, flight.id, 'flight_number', inputValue($event))" /></label>
+                    <label>Fecha <input type="date" [value]="flight.on_date.value ?? ''" (input)="onFlightDate(block.id, flight.id, inputValue($event))" /></label>
+                    <label>Hora <input pInputText [value]="flight.at_time.value ?? ''" (input)="onFlight(block.id, flight.id, 'at_time', inputValue($event))" /></label>
+                  </fieldset>
+                }
+              }
+              @case ('day') {
+                <label>Fecha <input type="date" [value]="date(block, 'on_date')" (input)="onDate(block.id, 'on_date', inputValue($event))" /></label>
+                <label>Título <input pInputText [value]="text(block, 'title')" (input)="onText(block.id, 'title', inputValue($event))" /></label>
+                <label>Notas del día <textarea pInputTextarea rows="4" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
+              }
+              @case ('hotel') {
+                <ng-container [ngTemplateOutlet]="locale" [ngTemplateOutletContext]="{ block: block }" />
+                <label>Nombre <input pInputText [value]="text(block, 'public_name')" (input)="onText(block.id, 'public_name', inputValue($event))" /></label>
+                <label>Dirección <input pInputText [value]="text(block, 'address')" (input)="onText(block.id, 'address', inputValue($event))" /></label>
+                <label>Contacto público <input pInputText [value]="text(block, 'phone')" (input)="onText(block.id, 'phone', inputValue($event))" /></label>
+                <label>Localidad <input pInputText [value]="text(block, 'locality')" (input)="onText(block.id, 'locality', inputValue($event))" /></label>
+                <label>Entrada <input type="date" [value]="date(block, 'check_in')" (input)="onDate(block.id, 'check_in', inputValue($event))" /></label>
+                <label>Salida <input type="date" [value]="date(block, 'check_out')" (input)="onDate(block.id, 'check_out', inputValue($event))" /></label>
+                <ng-container [ngTemplateOutlet]="coordFields" [ngTemplateOutletContext]="{ block: block, field: 'coordinates', label: 'Coordenadas' }" />
+                <label>Reserva <input pInputText [value]="text(block, 'reservation_number')" (input)="onText(block.id, 'reservation_number', inputValue($event))" /></label>
+                <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
+                <label>Notas <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
+                @for (room of rooms(block); track room.id) {
+                  <fieldset>
+                    <legend>Habitación</legend>
+                    <label>Nombre <input pInputText [value]="room.public_name.value ?? ''" (input)="onRoom(block.id, room.id, 'public_name', inputValue($event))" /></label>
+                    <label>Descripción <textarea pInputTextarea rows="3" [value]="room.description_fr.value ?? ''" (input)="onRoom(block.id, room.id, 'description_fr', inputValue($event))"></textarea></label>
+                    <label>Recomendación <textarea pInputTextarea rows="2" [value]="room.recommendation_fr.value ?? ''" (input)="onRoom(block.id, room.id, 'recommendation_fr', inputValue($event))"></textarea></label>
+                  </fieldset>
+                }
+              }
+              @case ('activity') {
+                <ng-container [ngTemplateOutlet]="locale" [ngTemplateOutletContext]="{ block: block }" />
+                <label>Nombre <input pInputText [value]="text(block, 'public_name')" (input)="onText(block.id, 'public_name', inputValue($event))" /></label>
+                <label>Horario <input pInputText [value]="text(block, 'schedule')" (input)="onText(block.id, 'schedule', inputValue($event))" /></label>
+                <label>Dirección <input pInputText [value]="text(block, 'address')" (input)="onText(block.id, 'address', inputValue($event))" /></label>
+                <label>Contacto público <input pInputText [value]="text(block, 'phone')" (input)="onText(block.id, 'phone', inputValue($event))" /></label>
+                <label>Localidad <input pInputText [value]="text(block, 'locality')" (input)="onText(block.id, 'locality', inputValue($event))" /></label>
+                <label>Fechas <textarea pInputTextarea rows="3" [value]="dates(block)" (input)="onDates(block.id, inputValue($event))"></textarea></label>
+                <ng-container [ngTemplateOutlet]="coordFields" [ngTemplateOutletContext]="{ block: block, field: 'coordinates', label: 'Coordenadas' }" />
+                <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
+                <label>Notas <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
+              }
+              @case ('transport') {
+                <ng-container [ngTemplateOutlet]="locale" [ngTemplateOutletContext]="{ block: block }" />
+                <label>Nombre <input pInputText [value]="text(block, 'public_name')" (input)="onText(block.id, 'public_name', inputValue($event))" /></label>
+                <label>Tipo <input pInputText [value]="text(block, 'service_type')" (input)="onText(block.id, 'service_type', inputValue($event))" /></label>
+                <label>Recogida <textarea pInputTextarea rows="2" [value]="text(block, 'pickup_text')" (input)="onText(block.id, 'pickup_text', inputValue($event))"></textarea></label>
+                <label>Devolución <textarea pInputTextarea rows="2" [value]="text(block, 'dropoff_text')" (input)="onText(block.id, 'dropoff_text', inputValue($event))"></textarea></label>
+                <label>Salida <input pInputText [value]="text(block, 'departure_time')" (input)="onText(block.id, 'departure_time', inputValue($event))" /></label>
+                <label>Regreso <input pInputText [value]="text(block, 'return_time')" (input)="onText(block.id, 'return_time', inputValue($event))" /></label>
+                <label>Fechas <textarea pInputTextarea rows="3" [value]="dates(block)" (input)="onDates(block.id, inputValue($event))"></textarea></label>
+                <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
+                <label>Notas <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
+              }
+              @case ('route') {
+                <label>Nombre del trayecto <input pInputText [value]="text(block, 'title')" (input)="onText(block.id, 'title', inputValue($event))" /></label>
+                <label>Origen <input pInputText [value]="text(block, 'origin_label')" (input)="onText(block.id, 'origin_label', inputValue($event))" /></label>
+                <label>Destino <input pInputText [value]="text(block, 'destination_label')" (input)="onText(block.id, 'destination_label', inputValue($event))" /></label>
+                <ng-container [ngTemplateOutlet]="coordFields" [ngTemplateOutletContext]="{ block: block, field: 'origin_coordinates', label: 'Coordenadas de origen' }" />
+                <ng-container [ngTemplateOutlet]="coordFields" [ngTemplateOutletContext]="{ block: block, field: 'destination_coordinates', label: 'Coordenadas de destino' }" />
+                <label>Notas del trayecto <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
+                <p class="carnet-editor__hint">El orden del trayecto se cambia en la lista de la izquierda. Los enlaces de navegación quedan para una etapa posterior.</p>
+              }
+              @case ('point_of_interest') {
+                <label>Nombre <input pInputText [value]="text(block, 'name')" (input)="onText(block.id, 'name', inputValue($event))" /></label>
+                <label>Descripción en francés <textarea pInputTextarea rows="4" [value]="text(block, 'description_fr')" (input)="onText(block.id, 'description_fr', inputValue($event))"></textarea></label>
+                <ng-container [ngTemplateOutlet]="coordFields" [ngTemplateOutletContext]="{ block: block, field: 'coordinates', label: 'Coordenadas' }" />
+                <label>Consejos para la visita <textarea pInputTextarea rows="3" [value]="text(block, 'visit_tips')" (input)="onText(block.id, 'visit_tips', inputValue($event))"></textarea></label>
+                <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
+                <label>Notas <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
+              }
+              @default {
+                <label>Título <input pInputText [value]="text(block, 'heading')" (input)="onText(block.id, 'heading', inputValue($event))" /></label>
+                <label>Texto <textarea pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
+              }
+            }
+
+            @if (block.type !== 'day' && block.type !== 'cover' && block.type !== 'general') {
+              <label>
+                Colocar en el día
+                <select (change)="placeOnDay(inputValue($event))">
+                  <option value="">Elegir día</option>
+                  @for (day of days(); track day.id) {
+                    <option [value]="day.id">{{ titleOf(day) }}</option>
+                  }
+                </select>
+              </label>
+            }
+          } @else {
+            <p>Seleccione un bloque para editarlo.</p>
+          }
+        </div>
+      </div>
+
+      <section class="carnet-editor__warnings">
+        <h2>Diagnóstico para Operaciones</h2>
+        <p>Estas advertencias no forman parte del Carnet que verá el viajero.</p>
+        @if (!warnings().length) {
+          <p>Sin advertencias internas.</p>
+        } @else {
+          <ul>
+            @for (warning of warnings(); track warning.code + warning.message) {
+              <li>{{ warningLabel(warning) }}</li>
+            }
+          </ul>
+        }
+      </section>
+    }
+  }
+</section>
+
+<ng-template #locale let-block="block">
+  <label>Descripción en francés <textarea pInputTextarea rows="4" [value]="text(block, 'description_fr')" (input)="onText(block.id, 'description_fr', inputValue($event))"></textarea></label>
+  <label>Descripción breve <textarea pInputTextarea rows="2" [value]="text(block, 'short_description_fr')" (input)="onText(block.id, 'short_description_fr', inputValue($event))"></textarea></label>
+  <label>Recomendación <textarea pInputTextarea rows="3" [value]="text(block, 'recommendation_fr')" (input)="onText(block.id, 'recommendation_fr', inputValue($event))"></textarea></label>
+  <label>Puntos destacados <textarea pInputTextarea rows="3" [value]="points(block, 'selling_points_fr')" (input)="onPoints(block.id, 'selling_points_fr', inputValue($event))"></textarea></label>
+  <details>
+    <summary>Referencia en español</summary>
+    <label>Descripción <textarea pInputTextarea rows="3" [value]="text(block, 'description_es')" (input)="onText(block.id, 'description_es', inputValue($event))"></textarea></label>
+  </details>
+</ng-template>
+
+<ng-template #coordFields let-block="block" let-field="field" let-label="label">
+  <fieldset>
+    <legend>{{ label }}</legend>
+    <label>Latitud <input pInputText [value]="coords(block, field).latitude ?? ''" (input)="onCoords(block.id, field, inputValue($event), coords(block, field).longitude ?? '')" /></label>
+    <label>Longitud <input pInputText [value]="coords(block, field).longitude ?? ''" (input)="onCoords(block.id, field, coords(block, field).latitude ?? '', inputValue($event))" /></label>
+  </fieldset>
+</ng-template>

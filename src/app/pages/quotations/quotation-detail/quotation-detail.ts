@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject, DestroyRef } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, DestroyRef, effect } from '@angular/core';
 import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, forkJoin } from 'rxjs';
@@ -35,6 +35,8 @@ import { ActivityService } from '../../../core/services/activity.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ContactService } from '../../../core/services/contact.service';
 import { AppSettingsService } from '../../../core/services/app-settings.service';
+import { CarnetService } from '../../../core/services/carnet.service';
+import { canEditCarnet } from '../../../core/utils/carnet-document';
 import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import {
   QuotationFull, QuotationVersion, QuotationLine,
@@ -247,6 +249,7 @@ export class QuotationDetail implements OnInit {
   isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
   isOperaciones = computed(() => this.auth.currentUser()?.role === 'operaciones');
   canDeleteFileAA = computed(() => this.isAdmin() || this.isOperaciones());
+  canOpenCarnet = computed(() => canEditCarnet(this.auth.currentUser()?.role));
   /** Al salir de Ficha AA hacia Agenda/Cotización: elegir versión (admin y operaciones). */
   canPickVersionWhenLeavingFicha = computed(() => this.isAdmin() || this.isOperaciones());
   /** Editar y guardar `file_aa_name` desde la Ficha AA (catálogo + fila). */
@@ -453,6 +456,27 @@ export class QuotationDetail implements OnInit {
   itineraryMenuItems: MenuItem[] = [];
 
   private destroyRef = inject(DestroyRef);
+  private carnetService = inject(CarnetService);
+  readonly carnetActionLabel = signal('Generar Carnet de Route');
+  readonly openingCarnet = signal(false);
+  private carnetLabelSeq = 0;
+  private readonly watchCarnetLabel = effect(() => {
+    const fileId = this.fichaFileAA()?.id ?? null;
+    const allowed = this.canOpenCarnet();
+    const seq = ++this.carnetLabelSeq;
+    if (!fileId || !allowed) {
+      this.carnetActionLabel.set('Generar Carnet de Route');
+      return;
+    }
+    this.carnetService.findByFile(fileId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        if (seq === this.carnetLabelSeq) this.carnetActionLabel.set('Editar Carnet de Route');
+      },
+      error: () => {
+        if (seq === this.carnetLabelSeq) this.carnetActionLabel.set('Generar Carnet de Route');
+      },
+    });
+  });
 
   /** Borrador UI para observaciones estructuradas (vehículo) en Ficha AA — evita pisar texto al teclear */
   private vehicleFichaObsDraft: Record<string, FileAADetailVehicleObsState> = {};
@@ -7082,6 +7106,30 @@ export class QuotationDetail implements OnInit {
           severity: 'error',
           summary: typeof msg === 'string' ? msg : 'Error al generar Ficha AA',
         });
+      },
+    });
+  }
+
+  openCarnet(): void {
+    const ficha = this.fichaFileAA();
+    const quotation = this.quotation();
+    if (!ficha || !quotation || !this.canOpenCarnet() || this.openingCarnet()) return;
+    this.openingCarnet.set(true);
+    this.carnetService.openFromFile(ficha.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (carnet) => {
+        this.openingCarnet.set(false);
+        this.carnetActionLabel.set('Editar Carnet de Route');
+        void this.router.navigate(['/cotizaciones', quotation.id, 'carnet', carnet.id]);
+      },
+      error: (err: { error?: { detail?: { code?: string } } }) => {
+        this.openingCarnet.set(false);
+        const code = err.error?.detail?.code;
+        const summary = code === 'file_aa_inactive'
+          ? 'La Ficha AA no está activa.'
+          : code === 'file_aa_archived'
+            ? 'La Ficha AA está archivada.'
+            : 'No se pudo abrir el Carnet.';
+        this.messageService.add({ severity: 'error', summary });
       },
     });
   }

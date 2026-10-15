@@ -1,0 +1,136 @@
+<section class="carnet-preview" [class.carnet-preview--draft]="unsaved()">
+  <p class="carnet-preview__banner">
+    @if (mode() === 'published') {
+      Carnet de route
+    } @else if (unsaved()) {
+      Borrador con cambios todavía no guardados · Français
+    } @else {
+      Borrador · Français
+    }
+  </p>
+
+  @if (preview().cover; as cover) {
+    <header class="carnet-preview__cover">
+      <p class="carnet-preview__kicker">Carnet de route</p>
+      <h1>{{ text(cover, 'title') || 'Sans titre' }}</h1>
+      @if (text(cover, 'subtitle')) {
+        <p>{{ text(cover, 'subtitle') }}</p>
+      }
+    </header>
+  }
+
+  @if (preview().general; as general) {
+    <section class="carnet-preview__card">
+      <h2>{{ text(general, 'trip_title') || 'Informations générales' }}</h2>
+      <p>
+        @if (date(general, 'start_date')) {
+          Du {{ date(general, 'start_date') }}
+        }
+        @if (date(general, 'end_date')) {
+          au {{ date(general, 'end_date') }}
+        }
+      </p>
+      @if (text(general, 'holder_name')) {
+        <p>{{ text(general, 'holder_name') }}</p>
+      }
+    </section>
+  }
+
+  @for (day of preview().days; track day.block.id) {
+    <section class="carnet-preview__day">
+      <h2>{{ date(day.block, 'on_date') || 'Jour' }}</h2>
+      @if (text(day.block, 'title')) {
+        <p class="carnet-preview__day-title">{{ text(day.block, 'title') }}</p>
+      }
+      @if (text(day.block, 'notes')) {
+        <p>{{ text(day.block, 'notes') }}</p>
+      }
+      @for (entry of day.entries; track entry.block.id) {
+        <article class="carnet-preview__card">
+          @if (entry.role === 'included') {
+            <p class="carnet-preview__badge">Inclus</p>
+          }
+          <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: entry.block }" />
+        </article>
+      }
+    </section>
+  }
+
+  @for (block of preview().rest; track block.id) {
+    <article class="carnet-preview__card">
+      <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
+    </article>
+  }
+</section>
+
+<ng-template #service let-block="block">
+  <h3>{{ title(block) }}</h3>
+  @if (text(block, 'schedule')) {
+    <p>Horaire : {{ text(block, 'schedule') }}</p>
+  }
+  @if (date(block, 'check_in') || date(block, 'check_out')) {
+    <p>Du {{ date(block, 'check_in') }} au {{ date(block, 'check_out') }}</p>
+  }
+  @if (text(block, 'departure_time') || text(block, 'return_time')) {
+    <p>
+      @if (text(block, 'departure_time')) { Départ {{ text(block, 'departure_time') }} }
+      @if (text(block, 'return_time')) { · Retour {{ text(block, 'return_time') }} }
+    </p>
+  }
+  @if (text(block, 'origin_label') || text(block, 'destination_label')) {
+    <p>{{ text(block, 'origin_label') }} → {{ text(block, 'destination_label') }}</p>
+  }
+  @if (text(block, 'address')) { <p>{{ text(block, 'address') }}</p> }
+  @if (text(block, 'phone')) {
+    <p>
+      @if (tel(block); as phone) {
+        <a [href]="phone" referrerpolicy="no-referrer">{{ text(block, 'phone') }}</a>
+      } @else {
+        {{ text(block, 'phone') }}
+      }
+    </p>
+  }
+  @if (text(block, 'reservation_number')) { <p>Réservation : {{ text(block, 'reservation_number') }}</p> }
+  @if (text(block, 'locality')) { <p>{{ text(block, 'locality') }}</p> }
+  @if (text(block, 'pickup_text')) { <p>Prise en charge : {{ text(block, 'pickup_text') }}</p> }
+  @if (text(block, 'dropoff_text')) { <p>Dépose : {{ text(block, 'dropoff_text') }}</p> }
+  @if (text(block, 'description_fr')) { <p>{{ text(block, 'description_fr') }}</p> }
+  @if (text(block, 'short_description_fr')) { <p>{{ text(block, 'short_description_fr') }}</p> }
+  @if (text(block, 'recommendation_fr')) { <p>{{ text(block, 'recommendation_fr') }}</p> }
+  @if (text(block, 'visit_tips')) { <p>Conseils : {{ text(block, 'visit_tips') }}</p> }
+  @if (points(block, 'selling_points_fr').length) {
+    <ul>
+      @for (point of points(block, 'selling_points_fr'); track point) {
+        <li>{{ point }}</li>
+      }
+    </ul>
+  }
+  @for (room of rooms(block); track room.id) {
+    <p>{{ room.public_name.value }} × {{ room.quantity.value }}</p>
+    @if (room.description_fr.value) { <p>{{ room.description_fr.value }}</p> }
+  }
+  @if (text(block, 'heading')) { <p class="carnet-preview__day-title">{{ text(block, 'heading') }}</p> }
+  @if (text(block, 'body')) { <p>{{ text(block, 'body') }}</p> }
+  @if (text(block, 'notes')) { <p>{{ text(block, 'notes') }}</p> }
+  @if (text(block, 'link')) {
+    <p><a [href]="text(block, 'link')" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Site web</a></p>
+  }
+  @if (nav(block); as links) {
+    @if (links.origin) { <p>Coordonnées de départ : {{ links.origin }}</p> }
+    @if (links.destination) { <p>Coordonnées d'arrivée : {{ links.destination }}</p> }
+    @if (links.place) { <p>Coordonnées : {{ links.place }}</p> }
+    @if (links.mapsUrl || links.wazeUrl) {
+      <p class="carnet-preview__nav">
+        @if (links.mapsUrl) {
+          <a [href]="links.mapsUrl" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Voir l'itinéraire</a>
+        }
+        @if (links.wazeUrl) {
+          <a [href]="links.wazeUrl" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Naviguer vers la destination</a>
+        }
+      </p>
+      @if (links.wazeUrl) {
+        <p class="carnet-preview__fine">Depuis votre position</p>
+      }
+    }
+  }
+</ng-template>
