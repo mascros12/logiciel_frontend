@@ -918,9 +918,11 @@ export function previewOf(document: CarnetDocument): PreviewModel {
     if (block.type !== 'day' || !usable(block)) continue;
     shown.add(block.id);
     const entries: PreviewEntry[] = [];
+    const dayIds = new Set<string>();
     for (const entry of entriesOf(block)) {
       const child = document.blocks.find((item) => item.id === entry.block_id);
-      if (!usable(child) || shown.has(child.id)) continue;
+      if (!usable(child) || dayIds.has(child.id)) continue;
+      dayIds.add(child.id);
       shown.add(child.id);
       entries.push({ role: entry.role, block: child });
     }

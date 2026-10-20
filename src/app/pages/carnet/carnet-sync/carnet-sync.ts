@@ -115,7 +115,7 @@ export class CarnetSyncPanel implements OnInit {
 
   askReplaceAll(): void {
     this.confirmation.confirm({
-      header: 'Reemplazar el borrador con la Ficha AA',
+      header: 'Seleccionar todos los cambios',
       message:
         'Se marcarán todos los cambios, incluidos los conflictos que sustituyen valores personalizados. Hay que ver el resultado y pulsar Aplicar. El Carnet publicado no cambia.',
       acceptLabel: 'Marcar todos',
