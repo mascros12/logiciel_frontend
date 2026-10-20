@@ -1,0 +1,61 @@
+<p-toast />
+
+<div class="page-container">
+  <div class="page-header">
+    <h2 class="page-title">Plantillas del Carnet</h2>
+    <p class="page-subtitle">
+      Textos maestros en francés. Al crear un Carnet se copia el contenido vigente.
+      Los Carnets ya creados y las revisiones publicadas no cambian.
+    </p>
+  </div>
+
+  @if (loading()) {
+    <p>Cargando plantillas…</p>
+  } @else if (loadError()) {
+    <p>{{ loadError() }}</p>
+    <p-button label="Reintentar" (onClick)="reload()" />
+  } @else {
+    @for (row of rows(); track row.key) {
+      <article class="template-card">
+        <header class="template-card__meta">
+          <p>Versión {{ row.version }}</p>
+          <p>Última modificación {{ row.updated_at | date: 'dd/MM/yyyy HH:mm' }}</p>
+        </header>
+
+        <label>
+          Título en francés
+          <input pInputText [ngModel]="row.title" (ngModelChange)="row.title = $event" />
+        </label>
+
+        <label>
+          Texto en francés
+          <textarea
+            pInputTextarea
+            rows="8"
+            [ngModel]="row.body"
+            (ngModelChange)="row.body = $event"
+          ></textarea>
+        </label>
+
+        <label class="template-card__active">
+          <input type="checkbox" [ngModel]="row.active" (ngModelChange)="row.active = $event" />
+          Sección activa
+        </label>
+
+        <section class="template-card__preview">
+          <h3>Vista previa</h3>
+          <p class="template-card__preview-title">{{ row.title || 'Sin título' }}</p>
+          <p class="template-card__preview-body">{{ row.body || 'Sin texto. No se publica hasta que el Carnet tenga contenido.' }}</p>
+        </section>
+
+        <p-button
+          label="Guardar"
+          icon="pi pi-save"
+          [loading]="savingKey() === row.key"
+          [disabled]="savingKey() !== null"
+          (onClick)="save(row)"
+        />
+      </article>
+    }
+  }
+</div>

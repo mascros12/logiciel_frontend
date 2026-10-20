@@ -54,6 +54,7 @@ import {
   setInt,
   setPoints,
   setRoomText,
+  sectionPending,
   setText,
   setVisible,
   shouldWarnOnLeave,
@@ -416,6 +417,10 @@ export class CarnetEditor implements OnInit {
 
   titleOf(block: CarnetBlock): string {
     return blockTitle(block);
+  }
+
+  pending(block: CarnetBlock): boolean {
+    return sectionPending(block);
   }
 
   edited(block: CarnetBlock, field?: string): boolean {

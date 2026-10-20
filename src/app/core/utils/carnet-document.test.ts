@@ -12,6 +12,7 @@ import {
   documentFromPublic,
   previewOf,
   previewText,
+  sectionPending,
   publicationLabel,
   reorderVisible,
   setCoords,
@@ -432,3 +433,41 @@ describe('carnet editor document', () => {
     assert.equal(text.includes('content_fr_missing'), false);
   });
 });
+
+describe('secciones editoriales', () => {
+  it('coloca los textos antes del itinerario y marca el cuerpo vacío', () => {
+    const document = sample();
+    const numbers = editorial('numbers', 'practical', 'Numéros importants', null);
+    const itinerary = editorial('itinerary', 'free_text', 'Votre itinéraire', null);
+    const conditions = editorial('conditions', 'conditions', 'Conditions et recommandations', null);
+    document.blocks.splice(1, 0, numbers, itinerary);
+    document.blocks.push(conditions);
+    const preview = previewOf(document);
+    assert.deepEqual(preview.lead.map((block) => block.id), ['numbers', 'itinerary']);
+    assert.equal(preview.rest.at(-1)?.id, 'conditions');
+    assert.equal(sectionPending(numbers), true);
+    assert.equal(sectionPending(itinerary), false);
+    assert.match(previewText(document), /Numéros importants/);
+    assert.equal(previewText(document).includes('9000'), false);
+  });
+});
+
+function editorial(
+  id: string,
+  type: 'practical' | 'free_text' | 'conditions',
+  heading: string,
+  body: string | null,
+) {
+  return {
+    id,
+    type,
+    position: 0,
+    visible: true,
+    removed: false,
+    manual: false,
+    source_detail_id: null,
+    product_kind: null,
+    product_id: null,
+    content: { heading: text(heading), body: text(body) },
+  };
+}

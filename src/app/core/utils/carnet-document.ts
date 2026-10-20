@@ -43,6 +43,7 @@ export interface PreviewModel {
   title: string;
   cover: CarnetBlock | null;
   general: CarnetBlock | null;
+  lead: CarnetBlock[];
   days: PreviewDay[];
   rest: CarnetBlock[];
 }
@@ -135,6 +136,15 @@ export function blockTitle(block: CarnetBlock): string {
 export function textOf(content: Record<string, unknown>, field: string): string {
   const tracked = content[field] as TrackedText | undefined;
   return tracked?.value ?? '';
+}
+
+const EDITORIAL_TYPES = new Set(['note', 'warning', 'free_text', 'practical', 'conditions']);
+export const ITINERARY_HEADING = 'Votre itinéraire';
+
+export function sectionPending(block: CarnetBlock): boolean {
+  if (block.removed || !block.visible || !EDITORIAL_TYPES.has(block.type)) return false;
+  if (textOf(block.content, 'body').trim()) return false;
+  return textOf(block.content, 'heading').trim() !== ITINERARY_HEADING;
 }
 
 export function dateOf(content: Record<string, unknown>, field: string): string {
@@ -928,9 +938,19 @@ export function previewOf(document: CarnetDocument): PreviewModel {
     }
     days.push({ block, entries });
   }
-  const rest = document.blocks.filter((block) => usable(block) && !shown.has(block.id));
+  const lead: CarnetBlock[] = [];
+  const rest: CarnetBlock[] = [];
+  let itineraryStarted = false;
+  for (const block of document.blocks) {
+    if (block.type === 'day' && usable(block)) {
+      itineraryStarted = true;
+      continue;
+    }
+    if (!usable(block) || shown.has(block.id)) continue;
+    (itineraryStarted ? rest : lead).push(block);
+  }
   const title = cover ? textOf(cover.content, 'title') : general ? textOf(general.content, 'trip_title') : '';
-  return { title, cover, general, days, rest };
+  return { title, cover, general, lead, days, rest };
 }
 
 export function previewText(document: CarnetDocument): string {
@@ -948,6 +968,7 @@ export function previewText(document: CarnetDocument): string {
   };
   if (preview.cover) pushBlock(preview.cover);
   if (preview.general) pushBlock(preview.general);
+  for (const block of preview.lead) pushBlock(block);
   for (const day of preview.days) {
     pushBlock(day.block);
     for (const entry of day.entries) pushBlock(entry.block);
@@ -1148,6 +1169,9 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
         removed: false,
       })),
     }));
+  }
+  for (const entry of view.preamble ?? []) {
+    blocks.push(publicBlock(entry.type, entryContent(entry)));
   }
   for (const day of view.days) {
     const entries = day.entries.map((entry) => {

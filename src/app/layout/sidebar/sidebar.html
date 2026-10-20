@@ -65,6 +65,7 @@
           @if (settingsExpanded() && !collapsed()) {
             <div class="settings-submenu" role="group" aria-label="Configuraciones">
               @for (item of settingsItems; track item.route) {
+                @if (canShowSettingsItem(item)) {
                 <a
                   [routerLink]="item.route"
                   routerLinkActive="active"
@@ -73,6 +74,7 @@
                   <i [class]="item.icon"></i>
                   <span>{{ item.label }}</span>
                 </a>
+                }
               }
             </div>
           }

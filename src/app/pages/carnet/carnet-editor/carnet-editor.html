@@ -172,6 +172,9 @@
                   @if (edited(block)) {
                     <span class="carnet-editor__edited">Editado</span>
                   }
+                  @if (pending(block)) {
+                    <span class="carnet-editor__edited">Pendiente</span>
+                  }
                   @if (!block.visible) {
                     <span class="carnet-editor__edited">Oculto</span>
                   }
@@ -316,6 +319,9 @@
               @default {
                 <label>Título <input pInputText [value]="text(block, 'heading')" (input)="onText(block.id, 'heading', inputValue($event))" /></label>
                 <label>Texto <textarea pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
+                @if (pending(block)) {
+                  <p class="carnet-editor__hint">Pendiente: este apartado no se publica hasta que Operaciones escriba el texto. No incluya teléfonos ni condiciones inventados.</p>
+                }
               }
             }
 

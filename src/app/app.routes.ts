@@ -127,6 +127,15 @@ export const routes: Routes = [
             .then(m => m.ZoneList)
       },
       {
+        path: 'configuraciones/plantillas-carnet',
+        title: 'Logiciel - Plantillas del Carnet',
+        canActivate: [authGuard],
+        data: { roles: ['admin', 'operaciones'] },
+        loadComponent: () =>
+          import('./pages/settings/carnet-templates/carnet-templates')
+            .then(m => m.CarnetTemplates)
+      },
+      {
         path: 'configuraciones/proveedores',
         title: 'Logiciel - Proveedores',
         canActivate: [authGuard],

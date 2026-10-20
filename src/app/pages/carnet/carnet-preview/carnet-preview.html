@@ -36,6 +36,12 @@
     </section>
   }
 
+  @for (block of preview().lead; track block.id) {
+    <article class="carnet-preview__card">
+      <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
+    </article>
+  }
+
   @for (day of preview().days; track day.block.id) {
     <section class="carnet-preview__day">
       <h2>{{ date(day.block, 'on_date') || 'Jour' }}</h2>
@@ -109,8 +115,10 @@
     <p>{{ room.public_name.value }} × {{ room.quantity.value }}</p>
     @if (room.description_fr.value) { <p>{{ room.description_fr.value }}</p> }
   }
-  @if (text(block, 'heading')) { <p class="carnet-preview__day-title">{{ text(block, 'heading') }}</p> }
-  @if (text(block, 'body')) { <p>{{ text(block, 'body') }}</p> }
+  @if (text(block, 'heading') && text(block, 'heading') !== title(block)) {
+    <p class="carnet-preview__day-title">{{ text(block, 'heading') }}</p>
+  }
+  @if (text(block, 'body')) { <p class="carnet-preview__prose">{{ text(block, 'body') }}</p> }
   @if (text(block, 'notes')) { <p>{{ text(block, 'notes') }}</p> }
   @if (text(block, 'link')) {
     <p><a [href]="text(block, 'link')" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Site web</a></p>

@@ -197,6 +197,7 @@ export interface PublicCarnet {
     children_ages: number[];
     flights: PublicFlight[];
   } | null;
+  preamble?: PublicEntry[];
   days: PublicDay[];
   rest: PublicEntry[];
 }

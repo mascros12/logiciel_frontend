@@ -15,6 +15,7 @@ interface SettingsNavItem {
   label: string;
   icon: string;
   route: string;
+  roles?: string[];
 }
 
 @Component({
@@ -41,9 +42,15 @@ export class Sidebar {
 
   /** Ítems del menú Configuraciones — ampliar aquí al agregar más módulos. */
   settingsItems: SettingsNavItem[] = [
-    { label: 'Generales', icon: 'pi pi-sliders-h', route: '/configuraciones/generales' },
-    { label: 'Zonas', icon: 'pi pi-map', route: '/configuraciones/zonas' },
-    { label: 'Proveedores', icon: 'pi pi-briefcase', route: '/configuraciones/proveedores' },
+    { label: 'Generales', icon: 'pi pi-sliders-h', route: '/configuraciones/generales', roles: ['admin'] },
+    { label: 'Zonas', icon: 'pi pi-map', route: '/configuraciones/zonas', roles: ['admin'] },
+    { label: 'Proveedores', icon: 'pi pi-briefcase', route: '/configuraciones/proveedores', roles: ['admin'] },
+    {
+      label: 'Plantillas del Carnet',
+      icon: 'pi pi-book',
+      route: '/configuraciones/plantillas-carnet',
+      roles: ['admin', 'operaciones'],
+    },
   ];
 
   private readonly settingsExpandedManual = signal<boolean | null>(null);
@@ -76,7 +83,8 @@ export class Sidebar {
 
   toggleSettings(): void {
     if (this.collapsed()) {
-      this.router.navigate(['/configuraciones/generales']);
+      const route = this.settingsItems.find((item) => this.canShowSettingsItem(item))?.route;
+      if (route) this.router.navigate([route]);
       return;
     }
     this.settingsExpandedManual.set(!this.settingsExpanded());
@@ -89,6 +97,13 @@ export class Sidebar {
   }
 
   canShowSettings(): boolean {
-    return this.auth.currentUser()?.role === 'admin';
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'operaciones';
+  }
+
+  canShowSettingsItem(item: SettingsNavItem): boolean {
+    if (!item.roles?.length) return true;
+    const role = this.auth.currentUser()?.role;
+    return !!role && item.roles.includes(role);
   }
 }
