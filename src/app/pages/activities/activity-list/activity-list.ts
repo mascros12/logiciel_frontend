@@ -16,6 +16,8 @@ import { SelectModule } from 'primeng/select';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ActivityService } from '../../../core/services/activity.service';
 import { Activity } from '../../../core/models/activity.model';
+import { Zone, zoneOptionLabel } from '../../../core/models/zone.model';
+import { ZoneService } from '../../../core/services/zone.service';
 import { FormsModule } from '@angular/forms';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -92,6 +94,7 @@ export class ActivityList implements OnInit {
 
   constructor(
     private activityService: ActivityService,
+    private zoneService: ZoneService,
     private auth: AuthService,
     private router: Router,
     private route: ActivatedRoute,
@@ -103,6 +106,7 @@ export class ActivityList implements OnInit {
       name: ['', Validators.required],
       name_es: ['', Validators.required],
       province: [null],
+      zone_id: [null as string | null],
       address: [''],
       phone: ['', Validators.maxLength(25)],
       longitude: ['', longitudeValidator],
@@ -122,9 +126,24 @@ export class ActivityList implements OnInit {
     this.form.get('commission')!.valueChanges.subscribe(() => this.calcRackFromNet());
   }
 
+  zones = signal<Zone[]>([]);
+
   ngOnInit() {
     this.listState = readListStateFromRoute(this.route);
+    this.zoneService.getAll().subscribe({
+      next: (res) => this.zones.set(res.items),
+      error: () => this.zones.set([]),
+    });
     this.load();
+  }
+
+  zoneOptions(): { label: string; value: string }[] {
+    return this.zones().map((zone) => ({ label: zoneOptionLabel(zone), value: zone.id }));
+  }
+
+  zoneName(zoneId: string | null | undefined): string {
+    if (!zoneId) return '';
+    return this.zones().find((zone) => zone.id === zoneId)?.name ?? '';
   }
 
   get searchTerm(): string {
@@ -188,6 +207,7 @@ export class ActivityList implements OnInit {
       rack_child_price: 0,
       reservation_email: '',
       provider: '',
+      zone_id: null,
       phone: '',
       longitude: '',
       latitude: '',
@@ -227,6 +247,7 @@ export class ActivityList implements OnInit {
       name: activity.name,
       name_es: activity.name_es,
       province: activity.province,
+      zone_id: activity.zone_id ?? null,
       address: activity.address,
       phone: activity.phone ?? '',
       longitude: formatCoordinate(activity.longitude),

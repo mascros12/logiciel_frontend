@@ -12,11 +12,12 @@ import {
 } from '../../../core/utils/carnet-document';
 import { CarnetBlock, CarnetDocument } from '../../../core/models/carnet.model';
 import { NavigationView, navigationOf } from '../../../core/utils/carnet-navigation';
+import { OrganisationTable } from '../organisation-table/organisation-table';
 
 @Component({
   selector: 'app-carnet-preview',
   standalone: true,
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, OrganisationTable],
   templateUrl: './carnet-preview.html',
   styleUrl: './carnet-preview.scss',
 })

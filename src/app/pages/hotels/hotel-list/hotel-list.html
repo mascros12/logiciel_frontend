@@ -76,6 +76,7 @@
           </span>
         </th>
         <th style="width:120px">Provincia</th>
+        <th style="width:140px">Zona</th>
         @if (canManageHotels()) {
           <th style="width:100px">Comisión</th>
         }
@@ -112,6 +113,7 @@
           }
         </td>
         <td>{{ h.province ?? '—' }}</td>
+        <td>{{ zoneName(h.zone_id) }}</td>
         @if (canManageHotels()) {
           <td>{{ h.commission | number:'1.2-2' }}</td>
         }
@@ -142,7 +144,7 @@
     </ng-template>
 
     <ng-template pTemplate="emptymessage">
-      <tr><td [attr.colspan]="(canManageHotels() ? 5 : 3) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay hoteles registrados</td></tr>
+      <tr><td [attr.colspan]="(canManageHotels() ? 6 : 4) + (showActionsColumn() ? 1 : 0)" class="text-center">No hay hoteles registrados</td></tr>
     </ng-template>
   </p-table>
 </div>
@@ -172,6 +174,13 @@
         <p-inputNumber formControlName="commission"
           [minFractionDigits]="2" [maxFractionDigits]="4" styleClass="w-full" />
       </div>
+    </div>
+    <div class="field">
+      <label>Zona</label>
+      <p-select formControlName="zone_id" [options]="zoneOptions()"
+        optionLabel="label" optionValue="value"
+        placeholder="Seleccionar" [filter]="true" [showClear]="true"
+        styleClass="w-full" appendTo="body" />
     </div>
     <div class="field">
       <label>Dirección / Ciudad</label>

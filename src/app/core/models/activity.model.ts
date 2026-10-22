@@ -14,6 +14,7 @@ export interface Activity {
   name_es: string;
   file_aa_name?: string | null;
   province: string;
+  zone_id?: string | null;
   address: string | null;
   phone?: string | null;
   longitude?: string | null;
@@ -43,6 +44,7 @@ export interface ActivityCreate {
   name_es: string;
   file_aa_name?: string | null;
   province: string;
+  zone_id?: string | null;
   address?: string;
   phone?: string | null;
   longitude?: string | null;

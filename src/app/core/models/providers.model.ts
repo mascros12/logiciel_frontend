@@ -1,6 +1,7 @@
 export interface ProviderBranch {
   id: string;
   name: string;
+  zone_id: string | null;
   longitude: string;
   latitude: string;
   created_at: string;
@@ -20,6 +21,7 @@ export interface Provider {
 export interface ProviderBranchWrite {
   id?: string | null;
   name: string;
+  zone_id?: string | null;
   longitude: string;
   latitude: string;
 }

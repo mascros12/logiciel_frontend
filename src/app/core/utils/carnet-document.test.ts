@@ -10,6 +10,8 @@ import {
   markRemoved,
   moveDayEntry,
   documentFromPublic,
+  formatDateFr,
+  organisationRows,
   previewOf,
   previewText,
   sectionPending,
@@ -26,7 +28,14 @@ import {
   warningText,
   withDocument,
 } from './carnet-document.ts';
-import type { CarnetDocument, CarnetView } from '../models/carnet.model.ts';
+import type {
+  BlockType,
+  CarnetBlock,
+  CarnetDocument,
+  CarnetView,
+  PublicCarnet,
+  PublicEntry,
+} from '../models/carnet.model.ts';
 
 function text(value: string | null, generated: string | null = value) {
   return {
@@ -447,10 +456,250 @@ describe('secciones editoriales', () => {
     assert.equal(preview.rest.at(-1)?.id, 'conditions');
     assert.equal(sectionPending(numbers), true);
     assert.equal(sectionPending(itinerary), false);
+    const organisation = {
+      ...editorial('organisation', 'free_text', 'Organisation du voyage', null),
+      section_kind: 'itinerary_summary' as const,
+    };
+    assert.equal(sectionPending(organisation), false);
     assert.match(previewText(document), /Numéros importants/);
     assert.equal(previewText(document).includes('9000'), false);
   });
 });
+
+describe('organisation du voyage', () => {
+  it('proyecta los días sin copiar comidas, regiones ni servicios ocultos', () => {
+    const document = organisationDocument();
+    const rows = organisationRows(document);
+    assert.ok(rows);
+    assert.deepEqual(rows.map((row) => row.dateLabel), [
+      '20 mars 2026',
+      '21 mars 2026',
+      '22 mars 2026',
+      '23 mars 2026',
+      '24 mars 2026',
+    ]);
+    assert.equal(formatDateFr('2026-03-20'), '20 mars 2026');
+    assert.equal(rows[0].region, 'Tortuguero');
+    assert.equal(rows[1].region, '');
+    assert.deepEqual(rows[0].lodging, ['Hôtel Arco']);
+    assert.deepEqual(rows[1].lodging, ['Hôtel Arco']);
+    assert.deepEqual(rows[2].lodging, ['Hôtel Arco']);
+    assert.deepEqual(rows[3].lodging, []);
+    assert.deepEqual(rows[0].included, ['Thermal', 'Ponts', 'Transfert hôtel', 'Navette']);
+    assert.deepEqual(rows[1].included, []);
+    assert.deepEqual(rows[3].included, ['Ponts']);
+    assert.deepEqual(rows[4].lodging, []);
+    assert.deepEqual(rows[4].included, []);
+    assert.equal(rows.some((row) => row.lodging.includes('Hôtel Secret')), false);
+    assert.equal(rows.some((row) => row.included.includes('Ancien tour')), false);
+    assert.equal(rows.some((row) => row.included.includes('Cascade')), false);
+    assert.equal(JSON.stringify(rows).includes('Petit-déjeuner'), false);
+    assert.equal(JSON.stringify(rows).includes('Guanacaste'), false);
+    const preview = previewOf(document);
+    assert.equal(preview.rest.at(-1)?.section_kind, 'itinerary_summary');
+    assert.equal(preview.lead.some((block) => block.section_kind === 'itinerary_summary'), false);
+  });
+
+  it('oculta la tabla con la sección y conserva el snapshot', () => {
+    const document = organisationDocument();
+    const published = structuredClone(document);
+    const hotel = document.blocks.find((block) => block.id === 'hotel');
+    assert.ok(hotel);
+    hotel.content['public_name'] = text('Hôtel du lac');
+    const day = document.blocks.find((block) => block.id === 'day-a');
+    assert.ok(day);
+    day.content['title'] = text('Arenal');
+    assert.equal(organisationRows(document)?.[0].lodging[0], 'Hôtel du lac');
+    assert.equal(organisationRows(document)?.[0].region, 'Arenal');
+    assert.equal(organisationRows(published)?.[0].lodging[0], 'Hôtel Arco');
+    const hidden = structuredClone(published);
+    const marker = hidden.blocks.find((block) => block.id === 'marker');
+    assert.ok(marker);
+    marker.visible = false;
+    assert.equal(organisationRows(hidden), null);
+    assert.equal(organisationRows(sample()), null);
+  });
+
+  it('repite la misma proyección al reconstruir la página pública', () => {
+    const document = organisationDocument();
+    const rows = organisationRows(document);
+    const rebuilt = documentFromPublic(publicView(document));
+    assert.equal(
+      rebuilt.blocks.some((block) => block.section_kind === 'itinerary_summary'),
+      true,
+    );
+    assert.deepEqual(organisationRows(rebuilt), rows);
+  });
+});
+
+function organisationDocument(): CarnetDocument {
+  const hotel = service('hotel', 'hotel', 'Hôtel Arco', {
+    locality: text('Guanacaste'),
+    check_in: text('2026-03-20'),
+    check_out: text('2026-03-23'),
+    notes: text('Petit-déjeuner inclus'),
+  });
+  const secret = service('secret', 'hotel', 'Hôtel Secret', {
+    check_in: text('2026-03-20'),
+    check_out: text('2026-03-23'),
+  });
+  secret.visible = false;
+  const removed = service('old', 'activity', 'Ancien tour');
+  removed.removed = true;
+  return {
+    locale: 'fr',
+    schema_version: 1,
+    blocks: [
+      day('day-c', '2026-03-22', null, [
+        ['hotel', 'stay'],
+        ['old', 'activity'],
+      ]),
+      day('day-b', '2026-03-21', null, [['hotel', 'stay']]),
+      day('day-e', '2026-03-24', null, []),
+      day('day-d', '2026-03-23', null, [
+        ['hotel', 'stay'],
+        ['visit', 'activity'],
+      ]),
+      day('day-a', '2026-03-20', 'Tortuguero', [
+        ['hotel', 'stay'],
+        ['thermal', 'included'],
+        ['visit', 'activity'],
+        ['transfer', 'included'],
+        ['transfer', 'transport'],
+        ['shuttle', 'transport'],
+        ['poi', 'activity'],
+        ['secret', 'stay'],
+      ]),
+      marker(),
+      hotel,
+      secret,
+      service('thermal', 'activity', 'Thermal'),
+      service('visit', 'activity', 'Ponts'),
+      service('transfer', 'transport', 'Transfert hôtel'),
+      service('shuttle', 'transport', 'Navette'),
+      service('poi', 'point_of_interest', 'Cascade'),
+      removed,
+    ],
+  };
+}
+
+function publicView(document: CarnetDocument): PublicCarnet {
+  const preview = previewOf(document);
+  return {
+    locale: 'fr',
+    cover: null,
+    general: null,
+    preamble: preview.lead.map(publicEntry),
+    days: preview.days.map((dayBlock) => ({
+      on_date: textOf(dayBlock.block, 'on_date'),
+      title: textOf(dayBlock.block, 'title') || null,
+      notes: textOf(dayBlock.block, 'notes') || null,
+      entries: dayBlock.entries.map((entry) => publicEntry(entry.block, entry.role)),
+    })),
+    rest: preview.rest.map(publicEntry),
+  };
+}
+
+function publicEntry(block: CarnetBlock, role: PublicEntry['role'] = null): PublicEntry {
+  const value = (field: string) => textOf(block, field) || null;
+  return {
+    type: block.type,
+    role,
+    title: value('public_name') || value('title') || value('name') || value('heading'),
+    schedule: value('schedule'),
+    description_fr: value('description_fr'),
+    short_description_fr: null,
+    recommendation_fr: null,
+    selling_points_fr: [],
+    highlights_fr: [],
+    address: null,
+    phone: null,
+    locality: value('locality'),
+    check_in: value('check_in'),
+    check_out: value('check_out'),
+    dates: [],
+    departure_time: null,
+    return_time: null,
+    pickup_text: null,
+    dropoff_text: null,
+    origin_label: null,
+    destination_label: null,
+    latitude: null,
+    longitude: null,
+    origin_latitude: null,
+    origin_longitude: null,
+    destination_latitude: null,
+    destination_longitude: null,
+    reservation_number: null,
+    link: null,
+    notes: value('notes'),
+    heading: value('heading'),
+    body: value('body'),
+    visit_tips: null,
+    rooms: [],
+    section_kind: block.section_kind ?? null,
+  };
+}
+
+function textOf(block: CarnetBlock, field: string): string {
+  const tracked = block.content[field] as { value?: string | null } | undefined;
+  return tracked?.value ?? '';
+}
+
+function marker(): CarnetBlock {
+  return {
+    ...service('marker', 'free_text', 'Organisation du voyage'),
+    section_kind: 'itinerary_summary',
+    content: {
+      heading: text('Organisation du voyage'),
+      body: text(null),
+    },
+  };
+}
+
+function day(
+  id: string,
+  onDate: string,
+  title: string | null,
+  entries: Array<[string, 'stay' | 'activity' | 'transport' | 'included']>,
+): CarnetBlock {
+  return {
+    ...service(id, 'day', title),
+    content: {
+      on_date: text(onDate),
+      title: text(title),
+      notes: text(null),
+      entries: entries.map(([blockId, role]) => ({ block_id: blockId, role })),
+      generated_entries: [],
+      entries_origin: 'generated',
+    },
+  };
+}
+
+function service(
+  id: string,
+  type: BlockType,
+  name: string | null,
+  extra: Record<string, unknown> = {},
+): CarnetBlock {
+  const named = type === 'point_of_interest'
+    ? { name: text(name) }
+    : type === 'day' || type === 'free_text'
+      ? { title: text(name), heading: text(name) }
+      : { public_name: text(name) };
+  return {
+    id,
+    type,
+    position: 0,
+    visible: true,
+    removed: false,
+    manual: false,
+    source_detail_id: null,
+    product_kind: null,
+    product_id: null,
+    content: { ...named, ...extra },
+  };
+}
 
 function editorial(
   id: string,

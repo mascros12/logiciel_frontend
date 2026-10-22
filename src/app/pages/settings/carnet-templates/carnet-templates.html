@@ -4,58 +4,163 @@
   <div class="page-header">
     <h2 class="page-title">Plantillas del Carnet</h2>
     <p class="page-subtitle">
-      Textos maestros en francés. Al crear un Carnet se copia el contenido vigente.
-      Los Carnets ya creados y las revisiones publicadas no cambian.
+      Estructura general en francés. Publicar guarda una versión inmutable.
+      Activarla solo afecta a los Carnets que se creen después.
     </p>
   </div>
 
   @if (loading()) {
-    <p>Cargando plantillas…</p>
+    <p>Cargando plantilla…</p>
   } @else if (loadError()) {
     <p>{{ loadError() }}</p>
     <p-button label="Reintentar" (onClick)="reload()" />
-  } @else {
-    @for (row of rows(); track row.key) {
-      <article class="template-card">
-        <header class="template-card__meta">
-          <p>Versión {{ row.version }}</p>
-          <p>Última modificación {{ row.updated_at | date: 'dd/MM/yyyy HH:mm' }}</p>
-        </header>
+  } @else if (state(); as current) {
+    <p class="layout-status">
+      @if (current.active_version_number) {
+        Versión activa: {{ current.active_version_number }}.
+      } @else {
+        No hay una versión activa. Los Carnets nuevos siguen la plantilla editorial anterior.
+      }
+      Borrador modificado {{ current.draft_updated_at | date: 'dd/MM/yyyy HH:mm' }}.
+    </p>
 
-        <label>
-          Título en francés
-          <input pInputText [ngModel]="row.title" (ngModelChange)="row.title = $event" />
-        </label>
+    <div class="layout-actions">
+      <p-button label="Agregar sección" icon="pi pi-plus" [disabled]="busy()" (onClick)="addSection()" />
+      <p-button
+        label="Guardar borrador"
+        icon="pi pi-save"
+        [disabled]="busy() || !dirty()"
+        [loading]="busy()"
+        (onClick)="save()"
+      />
+      <p-button
+        label="Publicar versión"
+        icon="pi pi-book"
+        severity="secondary"
+        [disabled]="busy() || dirty()"
+        (onClick)="publish()"
+      />
+    </div>
 
-        <label>
-          Texto en francés
-          <textarea
-            pInputTextarea
-            rows="8"
-            [ngModel]="row.body"
-            (ngModelChange)="row.body = $event"
-          ></textarea>
-        </label>
+    <div class="layout-grid">
+      <section class="layout-tree" cdkDropList (cdkDropListDropped)="dropRoot($event)">
+        @for (node of nodes(); track node.id) {
+          <article class="layout-node" cdkDrag [class.is-selected]="selectedId() === node.id">
+            <header>
+              <button type="button" class="drag-handle" cdkDragHandle aria-label="Reordenar sección">Mover</button>
+              <button type="button" class="node-title" (click)="selectedId.set(node.id)">
+                {{ node.title || 'Sin título' }}
+              </button>
+              <span>{{ kindLabel(node.kind) }}</span>
+              @if (!node.visible) {
+                <span>Oculta</span>
+              }
+            </header>
+            <div
+              class="layout-children"
+              cdkDropList
+              [cdkDropListData]="node.children"
+              (cdkDropListDropped)="dropChild(node, $event)"
+            >
+              @for (child of node.children; track child.id) {
+                <div class="layout-child" cdkDrag [class.is-selected]="selectedId() === child.id">
+                  <button type="button" class="drag-handle" cdkDragHandle aria-label="Reordenar subsección">Mover</button>
+                  <button type="button" class="node-title" (click)="selectedId.set(child.id)">
+                    {{ child.title || 'Sin título' }}
+                  </button>
+                  @if (!child.visible) {
+                    <span>Oculta</span>
+                  }
+                </div>
+              }
+            </div>
+          </article>
+        }
+      </section>
 
-        <label class="template-card__active">
-          <input type="checkbox" [ngModel]="row.active" (ngModelChange)="row.active = $event" />
-          Sección activa
-        </label>
+      <aside class="layout-editor">
+        @if (selected(); as node) {
+          <label>
+            Título en francés
+            <input pInputText [ngModel]="node.title" (ngModelChange)="node.title = $event; touch()" />
+          </label>
+          <label>
+            Tipo
+            <select [ngModel]="node.kind" (ngModelChange)="changeKind(node, $event)">
+              @for (kind of kindChoices(node); track kind.id) {
+                <option [value]="kind.id">{{ kind.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="check">
+            <input type="checkbox" [ngModel]="node.visible" (ngModelChange)="node.visible = $event; touch()" />
+            Visible en los Carnets nuevos
+          </label>
+          <label>
+            Texto predeterminado
+            <textarea
+              pInputTextarea
+              rows="8"
+              [ngModel]="node.body"
+              (ngModelChange)="node.body = $event; touch()"
+            ></textarea>
+          </label>
+          <p class="source-note">{{ sourceLabel(node) }}</p>
+          <div class="layout-actions">
+            @if (!childOf() && canAddChild(node)) {
+              <p-button label="Agregar subsección" [text]="true" (onClick)="addChild(node)" />
+            }
+            <p-button label="Quitar del borrador" severity="danger" [text]="true" (onClick)="removeSelected()" />
+          </div>
+        } @else {
+          <p>Seleccione una sección.</p>
+        }
 
-        <section class="template-card__preview">
-          <h3>Vista previa</h3>
-          <p class="template-card__preview-title">{{ row.title || 'Sin título' }}</p>
-          <p class="template-card__preview-body">{{ row.body || 'Sin texto. No se publica hasta que el Carnet tenga contenido.' }}</p>
+        <section class="layout-preview">
+          <h3>Vista previa de la estructura</h3>
+          <ol>
+            @for (node of nodes(); track node.id) {
+              <li [class.is-hidden]="!node.visible">
+                {{ node.title || 'Sin título' }}
+                <span>{{ kindLabel(node.kind) }}</span>
+                @if (node.children.length) {
+                  <ol>
+                    @for (child of node.children; track child.id) {
+                      <li [class.is-hidden]="!child.visible">{{ child.title || 'Sin título' }}</li>
+                    }
+                  </ol>
+                }
+              </li>
+            }
+          </ol>
         </section>
+      </aside>
+    </div>
 
-        <p-button
-          label="Guardar"
-          icon="pi pi-save"
-          [loading]="savingKey() === row.key"
-          [disabled]="savingKey() !== null"
-          (onClick)="save(row)"
-        />
-      </article>
-    }
+    <section class="layout-history">
+      <h3>Historial</h3>
+      @if (!current.versions.length) {
+        <p>Todavía no hay versiones publicadas.</p>
+      } @else {
+        <ul>
+          @for (version of current.versions; track version.id) {
+            <li>
+              <span>Versión {{ version.version_number }}</span>
+              <span>{{ version.published_at | date: 'dd/MM/yyyy HH:mm' }}</span>
+              @if (version.active) {
+                <strong>Activa</strong>
+              } @else {
+                <p-button
+                  label="Activar"
+                  [text]="true"
+                  [disabled]="busy()"
+                  (onClick)="activate(version.id)"
+                />
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
   }
 </div>

@@ -16,6 +16,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
+import { Zone, zoneOptionLabel } from '../../../core/models/zone.model';
+import { ZoneService } from '../../../core/services/zone.service';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
 import {
@@ -73,6 +75,7 @@ export class HotelDetail implements OnInit {
   /** Editar datos generales del hotel (incl. correo reservas) */
   showHotelMetaDialog = signal(false);
   savingHotelMeta = signal(false);
+  zones = signal<Zone[]>([]);
   hotelMetaForm: FormGroup;
 
   roomForm: FormGroup;
@@ -127,6 +130,7 @@ export class HotelDetail implements OnInit {
     protected router: Router,
     private location: Location,
     private hotelService: HotelService,
+    private zoneService: ZoneService,
     private auth: AuthService,
     private fb: FormBuilder,
     private messageService: MessageService,
@@ -174,6 +178,7 @@ export class HotelDetail implements OnInit {
     this.hotelMetaForm = this.fb.group({
       name: ['', Validators.required],
       province: [null as string | null],
+      zone_id: [null as string | null],
       address: [''],
       phone: ['', Validators.maxLength(25)],
       longitude: ['', longitudeValidator],
@@ -186,7 +191,20 @@ export class HotelDetail implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;
+    this.zoneService.getAll().subscribe({
+      next: (res) => this.zones.set(res.items),
+      error: () => this.zones.set([]),
+    });
     this.load(id);
+  }
+
+  zoneOptions(): { label: string; value: string }[] {
+    return this.zones().map((zone) => ({ label: zoneOptionLabel(zone), value: zone.id }));
+  }
+
+  zoneName(zoneId: string | null | undefined): string {
+    if (!zoneId) return '';
+    return this.zones().find((zone) => zone.id === zoneId)?.name ?? '';
   }
 
   load(id: string) {
@@ -471,6 +489,7 @@ export class HotelDetail implements OnInit {
     this.hotelMetaForm.patchValue({
       name: h.name,
       province: h.province,
+      zone_id: h.zone_id ?? null,
       address: h.address ?? '',
       phone: h.phone ?? '',
       longitude: formatCoordinate(h.longitude),

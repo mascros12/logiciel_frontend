@@ -16,6 +16,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
 import { Hotel, HotelCategory } from '../../../core/models/hotel.model';
+import { Zone, zoneOptionLabel } from '../../../core/models/zone.model';
+import { ZoneService } from '../../../core/services/zone.service';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
@@ -97,8 +99,11 @@ export class HotelList implements OnInit {
     { label: 'Limón',       value: 'Limon' },
   ];
 
+  zones = signal<Zone[]>([]);
+
   constructor(
     private hotelService: HotelService,
+    private zoneService: ZoneService,
     private fb: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
@@ -109,6 +114,7 @@ export class HotelList implements OnInit {
     this.form = this.fb.group({
       name: ['', Validators.required],
       province: [null],
+      zone_id: [null as string | null],
       address: [''],
       phone: ['', Validators.maxLength(25)],
       longitude: ['', longitudeValidator],
@@ -121,7 +127,24 @@ export class HotelList implements OnInit {
 
   ngOnInit() {
     this.listState = readListStateFromRoute(this.route);
+    this.loadZones();
     this.load();
+  }
+
+  zoneOptions(): { label: string; value: string }[] {
+    return this.zones().map((zone) => ({ label: zoneOptionLabel(zone), value: zone.id }));
+  }
+
+  zoneName(zoneId: string | null | undefined): string {
+    if (!zoneId) return '—';
+    return this.zones().find((zone) => zone.id === zoneId)?.name ?? '—';
+  }
+
+  private loadZones() {
+    this.zoneService.getAll().subscribe({
+      next: (res) => this.zones.set(res.items),
+      error: () => this.zones.set([]),
+    });
   }
 
   get searchTerm(): string {
@@ -178,6 +201,7 @@ export class HotelList implements OnInit {
     this.editingHotel.set(null);
     this.form.reset({
       commission: 1.2,
+      zone_id: null,
       reservation_email: '',
       category: null,
       phone: '',
@@ -193,6 +217,7 @@ export class HotelList implements OnInit {
     this.form.patchValue({
       name: h.name,
       province: h.province,
+      zone_id: h.zone_id ?? null,
       address: h.address ?? '',
       phone: h.phone ?? '',
       longitude: formatCoordinate(h.longitude),

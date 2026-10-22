@@ -32,6 +32,7 @@ export interface RoomSeason {
     name: string;
     file_aa_name?: string | null;
     province: string | null;
+    zone_id?: string | null;
     address: string | null;
     phone?: string | null;
     longitude?: string | null;
@@ -56,6 +57,7 @@ export interface RoomSeason {
     name: string;
     file_aa_name?: string | null;
     province?: string;
+    zone_id?: string | null;
     address?: string;
     phone?: string | null;
     longitude?: string | null;

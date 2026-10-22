@@ -104,6 +104,9 @@
         @if (a.name_es) {
           <div class="activity-name-es">{{ a.name_es }}</div>
         }
+        @if (zoneName(a.zone_id)) {
+          <div class="activity-name-es">{{ zoneName(a.zone_id) }}</div>
+        }
       </td>
       @if (canManageActivities()) {
         <td>
@@ -260,6 +263,21 @@
     } @else if (!form.get('longitude')?.invalid && !form.get('latitude')?.invalid) {
         <small class="coord-hint">Coordenadas con al menos 5 decimales.</small>
     }
+
+    <div class="field">
+        <label>Zona</label>
+        <p-select
+          formControlName="zone_id"
+          [options]="zoneOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar"
+          [filter]="true"
+          [showClear]="true"
+          styleClass="w-full"
+          appendTo="body"
+        />
+    </div>
 
     <div class="field">
         <label>Proveedor</label>

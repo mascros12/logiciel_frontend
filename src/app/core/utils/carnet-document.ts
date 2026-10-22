@@ -46,6 +46,15 @@ export interface PreviewModel {
   lead: CarnetBlock[];
   days: PreviewDay[];
   rest: CarnetBlock[];
+  organisation: OrganisationRow[] | null;
+}
+
+export interface OrganisationRow {
+  onDate: string | null;
+  dateLabel: string;
+  region: string;
+  lodging: string[];
+  included: string[];
 }
 
 const COORDINATE = /^-?\d+\.\d{5,7}$/;
@@ -139,9 +148,17 @@ export function textOf(content: Record<string, unknown>, field: string): string 
 }
 
 const EDITORIAL_TYPES = new Set(['note', 'warning', 'free_text', 'practical', 'conditions']);
+const STRUCTURAL_KINDS = new Set([
+  'cover',
+  'table_of_contents',
+  'itinerary_summary',
+  'route_collection',
+  'regional_recommendations',
+]);
 export const ITINERARY_HEADING = 'Votre itinéraire';
 
 export function sectionPending(block: CarnetBlock): boolean {
+  if (block.section_kind && STRUCTURAL_KINDS.has(block.section_kind)) return false;
   if (block.removed || !block.visible || !EDITORIAL_TYPES.has(block.type)) return false;
   if (textOf(block.content, 'body').trim()) return false;
   return textOf(block.content, 'heading').trim() !== ITINERARY_HEADING;
@@ -915,6 +932,84 @@ export function coordinateError(latitude: string | null, longitude: string | nul
   return null;
 }
 
+const MONTHS_FR = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+];
+const INCLUDED_ROLES = new Set(['activity', 'transport', 'included']);
+const INCLUDED_TYPES = new Set(['activity', 'transport']);
+
+export function formatDateFr(value: string | null | undefined): string {
+  if (!value) return '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  const month = MONTHS_FR[Number(match[2]) - 1];
+  if (!month) return value;
+  return `${Number(match[3])} ${month} ${match[1]}`;
+}
+
+export function organisationRows(document: CarnetDocument): OrganisationRow[] | null {
+  const marker = document.blocks.find(
+    (block) =>
+      block.section_kind === 'itinerary_summary' && block.visible && !block.removed,
+  );
+  if (!marker) return null;
+  const byId = new Map(document.blocks.map((block) => [block.id, block]));
+  const days = document.blocks
+    .filter((block) => block.type === 'day' && block.visible && !block.removed)
+    .sort((left, right) => {
+      const a = textOf(left.content, 'on_date');
+      const b = textOf(right.content, 'on_date');
+      if (!a && !b) return left.position - right.position;
+      if (!a) return 1;
+      if (!b) return -1;
+      if (a === b) return left.position - right.position;
+      return a < b ? -1 : 1;
+    });
+  return days.map((day) => {
+    const onDate = textOf(day.content, 'on_date') || null;
+    const lodging: string[] = [];
+    const included: string[] = [];
+    const seen = new Set<string>();
+    for (const entry of entriesOf(day)) {
+      if (seen.has(entry.block_id)) continue;
+      const block = byId.get(entry.block_id);
+      if (!block || block.removed || !block.visible) continue;
+      if (checkedOut(block, onDate)) continue;
+      const name = serviceName(block);
+      if (!name) continue;
+      if (entry.role === 'stay' && block.type === 'hotel') {
+        seen.add(block.id);
+        lodging.push(name);
+      } else if (INCLUDED_ROLES.has(entry.role) && INCLUDED_TYPES.has(block.type)) {
+        seen.add(block.id);
+        included.push(name);
+      }
+    }
+    return {
+      onDate,
+      dateLabel: formatDateFr(onDate),
+      region: textOf(day.content, 'title').trim(),
+      lodging,
+      included,
+    };
+  });
+}
+
+function checkedOut(block: CarnetBlock, onDate: string | null): boolean {
+  if (block.type !== 'hotel' || !onDate) return false;
+  const checkOut = textOf(block.content, 'check_out');
+  return !!checkOut && onDate >= checkOut;
+}
+
+function serviceName(block: CarnetBlock): string {
+  return (
+    textOf(block.content, 'public_name').trim()
+    || textOf(block.content, 'title').trim()
+    || textOf(block.content, 'name').trim()
+  );
+}
+
 export function previewOf(document: CarnetDocument): PreviewModel {
   const shown = new Set<string>();
   const usable = (block: CarnetBlock | undefined): block is CarnetBlock =>
@@ -950,7 +1045,7 @@ export function previewOf(document: CarnetDocument): PreviewModel {
     (itineraryStarted ? rest : lead).push(block);
   }
   const title = cover ? textOf(cover.content, 'title') : general ? textOf(general.content, 'trip_title') : '';
-  return { title, cover, general, lead, days, rest };
+  return { title, cover, general, lead, days, rest, organisation: organisationRows(document) };
 }
 
 export function previewText(document: CarnetDocument): string {
@@ -1045,7 +1140,11 @@ function displayDate(value: string | null | undefined): TrackedDate {
 
 let publicSeq = 0;
 
-function publicBlock(type: BlockType, content: Record<string, unknown>): CarnetBlock {
+function publicBlock(
+  type: BlockType,
+  content: Record<string, unknown>,
+  sectionKind?: string | null,
+): CarnetBlock {
   publicSeq += 1;
   return {
     id: `public-${publicSeq}`,
@@ -1057,6 +1156,7 @@ function publicBlock(type: BlockType, content: Record<string, unknown>): CarnetB
     source_detail_id: null,
     product_kind: null,
     product_id: null,
+    section_kind: sectionKind === 'itinerary_summary' ? sectionKind : null,
     content,
   };
 }
@@ -1171,7 +1271,7 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
     }));
   }
   for (const entry of view.preamble ?? []) {
-    blocks.push(publicBlock(entry.type, entryContent(entry)));
+    blocks.push(publicBlock(entry.type, entryContent(entry), entry.section_kind));
   }
   for (const day of view.days) {
     const entries = day.entries.map((entry) => {
@@ -1189,7 +1289,7 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
     }));
   }
   for (const entry of view.rest) {
-    blocks.push(publicBlock(entry.type, entryContent(entry)));
+    blocks.push(publicBlock(entry.type, entryContent(entry), entry.section_kind));
   }
   return { locale: 'fr', schema_version: 1, blocks };
 }

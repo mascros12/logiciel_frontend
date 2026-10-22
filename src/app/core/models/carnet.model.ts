@@ -86,6 +86,19 @@ export interface CarnetBlock {
   source_detail_id: string | null;
   product_kind: 'hotel' | 'room' | 'activity' | 'vehicle' | null;
   product_id: string | null;
+  template_section_id?: string | null;
+  parent_id?: string | null;
+  section_kind?:
+    | 'cover'
+    | 'table_of_contents'
+    | 'itinerary_summary'
+    | 'route_collection'
+    | 'rich_text_section'
+    | 'regional_recommendations'
+    | 'questionnaire'
+    | 'free_section'
+    | 'conditions'
+    | null;
   content: Record<string, unknown>;
 }
 
@@ -175,6 +188,16 @@ export interface PublicEntry {
   body: string | null;
   visit_tips: string | null;
   rooms: PublicRoom[];
+  section_kind?: string | null;
+  organisation?: PublicOrganisationRow[] | null;
+}
+
+export interface PublicOrganisationRow {
+  on_date: string | null;
+  date_label: string;
+  region: string | null;
+  lodging: string[];
+  included: string[];
 }
 
 export interface PublicDay {

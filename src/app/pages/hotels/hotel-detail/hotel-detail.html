@@ -18,6 +18,7 @@
         <p [innerHTML]="h.name | richText" style="font-size: 24px;"></p>
         <div class="header-meta">
           @if (h.province) { <span class="meta-item"><i class="pi pi-map-marker"></i> {{ h.province }}</span> }
+          @if (zoneName(h.zone_id)) { <span class="meta-item"><i class="pi pi-flag"></i> {{ zoneName(h.zone_id) }}</span> }
           @if (h.address)  { <span class="meta-item"><i class="pi pi-home"></i> {{ h.address }}</span> }
           @if (h.phone) { <span class="meta-item"><i class="pi pi-phone"></i> {{ h.phone }}</span> }
           @if (h.latitude && h.longitude) {
@@ -223,6 +224,20 @@
           styleClass="w-full"
         />
       </div>
+    </div>
+    <div class="field">
+      <label>Zona</label>
+      <p-select
+        formControlName="zone_id"
+        [options]="zoneOptions()"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Seleccionar"
+        [filter]="true"
+        [showClear]="true"
+        styleClass="w-full"
+        appendTo="body"
+      />
     </div>
     <div class="field">
       <label>Dirección / Ciudad</label>

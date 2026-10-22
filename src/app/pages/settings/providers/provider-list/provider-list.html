@@ -151,6 +151,21 @@
             <app-field-error [control]="group.get('name')" label="Nombre" />
           </div>
           <div class="field">
+            <label [attr.for]="'branch-zone-' + $index">Zona</label>
+            <p-select
+              [inputId]="'branch-zone-' + $index"
+              formControlName="zone_id"
+              [options]="zoneOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar"
+              [filter]="true"
+              [showClear]="true"
+              styleClass="w-full"
+              appendTo="body"
+            />
+          </div>
+          <div class="field">
             <label [attr.for]="'branch-lng-' + $index">Longitud *</label>
             <input
               pInputText

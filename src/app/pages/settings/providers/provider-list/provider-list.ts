@@ -14,10 +14,13 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { ToastModule } from 'primeng/toast';
 import { Provider, ProviderWrite } from '../../../../core/models/providers.model';
+import { Zone, zoneOptionLabel } from '../../../../core/models/zone.model';
 import { ProvidersService } from '../../../../core/services/providers.service';
+import { ZoneService } from '../../../../core/services/zone.service';
 import { FieldErrorComponent } from '../../../../shared/components/field-error/field-error.component';
 import {
   apiErrorSummary,
@@ -48,6 +51,7 @@ function optionalEmail(control: AbstractControl) {
     ButtonModule,
     DialogModule,
     InputTextModule,
+    SelectModule,
     ToastModule,
     ConfirmDialogModule,
     FieldErrorComponent,
@@ -58,6 +62,7 @@ function optionalEmail(control: AbstractControl) {
 })
 export class ProviderList implements OnInit {
   providers = signal<Provider[]>([]);
+  zones = signal<Zone[]>([]);
   loading = signal(false);
   saving = signal(false);
   showDialog = signal(false);
@@ -71,6 +76,7 @@ export class ProviderList implements OnInit {
   constructor(
     private fb: FormBuilder,
     private providersService: ProvidersService,
+    private zoneService: ZoneService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
   ) {
@@ -83,7 +89,15 @@ export class ProviderList implements OnInit {
   }
 
   ngOnInit(): void {
+    this.zoneService.getAll().subscribe({
+      next: (res) => this.zones.set(res.items),
+      error: () => this.zones.set([]),
+    });
     this.load();
+  }
+
+  zoneOptions(): { label: string; value: string }[] {
+    return this.zones().map((zone) => ({ label: zoneOptionLabel(zone), value: zone.id }));
   }
 
   get branches(): FormArray {
@@ -219,6 +233,7 @@ export class ProviderList implements OnInit {
     return this.fb.group({
       id: [branch?.id ?? null],
       name: [branch?.name ?? '', [Validators.required, Validators.maxLength(150)]],
+      zone_id: [branch?.zone_id ?? null],
       longitude: [
         branch ? formatCoordinate(branch.longitude) : '',
         [Validators.required, longitudeValidator],
@@ -235,7 +250,13 @@ export class ProviderList implements OnInit {
       name: string;
       phone: string;
       reservation_email: string;
-      branches: { id: string | null; name: string; longitude: string; latitude: string }[];
+      branches: {
+        id: string | null;
+        name: string;
+        zone_id: string | null;
+        longitude: string;
+        latitude: string;
+      }[];
     };
     return {
       name: raw.name.trim(),
@@ -244,6 +265,7 @@ export class ProviderList implements OnInit {
       branches: raw.branches.map((branch) => ({
         id: branch.id,
         name: branch.name.trim(),
+        zone_id: branch.zone_id || null,
         longitude: String(branch.longitude ?? '').trim().replace(',', '.'),
         latitude: String(branch.latitude ?? '').trim().replace(',', '.'),
       })),

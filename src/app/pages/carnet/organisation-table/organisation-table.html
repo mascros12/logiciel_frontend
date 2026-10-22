@@ -1,0 +1,50 @@
+<section class="organisation">
+  <h2>{{ heading() }}</h2>
+  <table class="organisation__table">
+    <colgroup>
+      <col class="organisation__date" />
+      <col class="organisation__region" />
+      <col class="organisation__stay" />
+      <col class="organisation__included" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">Date</th>
+        <th scope="col">Région</th>
+        <th scope="col">Hébergement et repas inclus</th>
+        <th scope="col">Activités et transports inclus</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (!rows().length) {
+        <tr>
+          <td colspan="4">Aucune date dans l'itinéraire.</td>
+        </tr>
+      }
+      @for (row of rows(); track $index) {
+        <tr>
+          <td data-label="Date">{{ row.dateLabel || '—' }}</td>
+          <td data-label="Région">{{ row.region }}</td>
+          <td data-label="Hébergement et repas inclus">
+            @if (row.lodging.length) {
+              <ul class="organisation__lines">
+                @for (line of row.lodging; track $index) {
+                  <li>{{ line }}</li>
+                }
+              </ul>
+            }
+          </td>
+          <td data-label="Activités et transports inclus">
+            @if (row.included.length) {
+              <ul class="organisation__lines">
+                @for (line of row.included; track $index) {
+                  <li>{{ line }}</li>
+                }
+              </ul>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

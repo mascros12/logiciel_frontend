@@ -37,9 +37,16 @@
   }
 
   @for (block of preview().lead; track block.id) {
-    <article class="carnet-preview__card">
-      <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
-    </article>
+    @if (block.section_kind === 'itinerary_summary') {
+      <app-organisation-table
+        [heading]="text(block, 'heading') || 'Organisation du voyage'"
+        [rows]="preview().organisation ?? []"
+      />
+    } @else {
+      <article class="carnet-preview__card">
+        <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
+      </article>
+    }
   }
 
   @for (day of preview().days; track day.block.id) {
@@ -63,9 +70,16 @@
   }
 
   @for (block of preview().rest; track block.id) {
-    <article class="carnet-preview__card">
-      <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
-    </article>
+    @if (block.section_kind === 'itinerary_summary') {
+      <app-organisation-table
+        [heading]="text(block, 'heading') || 'Organisation du voyage'"
+        [rows]="preview().organisation ?? []"
+      />
+    } @else {
+      <article class="carnet-preview__card">
+        <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
+      </article>
+    }
   }
 </section>
 

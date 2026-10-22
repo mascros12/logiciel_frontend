@@ -1,19 +1,30 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { CarnetTemplate, CarnetTemplateUpdate } from '../models/carnet-template.model';
+import { LayoutDraftWrite, LayoutState } from '../models/carnet-template.model';
 import { apiUrl } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class CarnetTemplateService {
-  private readonly url = apiUrl('/carnet-templates');
+  private readonly url = apiUrl('/carnet-templates/layout');
 
   constructor(private http: HttpClient) {}
 
-  list() {
-    return this.http.get<CarnetTemplate[]>(`${this.url}/`);
+  load() {
+    return this.http.get<LayoutState>(this.url);
   }
 
-  update(key: string, body: CarnetTemplateUpdate) {
-    return this.http.patch<CarnetTemplate>(`${this.url}/${key}`, body);
+  saveDraft(body: LayoutDraftWrite) {
+    return this.http.put<LayoutState>(`${this.url}/draft`, body);
+  }
+
+  publish() {
+    return this.http.post<LayoutState>(`${this.url}/versions`, {});
+  }
+
+  activate(versionId: string, lockVersion: number) {
+    return this.http.post<LayoutState>(`${this.url}/active`, {
+      version_id: versionId,
+      lock_version: lockVersion,
+    });
   }
 }
