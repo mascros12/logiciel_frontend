@@ -43,6 +43,7 @@ export interface PreviewModel {
   title: string;
   cover: CarnetBlock | null;
   general: CarnetBlock | null;
+  front: CarnetBlock[];
   lead: CarnetBlock[];
   days: PreviewDay[];
   rest: CarnetBlock[];
@@ -73,6 +74,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   free_text: 'Texto libre',
   practical: 'Información práctica',
   conditions: 'Condiciones',
+  full_page_image: 'Página de imagen',
 };
 
 export const ADDABLE_TYPES: BlockType[] = [
@@ -128,6 +130,8 @@ export function sourceStatusLabel(status: string): string {
 
 export function blockTitle(block: CarnetBlock): string {
   const content = block.content;
+  const label = content['label'];
+  if (typeof label === 'string' && label.trim()) return label.trim();
   const named = textOf(content, 'public_name')
     || textOf(content, 'title')
     || textOf(content, 'name')
@@ -157,7 +161,16 @@ const STRUCTURAL_KINDS = new Set([
 ]);
 export const ITINERARY_HEADING = 'Votre itinéraire';
 
+export function pageAssetId(block: CarnetBlock): string | null {
+  const value = block.content['asset_id'];
+  return typeof value === 'string' && value ? value : null;
+}
+
 export function sectionPending(block: CarnetBlock): boolean {
+  if (block.type === 'full_page_image') {
+    if (block.removed || !block.visible) return false;
+    return !pageAssetId(block);
+  }
   if (block.section_kind && STRUCTURAL_KINDS.has(block.section_kind)) return false;
   if (block.removed || !block.visible || !EDITORIAL_TYPES.has(block.type)) return false;
   if (textOf(block.content, 'body').trim()) return false;
@@ -251,6 +264,19 @@ function touchText(field: TrackedText | undefined, value: string): TrackedText {
     generated_value: generated,
     origin: next === generated ? 'generated' : 'edited',
   };
+}
+
+export function setPageAsset(
+  document: CarnetDocument,
+  blockId: string,
+  assetId: string | null,
+): CarnetDocument {
+  const block = document.blocks.find((item) => item.id === blockId);
+  if (!block || block.type !== 'full_page_image') return document;
+  return replaceBlock(document, blockId, {
+    ...block,
+    content: { ...block.content, asset_id: assetId },
+  });
 }
 
 export function setText(
@@ -621,6 +647,7 @@ function emptyLocale(): Record<string, unknown> {
 }
 
 function emptyContent(type: BlockType): Record<string, unknown> {
+  if (type === 'full_page_image') return { asset_id: null, label: '' };
   if (type === 'cover') return { title: emptyText(), subtitle: emptyText() };
   if (type === 'general') {
     return {
@@ -756,6 +783,9 @@ function clientId(id: string): string | undefined {
 
 function writeContent(block: CarnetBlock): Record<string, unknown> {
   const content = block.content;
+  if (block.type === 'full_page_image') {
+    return { asset_id: pageAssetId(block) };
+  }
   if (block.type === 'cover') {
     return { title: writeText(content, 'title'), subtitle: writeText(content, 'subtitle') };
   }
@@ -1033,19 +1063,36 @@ export function previewOf(document: CarnetDocument): PreviewModel {
     }
     days.push({ block, entries });
   }
+  const coverIndex = document.blocks.findIndex(
+    (block) => block.type === 'cover' && usable(block),
+  );
+  const front: CarnetBlock[] = [];
   const lead: CarnetBlock[] = [];
   const rest: CarnetBlock[] = [];
   let itineraryStarted = false;
-  for (const block of document.blocks) {
+  document.blocks.forEach((block, index) => {
     if (block.type === 'day' && usable(block)) {
       itineraryStarted = true;
-      continue;
+      return;
     }
-    if (!usable(block) || shown.has(block.id)) continue;
+    if (!usable(block) || shown.has(block.id)) return;
+    if (block.type === 'full_page_image' && coverIndex >= 0 && index < coverIndex) {
+      front.push(block);
+      return;
+    }
     (itineraryStarted ? rest : lead).push(block);
-  }
+  });
   const title = cover ? textOf(cover.content, 'title') : general ? textOf(general.content, 'trip_title') : '';
-  return { title, cover, general, lead, days, rest, organisation: organisationRows(document) };
+  return {
+    title,
+    cover,
+    general,
+    front,
+    lead,
+    days,
+    rest,
+    organisation: organisationRows(document),
+  };
 }
 
 export function previewText(document: CarnetDocument): string {
@@ -1179,6 +1226,7 @@ function entryContent(entry: PublicEntry): Record<string, unknown> {
     name: displayText(entry.title),
     heading: displayText(entry.heading),
     body: displayText(entry.body),
+    asset_id: entry.asset_id ?? null,
     schedule: displayText(entry.schedule),
     description_fr: displayText(entry.description_fr),
     short_description_fr: displayText(entry.short_description_fr),
@@ -1269,6 +1317,9 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
         removed: false,
       })),
     }));
+  }
+  for (const entry of view.front ?? []) {
+    blocks.push(publicBlock(entry.type, entryContent(entry), entry.section_kind));
   }
   for (const entry of view.preamble ?? []) {
     blocks.push(publicBlock(entry.type, entryContent(entry), entry.section_kind));

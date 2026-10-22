@@ -15,7 +15,8 @@ export type BlockType =
   | 'warning'
   | 'free_text'
   | 'practical'
-  | 'conditions';
+  | 'conditions'
+  | 'full_page_image';
 
 export interface TrackedText {
   value: string | null;
@@ -98,6 +99,7 @@ export interface CarnetBlock {
     | 'questionnaire'
     | 'free_section'
     | 'conditions'
+    | 'full_page_image'
     | null;
   content: Record<string, unknown>;
 }
@@ -190,6 +192,7 @@ export interface PublicEntry {
   rooms: PublicRoom[];
   section_kind?: string | null;
   organisation?: PublicOrganisationRow[] | null;
+  asset_id?: string | null;
 }
 
 export interface PublicOrganisationRow {
@@ -210,6 +213,7 @@ export interface PublicDay {
 export interface PublicCarnet {
   locale: 'fr';
   cover: { title: string | null; subtitle: string | null } | null;
+  front?: PublicEntry[];
   general: {
     trip_title: string | null;
     start_date: string | null;

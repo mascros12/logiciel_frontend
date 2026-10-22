@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { LayoutDraftWrite, LayoutState } from '../models/carnet-template.model';
+import { LayoutDraftWrite, LayoutState, MediaAsset } from '../models/carnet-template.model';
 import { apiUrl } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +19,12 @@ export class CarnetTemplateService {
 
   publish() {
     return this.http.post<LayoutState>(`${this.url}/versions`, {});
+  }
+
+  upload(file: File) {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<MediaAsset>(apiUrl('/carnet-templates/media'), body);
   }
 
   activate(versionId: string, lockVersion: number) {

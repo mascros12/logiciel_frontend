@@ -114,7 +114,11 @@
         Vista previa del borrador. Quedarían {{ previewPending() }} cambios sin aplicar.
         Publicar sigue siendo un paso aparte.
       </p>
-      <app-carnet-preview [document]="document" [unsaved]="true" />
+      <app-carnet-preview
+        [document]="document"
+        [unsaved]="true"
+        [privateMediaBase]="pageMediaBase()"
+      />
     }
   }
 </section>

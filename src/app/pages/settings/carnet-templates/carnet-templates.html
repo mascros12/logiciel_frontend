@@ -96,15 +96,40 @@
             <input type="checkbox" [ngModel]="node.visible" (ngModelChange)="node.visible = $event; touch()" />
             Visible en los Carnets nuevos
           </label>
-          <label>
-            Texto predeterminado
-            <textarea
-              pInputTextarea
-              rows="8"
-              [ngModel]="node.body"
-              (ngModelChange)="node.body = $event; touch()"
-            ></textarea>
-          </label>
+          @if (node.kind === 'full_page_image') {
+            <app-full-page-image
+              [assetId]="node.config.asset_id ?? null"
+              [privateBase]="templateMediaBase"
+            />
+            <label>
+              Imagen PNG, JPG o WebP
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                [disabled]="busy()"
+                (change)="onImage(node, $event)"
+              />
+            </label>
+            <p class="source-note">Proporción 210 × 297 mm. Si no coincide, se rechaza: no se recorta.</p>
+            @if (node.config.asset_id) {
+              <p-button
+                label="Quitar imagen del borrador"
+                severity="danger"
+                [text]="true"
+                (onClick)="clearImage(node)"
+              />
+            }
+          } @else {
+            <label>
+              Texto predeterminado
+              <textarea
+                pInputTextarea
+                rows="8"
+                [ngModel]="node.body"
+                (ngModelChange)="node.body = $event; touch()"
+              ></textarea>
+            </label>
+          }
           <p class="source-note">{{ sourceLabel(node) }}</p>
           <div class="layout-actions">
             @if (!childOf() && canAddChild(node)) {

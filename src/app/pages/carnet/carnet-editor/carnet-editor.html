@@ -139,7 +139,11 @@
     }
 
     @if (previewing()) {
-      <app-carnet-preview [document]="doc" [unsaved]="dirty()" />
+      <app-carnet-preview
+        [document]="doc"
+        [unsaved]="dirty()"
+        [privateMediaBase]="pageMediaBase()"
+      />
     } @else {
       <div class="carnet-editor__layout">
         <aside class="carnet-editor__structure">
@@ -316,6 +320,27 @@
                 <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
                 <label>Notas <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
               }
+              @case ('full_page_image') {
+                <app-full-page-image
+                  [assetId]="asset(block)"
+                  [privateBase]="pageMediaBase()"
+                />
+                <label>
+                  Imagen de página A4
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                    (change)="onPageFile($event)"
+                  />
+                </label>
+                <p class="carnet-editor__hint">PNG, JPG o WebP con proporción 210 × 297 mm. El reemplazo solo afecta a este Carnet.</p>
+                @if (asset(block)) {
+                  <p-button label="Quitar imagen del borrador" severity="danger" [text]="true" (onClick)="clearPage(block.id)" />
+                }
+                @if (pending(block)) {
+                  <p class="carnet-editor__hint">Pendiente: esta página no se publica hasta que Operaciones cargue la imagen.</p>
+                }
+              }
               @default {
                 <label>Título <input pInputText [value]="text(block, 'heading')" (input)="onText(block.id, 'heading', inputValue($event))" /></label>
                 <label>Texto <textarea pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
@@ -325,7 +350,7 @@
               }
             }
 
-            @if (block.type !== 'day' && block.type !== 'cover' && block.type !== 'general') {
+            @if (block.type !== 'day' && block.type !== 'cover' && block.type !== 'general' && block.type !== 'full_page_image') {
               <label>
                 Colocar en el día
                 <select (change)="placeOnDay(inputValue($event))">

@@ -13,6 +13,7 @@ import {
   SyncPreview,
   SyncProposal,
 } from '../models/carnet.model';
+import { MediaAsset } from '../models/carnet-template.model';
 
 @Injectable({ providedIn: 'root' })
 export class CarnetService {
@@ -32,6 +33,12 @@ export class CarnetService {
 
   save(carnetId: string, body: DraftWrite) {
     return this.http.put<CarnetView>(apiUrl(`/carnets/${carnetId}/draft`), body);
+  }
+
+  uploadMedia(carnetId: string, file: File) {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<MediaAsset>(apiUrl(`/carnets/${carnetId}/media`), body);
   }
 
   sourceStatus(carnetId: string) {

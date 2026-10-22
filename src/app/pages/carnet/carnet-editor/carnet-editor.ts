@@ -19,6 +19,7 @@ import {
   PublicationView,
   RevisionItem,
 } from '../../../core/models/carnet.model';
+import { apiUrl } from '../../../core/config/api.config';
 import { CarnetService } from '../../../core/services/carnet.service';
 import {
   ADDABLE_TYPES,
@@ -54,7 +55,9 @@ import {
   setInt,
   setPoints,
   setRoomText,
+  pageAssetId,
   sectionPending,
+  setPageAsset,
   setText,
   setVisible,
   shouldWarnOnLeave,
@@ -67,6 +70,7 @@ import {
   withDocument,
 } from '../../../core/utils/carnet-document';
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
+import { FullPageImage } from '../full-page-image/full-page-image';
 import { CarnetSyncPanel } from '../carnet-sync/carnet-sync';
 
 @Component({
@@ -87,6 +91,7 @@ import { CarnetSyncPanel } from '../carnet-sync/carnet-sync';
     TagModule,
     CarnetPreview,
     CarnetSyncPanel,
+    FullPageImage,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './carnet-editor.html',
@@ -311,6 +316,48 @@ export class CarnetEditor implements OnInit {
         if (this.selectedId() === block.id) this.selectedId.set(null);
       },
     });
+  }
+
+  pageMediaBase(): string {
+    return apiUrl(`carnets/${this.carnetId}/media`);
+  }
+
+  asset(block: CarnetBlock): string | null {
+    return pageAssetId(block);
+  }
+
+  onPageFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    const blockId = this.selectedId();
+    if (!file || !blockId || !this.carnetId) return;
+    this.carnets.uploadMedia(this.carnetId, file).subscribe({
+      next: (asset) => {
+        const current = this.document();
+        if (!current) return;
+        this.edit(setPageAsset(current, blockId, asset.id));
+        if (asset.warning) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Imagen cargada',
+            detail: asset.warning,
+          });
+        }
+      },
+      error: (error: { error?: { detail?: string } }) => {
+        const detail = typeof error.error?.detail === 'string'
+          ? error.error.detail
+          : 'No se pudo cargar la imagen';
+        this.messages.add({ severity: 'error', summary: detail });
+      },
+    });
+  }
+
+  clearPage(blockId: string): void {
+    const current = this.document();
+    if (!current) return;
+    this.edit(setPageAsset(current, blockId, null));
   }
 
   onText(blockId: string, field: string, value: string): void {

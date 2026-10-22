@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  max-width: 100%;
+  break-before: page;
+  break-after: page;
+}
+
+.full-page {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e4e7ef;
+  line-height: 0;
+}
+
+img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
+p {
+  margin: 0;
+  padding: 2.5rem 1rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #5c647a;
+  background: #f4f6fb;
+}

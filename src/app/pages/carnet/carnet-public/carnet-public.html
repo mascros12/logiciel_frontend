@@ -15,6 +15,10 @@
         <p>Le PDF n'est pas disponible.</p>
       }
     </div>
-    <app-carnet-preview [document]="document()!" [mode]="'published'" />
+    <app-carnet-preview
+      [document]="document()!"
+      [mode]="'published'"
+      [publicMediaBase]="mediaBase()"
+    />
   }
 </main>

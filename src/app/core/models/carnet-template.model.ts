@@ -7,7 +7,8 @@ export type LayoutKind =
   | 'regional_recommendations'
   | 'questionnaire'
   | 'free_section'
-  | 'conditions';
+  | 'conditions'
+  | 'full_page_image';
 
 export interface LayoutNode {
   id: string;
@@ -16,7 +17,7 @@ export interface LayoutNode {
   position: number;
   visible: boolean;
   body: string;
-  config: { source: string };
+  config: { source: string; asset_id?: string | null };
   children: LayoutNode[];
 }
 
@@ -55,7 +56,17 @@ export const LAYOUT_KINDS: { id: LayoutKind; label: string; anchor: boolean }[] 
   { id: 'questionnaire', label: 'Cuestionario', anchor: false },
   { id: 'free_section', label: 'Sección libre', anchor: false },
   { id: 'conditions', label: 'Condiciones', anchor: false },
+  { id: 'full_page_image', label: 'Página de imagen', anchor: false },
 ];
+
+export interface MediaAsset {
+  id: string;
+  content_type: string;
+  byte_size: number;
+  width: number;
+  height: number;
+  warning?: string | null;
+}
 
 export const LAYOUT_SOURCES: Record<string, string> = {
   none: 'Texto editorial de la plantilla',

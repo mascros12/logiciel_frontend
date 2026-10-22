@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { CarnetDocument } from '../../../core/models/carnet.model';
 import { CarnetService } from '../../../core/services/carnet.service';
 import { documentFromPublic } from '../../../core/utils/carnet-document';
+import { apiUrl } from '../../../core/config/api.config';
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
 
 @Component({
@@ -23,6 +24,11 @@ export class CarnetPublic implements OnInit, OnDestroy {
   readonly downloading = signal(false);
   readonly pdfError = signal(false);
   readonly document = signal<CarnetDocument | null>(null);
+
+  mediaBase(): string {
+    const token = this.route.snapshot.paramMap.get('token') ?? '';
+    return apiUrl(`public/carnets/${encodeURIComponent(token)}/media`);
+  }
 
   ngOnInit(): void {
     this.meta.updateTag({ name: 'referrer', content: 'no-referrer' });

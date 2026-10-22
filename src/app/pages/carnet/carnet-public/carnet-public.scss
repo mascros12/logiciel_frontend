@@ -1,12 +1,13 @@
 .carnet-public {
   min-height: 100vh;
   padding: 1.25rem 1rem 3rem;
+  overflow-x: clip;
   background: #f4f6fb;
   color: var(--app-primary, #030c3d);
 }
 
 .carnet-public__bar {
-  max-width: 42rem;
+  max-width: 72rem;
   margin: 0 auto 1rem;
   display: flex;
   flex-wrap: wrap;

@@ -12,6 +12,7 @@ import {
   documentFromPublic,
   formatDateFr,
   organisationRows,
+  pageAssetId,
   previewOf,
   previewText,
   sectionPending,
@@ -19,6 +20,7 @@ import {
   reorderVisible,
   setCoords,
   setDate,
+  setPageAsset,
   setText,
   setVisible,
   shouldWarnOnLeave,
@@ -720,3 +722,89 @@ function editorial(
     content: { heading: text(heading), body: text(body) },
   };
 }
+
+describe('página de imagen', () => {
+  it('respeta el orden, el reemplazo del borrador y la copia pública', () => {
+    const document = sample();
+    const plate = {
+      id: 'plate',
+      type: 'full_page_image' as const,
+      position: 0,
+      visible: true,
+      removed: false,
+      manual: false,
+      source_detail_id: null,
+      product_kind: null,
+      product_id: null,
+      section_kind: 'full_page_image' as const,
+      content: { asset_id: 'asset-cover', label: 'Couverture' },
+    };
+    const middle = {
+      ...plate,
+      id: 'middle',
+      content: { asset_id: 'asset-middle', label: 'Séparation' },
+    };
+    document.blocks.unshift(plate);
+    document.blocks.splice(2, 0, middle);
+    const preview = previewOf(document);
+    assert.deepEqual(preview.front.map((block) => block.id), ['plate']);
+    assert.equal(preview.lead.some((block) => block.id === 'middle'), true);
+    assert.equal(sectionPending(plate), false);
+    assert.equal(sectionPending({ ...plate, content: { asset_id: null, label: 'Couverture' } }), true);
+
+    const replaced = setPageAsset(document, 'plate', 'asset-carnet');
+    assert.equal(pageAssetId(replaced.blocks[0]), 'asset-carnet');
+    assert.equal(pageAssetId(document.blocks[0]), 'asset-cover');
+    const written = toDraftWrite(replaced, 1);
+    const saved = written.blocks.find((block) => block.id === 'plate');
+    assert.deepEqual(saved?.content, { asset_id: 'asset-carnet' });
+
+    const published = documentFromPublic({
+      locale: 'fr',
+      cover: null,
+      general: null,
+      front: [{
+        type: 'full_page_image',
+        role: null,
+        title: null,
+        schedule: null,
+        description_fr: null,
+        short_description_fr: null,
+        recommendation_fr: null,
+        selling_points_fr: [],
+        highlights_fr: [],
+        address: null,
+        phone: null,
+        locality: null,
+        check_in: null,
+        check_out: null,
+        dates: [],
+        departure_time: null,
+        return_time: null,
+        pickup_text: null,
+        dropoff_text: null,
+        origin_label: null,
+        destination_label: null,
+        latitude: null,
+        longitude: null,
+        origin_latitude: null,
+        origin_longitude: null,
+        destination_latitude: null,
+        destination_longitude: null,
+        reservation_number: null,
+        link: null,
+        notes: null,
+        heading: null,
+        body: null,
+        visit_tips: null,
+        rooms: [],
+        asset_id: 'asset-cover',
+      }],
+      preamble: [],
+      days: [],
+      rest: [],
+    });
+    assert.equal(published.blocks[0].type, 'full_page_image');
+    assert.equal(pageAssetId(published.blocks[0]), 'asset-cover');
+  });
+});

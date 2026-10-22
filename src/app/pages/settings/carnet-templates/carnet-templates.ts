@@ -14,7 +14,9 @@ import {
   LayoutNode,
   LayoutState,
 } from '../../../core/models/carnet-template.model';
+import { apiUrl } from '../../../core/config/api.config';
 import { CarnetTemplateService } from '../../../core/services/carnet-template.service';
+import { FullPageImage } from '../../carnet/full-page-image/full-page-image';
 
 @Component({
   selector: 'app-carnet-templates',
@@ -27,6 +29,7 @@ import { CarnetTemplateService } from '../../../core/services/carnet-template.se
     InputTextModule,
     TextareaModule,
     ToastModule,
+    FullPageImage,
   ],
   providers: [MessageService],
   templateUrl: './carnet-templates.html',
@@ -84,7 +87,12 @@ export class CarnetTemplates implements OnInit {
     return this.kinds.find((item) => item.id === kind)?.label ?? kind;
   }
 
+  readonly templateMediaBase = apiUrl('carnet-templates/media');
+
   sourceLabel(node: LayoutNode): string {
+    if (node.kind === 'full_page_image') {
+      return 'Página A4 vertical completa, sin márgenes ni texto automático.';
+    }
     return LAYOUT_SOURCES[node.config.source] ?? node.config.source;
   }
 
@@ -96,7 +104,9 @@ export class CarnetTemplates implements OnInit {
   }
 
   canAddChild(node: LayoutNode): boolean {
-    return node.kind !== 'cover' && node.kind !== 'table_of_contents';
+    return node.kind !== 'cover'
+      && node.kind !== 'table_of_contents'
+      && node.kind !== 'full_page_image';
   }
 
   dropRoot(event: CdkDragDrop<LayoutNode[]>): void {
@@ -141,7 +151,44 @@ export class CarnetTemplates implements OnInit {
 
   changeKind(node: LayoutNode, kind: LayoutKind): void {
     node.kind = kind;
+    if (kind !== 'full_page_image') {
+      node.config = { ...node.config, asset_id: null };
+    }
     if (!this.canAddChild(node)) node.children = [];
+    this.nodes.set([...this.nodes()]);
+    this.dirty.set(true);
+  }
+
+  onImage(node: LayoutNode, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.busy.set(true);
+    this.templates.upload(file).subscribe({
+      next: (asset) => {
+        node.config = { ...node.config, asset_id: asset.id };
+        this.nodes.set([...this.nodes()]);
+        this.dirty.set(true);
+        this.busy.set(false);
+        this.messages.add(
+          asset.warning
+            ? { severity: 'warn', summary: 'Imagen cargada', detail: asset.warning }
+            : { severity: 'success', summary: 'Imagen cargada en el borrador' },
+        );
+      },
+      error: (error: { error?: { detail?: string } }) => {
+        this.busy.set(false);
+        const detail = typeof error.error?.detail === 'string'
+          ? error.error.detail
+          : 'No se pudo cargar la imagen';
+        this.messages.add({ severity: 'error', summary: detail });
+      },
+    });
+  }
+
+  clearImage(node: LayoutNode): void {
+    node.config = { ...node.config, asset_id: null };
     this.nodes.set([...this.nodes()]);
     this.dirty.set(true);
   }
@@ -231,7 +278,7 @@ export class CarnetTemplates implements OnInit {
       position: 0,
       visible: true,
       body: '',
-      config: { source: 'none' },
+      config: { source: 'none', asset_id: null },
       children: [],
     };
   }

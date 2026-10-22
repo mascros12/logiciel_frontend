@@ -6,18 +6,20 @@ import {
   dateOf,
   entriesOf,
   pointsOf,
+  pageAssetId,
   previewOf,
   roomsOf,
   textOf,
 } from '../../../core/utils/carnet-document';
 import { CarnetBlock, CarnetDocument } from '../../../core/models/carnet.model';
 import { NavigationView, navigationOf } from '../../../core/utils/carnet-navigation';
+import { FullPageImage } from '../full-page-image/full-page-image';
 import { OrganisationTable } from '../organisation-table/organisation-table';
 
 @Component({
   selector: 'app-carnet-preview',
   standalone: true,
-  imports: [NgTemplateOutlet, OrganisationTable],
+  imports: [NgTemplateOutlet, OrganisationTable, FullPageImage],
   templateUrl: './carnet-preview.html',
   styleUrl: './carnet-preview.scss',
 })
@@ -25,6 +27,8 @@ export class CarnetPreview {
   readonly document = input.required<CarnetDocument>();
   readonly unsaved = input(false);
   readonly mode = input<'draft' | 'published'>('draft');
+  readonly publicMediaBase = input<string | null>(null);
+  readonly privateMediaBase = input<string | null>(null);
 
   preview(): PreviewModel {
     return previewOf(this.document());
@@ -36,6 +40,10 @@ export class CarnetPreview {
 
   text(block: CarnetBlock, field: string): string {
     return textOf(block.content, field);
+  }
+
+  asset(block: CarnetBlock): string | null {
+    return pageAssetId(block);
   }
 
   date(block: CarnetBlock, field: string): string {

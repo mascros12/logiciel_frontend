@@ -9,6 +9,10 @@
     }
   </p>
 
+  @for (block of preview().front; track block.id) {
+    <ng-container [ngTemplateOutlet]="plate" [ngTemplateOutletContext]="{ block: block }" />
+  }
+
   @if (preview().cover; as cover) {
     <header class="carnet-preview__cover">
       <p class="carnet-preview__kicker">Carnet de route</p>
@@ -37,7 +41,9 @@
   }
 
   @for (block of preview().lead; track block.id) {
-    @if (block.section_kind === 'itinerary_summary') {
+    @if (block.type === 'full_page_image') {
+      <ng-container [ngTemplateOutlet]="plate" [ngTemplateOutletContext]="{ block: block }" />
+    } @else if (block.section_kind === 'itinerary_summary') {
       <app-organisation-table
         [heading]="text(block, 'heading') || 'Organisation du voyage'"
         [rows]="preview().organisation ?? []"
@@ -70,7 +76,9 @@
   }
 
   @for (block of preview().rest; track block.id) {
-    @if (block.section_kind === 'itinerary_summary') {
+    @if (block.type === 'full_page_image') {
+      <ng-container [ngTemplateOutlet]="plate" [ngTemplateOutletContext]="{ block: block }" />
+    } @else if (block.section_kind === 'itinerary_summary') {
       <app-organisation-table
         [heading]="text(block, 'heading') || 'Organisation du voyage'"
         [rows]="preview().organisation ?? []"
@@ -82,6 +90,14 @@
     }
   }
 </section>
+
+<ng-template #plate let-block="block">
+  <app-full-page-image
+    [assetId]="asset(block)"
+    [publicBase]="publicMediaBase()"
+    [privateBase]="privateMediaBase()"
+  />
+</ng-template>
 
 <ng-template #service let-block="block">
   <h3>{{ title(block) }}</h3>
