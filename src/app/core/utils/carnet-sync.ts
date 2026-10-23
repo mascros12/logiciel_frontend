@@ -20,5 +20,10 @@ export function syncKindLabel(kind: string): string {
     return 'Servicio eliminado';
   }
   if (kind === 'realign_days') return 'Cambio de fecha';
+  if (kind === 'route_add') return 'Trayecto aplicable';
+  if (kind === 'route_exclude') return 'Trayecto que ya no corresponde';
+  if (kind === 'recommendation_add') return 'Recomendación de la zona';
+  if (kind === 'recommendation_exclude') return 'Recomendación que ya no corresponde';
+  if (kind === 'recommendation_recolor') return 'Color según la Ficha AA';
   return 'Servicio modificado';
 }

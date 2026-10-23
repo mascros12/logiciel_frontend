@@ -75,4 +75,5 @@ export const LAYOUT_SOURCES: Record<string, string> = {
   file_aa_days: 'Días y servicios de la Ficha AA, sin duplicarlos',
   file_aa_routes: 'Trayectos del documento, sin distancias inventadas',
   regional_groups: 'Grupos de recomendación, distintos de la reserva',
+  regional_restaurants: 'Restaurantes recomendados, sin precios ni reserva',
 };

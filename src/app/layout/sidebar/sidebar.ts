@@ -46,6 +46,18 @@ export class Sidebar {
     { label: 'Zonas', icon: 'pi pi-map', route: '/configuraciones/zonas', roles: ['admin'] },
     { label: 'Proveedores', icon: 'pi pi-briefcase', route: '/configuraciones/proveedores', roles: ['admin'] },
     {
+      label: 'Trayectos',
+      icon: 'pi pi-directions',
+      route: '/configuraciones/trayectos',
+      roles: ['admin', 'operaciones'],
+    },
+    {
+      label: 'Recomendaciones regionales',
+      icon: 'pi pi-map-marker',
+      route: '/configuraciones/recomendaciones',
+      roles: ['admin', 'operaciones'],
+    },
+    {
       label: 'Plantillas del Carnet',
       icon: 'pi pi-book',
       route: '/configuraciones/plantillas-carnet',

@@ -75,7 +75,11 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   practical: 'Información práctica',
   conditions: 'Condiciones',
   full_page_image: 'Página de imagen',
+  itinerary_route: 'Trayecto del viaje',
+  regional_recommendation: 'Recomendación regional',
 };
+
+export const RESTAURANTS_SECTION_ID = '642f2b2a-7f1f-513d-8b10-30ec17e370f2';
 
 export const ADDABLE_TYPES: BlockType[] = [
   'hotel',
@@ -139,6 +143,11 @@ export function blockTitle(block: CarnetBlock): string {
     || textOf(content, 'trip_title')
     || textOf(content, 'origin_label');
   if (named) return named;
+  if (block.type === 'itinerary_route') {
+    const origin = textOf(content, 'origin_zone');
+    const destination = textOf(content, 'destination_zone');
+    if (origin || destination) return `${origin} – ${destination}`;
+  }
   if (block.type === 'day') {
     const date = dateOf(content, 'on_date');
     return date ? `Día ${date}` : 'Día';
@@ -171,6 +180,7 @@ export function sectionPending(block: CarnetBlock): boolean {
     if (block.removed || !block.visible) return false;
     return !pageAssetId(block);
   }
+  if (block.template_section_id === RESTAURANTS_SECTION_ID) return false;
   if (block.section_kind && STRUCTURAL_KINDS.has(block.section_kind)) return false;
   if (block.removed || !block.visible || !EDITORIAL_TYPES.has(block.type)) return false;
   if (textOf(block.content, 'body').trim()) return false;
@@ -264,6 +274,24 @@ function touchText(field: TrackedText | undefined, value: string): TrackedText {
     generated_value: generated,
     origin: next === generated ? 'generated' : 'edited',
   };
+}
+
+export function setRouteIncluded(
+  document: CarnetDocument,
+  blockId: string,
+  included: boolean,
+): CarnetDocument {
+  const block = document.blocks.find((item) => item.id === blockId);
+  if (
+    !block
+    || (block.type !== 'itinerary_route' && block.type !== 'regional_recommendation')
+  ) {
+    return document;
+  }
+  return replaceBlock(document, blockId, {
+    ...block,
+    content: { ...block.content, included },
+  });
 }
 
 export function setPageAsset(
@@ -875,6 +903,44 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       notes: writeText(content, 'notes'),
     };
   }
+  if (block.type === 'regional_recommendation') {
+    return {
+      recommendation_id: block.content['recommendation_id'],
+      category: block.content['category'],
+      zone_id: block.content['zone_id'],
+      activity_id: block.content['activity_id'] ?? null,
+      identified: block.content['identified'] === true,
+      included: block.content['included'] !== false,
+      selection_origin: block.content['selection_origin'] ?? 'automatic',
+      tone: block.content['tone'] ?? 'black',
+      zone_name: writeText(content, 'zone_name'),
+      name: writeText(content, 'name'),
+      activity_type: writeText(content, 'activity_type'),
+      opening_hours: writeText(content, 'opening_hours'),
+      phone: writeText(content, 'phone'),
+      latitude: writeText(content, 'latitude'),
+      longitude: writeText(content, 'longitude'),
+      url: writeText(content, 'url'),
+      duration_text: writeText(content, 'duration_text'),
+      difficulty_text: writeText(content, 'difficulty_text'),
+      description: writeText(content, 'description'),
+    };
+  }
+  if (block.type === 'itinerary_route') {
+    return {
+      catalog_route_id: block.content['catalog_route_id'],
+      mode: block.content['mode'],
+      tone: block.content['tone'],
+      included: block.content['included'] !== false,
+      origin_zone: writeText(content, 'origin_zone'),
+      destination_zone: writeText(content, 'destination_zone'),
+      origin_place: writeText(content, 'origin_place'),
+      destination_place: writeText(content, 'destination_place'),
+      distance_km: writeText(content, 'distance_km'),
+      duration_minutes: intOf(content, 'duration_minutes'),
+      instructions: writeText(content, 'instructions'),
+    };
+  }
   if (block.type === 'route') {
     return {
       title: writeText(content, 'title'),
@@ -912,6 +978,7 @@ export function toDraftWrite(document: CarnetDocument, lockVersion: number): Dra
         type: block.type,
         visible: block.visible,
         removed: block.removed,
+        ...(block.parent_id ? { parent_id: block.parent_id } : {}),
         content: writeContent(block),
       };
     }),
@@ -923,10 +990,19 @@ export function validateDocument(document: CarnetDocument): string[] {
   for (const block of document.blocks) {
     if (block.removed) continue;
     const label = blockTitle(block);
-    for (const field of ['link']) {
+    for (const field of ['link', 'url']) {
       const link = textOf(block.content, field);
       if (link && !isHttpUrl(link)) {
         errors.push(`${label}: el enlace debe usar http o https.`);
+      }
+    }
+    if (block.type === 'regional_recommendation') {
+      const latitude = textOf(block.content, 'latitude');
+      const longitude = textOf(block.content, 'longitude');
+      const message = coordinateError(latitude, longitude);
+      if (message) errors.push(`${label}: ${message}`);
+      if (!latitude && !longitude && !textOf(block.content, 'url')) {
+        errors.push(`${label}: indique coordenadas o un enlace http o https.`);
       }
     }
     for (const field of ['coordinates', 'origin_coordinates', 'destination_coordinates']) {
@@ -968,6 +1044,104 @@ const MONTHS_FR = [
 ];
 const INCLUDED_ROLES = new Set(['activity', 'transport', 'included']);
 const INCLUDED_TYPES = new Set(['activity', 'transport']);
+
+export function formatDuration(minutes: number): string {
+  const value = Number.isFinite(minutes) ? Math.max(0, Math.trunc(minutes)) : 0;
+  if (value < 60) return `${value} min`;
+  const hours = Math.floor(value / 60);
+  const rest = value % 60;
+  return `${hours}H${String(rest).padStart(2, '0')}`;
+}
+
+export function formatDistance(value: string | number | null | undefined): string {
+  if (value == null || value === '') return '';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value);
+  const rounded = Math.round(number * 10) / 10;
+  const shown = Number.isInteger(rounded)
+    ? String(rounded)
+    : rounded.toFixed(1).replace('.', ',');
+  return `${shown} km`;
+}
+
+export interface RouteLine {
+  tone: 'zone' | 'excursion';
+  originZone: string;
+  destinationZone: string;
+  originPlace: string;
+  destinationPlace: string;
+  distanceLabel: string;
+  durationLabel: string;
+  instructions: string;
+}
+
+export function itineraryRoutes(document: CarnetDocument, parentId?: string): RouteLine[] {
+  return document.blocks
+    .filter((block) => {
+      if (block.type !== 'itinerary_route' || block.removed || !block.visible) return false;
+      if (parentId && block.parent_id !== parentId) return false;
+      return block.content['included'] !== false;
+    })
+    .sort((left, right) => left.position - right.position)
+    .map((block) => ({
+      tone: block.content['tone'] === 'excursion' ? 'excursion' : 'zone',
+      originZone: textOf(block.content, 'origin_zone'),
+      destinationZone: textOf(block.content, 'destination_zone'),
+      originPlace: textOf(block.content, 'origin_place'),
+      destinationPlace: textOf(block.content, 'destination_place'),
+      distanceLabel: formatDistance(textOf(block.content, 'distance_km')),
+      durationLabel: formatDuration(intOf(block.content, 'duration_minutes')),
+      instructions: textOf(block.content, 'instructions'),
+    }));
+}
+
+export interface RecommendationLine {
+  category: 'activity' | 'restaurant';
+  zoneName: string;
+  name: string;
+  activityType: string;
+  openingHours: string;
+  phone: string;
+  latitude: string;
+  longitude: string;
+  url: string;
+  durationText: string;
+  difficultyText: string;
+  description: string;
+  tone: 'black' | 'red' | 'purple';
+}
+
+export function recommendationLines(
+  document: CarnetDocument,
+  parentId?: string,
+): RecommendationLine[] {
+  return document.blocks
+    .filter((block) => {
+      if (block.type !== 'regional_recommendation' || block.removed || !block.visible) {
+        return false;
+      }
+      if (parentId && block.parent_id !== parentId) return false;
+      return block.content['included'] !== false;
+    })
+    .sort((left, right) => left.position - right.position)
+    .map((block) => ({
+      category: block.content['category'] === 'restaurant' ? 'restaurant' : 'activity',
+      zoneName: textOf(block.content, 'zone_name'),
+      name: textOf(block.content, 'name'),
+      activityType: textOf(block.content, 'activity_type'),
+      openingHours: textOf(block.content, 'opening_hours'),
+      phone: textOf(block.content, 'phone'),
+      latitude: textOf(block.content, 'latitude'),
+      longitude: textOf(block.content, 'longitude'),
+      url: textOf(block.content, 'url'),
+      durationText: textOf(block.content, 'duration_text'),
+      difficultyText: textOf(block.content, 'difficulty_text'),
+      description: textOf(block.content, 'description'),
+      tone: block.content['tone'] === 'red' || block.content['tone'] === 'purple'
+        ? block.content['tone']
+        : 'black',
+    }));
+}
 
 export function formatDateFr(value: string | null | undefined): string {
   if (!value) return '';
@@ -1075,6 +1249,7 @@ export function previewOf(document: CarnetDocument): PreviewModel {
       itineraryStarted = true;
       return;
     }
+    if (block.type === 'itinerary_route' || block.type === 'regional_recommendation') return;
     if (!usable(block) || shown.has(block.id)) return;
     if (block.type === 'full_page_image' && coverIndex >= 0 && index < coverIndex) {
       front.push(block);
@@ -1203,7 +1378,12 @@ function publicBlock(
     source_detail_id: null,
     product_kind: null,
     product_id: null,
-    section_kind: sectionKind === 'itinerary_summary' ? sectionKind : null,
+    section_kind:
+      sectionKind === 'itinerary_summary'
+      || sectionKind === 'route_collection'
+      || sectionKind === 'regional_recommendations'
+        ? sectionKind
+        : null,
     content,
   };
 }
@@ -1318,12 +1498,86 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
       })),
     }));
   }
-  for (const entry of view.front ?? []) {
-    blocks.push(publicBlock(entry.type, entryContent(entry), entry.section_kind));
-  }
-  for (const entry of view.preamble ?? []) {
-    blocks.push(publicBlock(entry.type, entryContent(entry), entry.section_kind));
-  }
+  const pushEntry = (entry: PublicEntry) => {
+    const block = publicBlock(entry.type, entryContent(entry), entry.section_kind);
+    blocks.push(block);
+    if (entry.recommendation_section === 'restaurants') {
+      block.template_section_id = RESTAURANTS_SECTION_ID;
+      block.section_kind = 'free_section';
+    }
+    for (const item of entry.recommendations ?? []) {
+      publicSeq += 1;
+      const tracked = (value: string | null) => displayText(value);
+      blocks.push({
+        id: `public-${publicSeq}`,
+        type: 'regional_recommendation',
+        position: publicSeq,
+        visible: true,
+        removed: false,
+        manual: false,
+        source_detail_id: null,
+        product_kind: null,
+        product_id: null,
+        parent_id: block.id,
+        content: {
+          recommendation_id: '00000000-0000-0000-0000-000000000000',
+          category: item.category,
+          zone_id: '00000000-0000-0000-0000-000000000000',
+          zone_name: tracked(item.zone_name),
+          activity_id: null,
+          identified: item.tone === 'red' || item.tone === 'purple',
+          included: true,
+          selection_origin: 'automatic',
+          tone: item.tone,
+          tone_origin: 'generated',
+          name: tracked(item.name),
+          activity_type: tracked(item.activity_type),
+          opening_hours: tracked(item.opening_hours),
+          phone: tracked(item.phone),
+          latitude: tracked(item.latitude),
+          longitude: tracked(item.longitude),
+          url: tracked(item.url),
+          duration_text: tracked(item.duration_text),
+          difficulty_text: tracked(item.difficulty_text),
+          description: tracked(item.description),
+        },
+      });
+    }
+    for (const route of entry.routes ?? []) {
+      publicSeq += 1;
+      blocks.push({
+        id: `public-${publicSeq}`,
+        type: 'itinerary_route',
+        position: publicSeq,
+        visible: true,
+        removed: false,
+        manual: false,
+        source_detail_id: null,
+        product_kind: null,
+        product_id: null,
+        parent_id: block.id,
+        content: {
+          catalog_route_id: '00000000-0000-0000-0000-000000000000',
+          mode: route.mode,
+          tone: route.tone,
+          included: true,
+          origin_zone: displayText(route.origin_zone),
+          destination_zone: displayText(route.destination_zone),
+          origin_place: displayText(route.origin_place),
+          destination_place: displayText(route.destination_place),
+          distance_km: displayText(route.distance_km),
+          duration_minutes: {
+            value: route.duration_minutes,
+            origin: 'generated',
+            generated_value: route.duration_minutes,
+          },
+          instructions: displayText(route.instructions),
+        },
+      });
+    }
+  };
+  for (const entry of view.front ?? []) pushEntry(entry);
+  for (const entry of view.preamble ?? []) pushEntry(entry);
   for (const day of view.days) {
     const entries = day.entries.map((entry) => {
       const child = publicBlock(entry.type, entryContent(entry));
@@ -1339,8 +1593,6 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
       entries_origin: 'generated',
     }));
   }
-  for (const entry of view.rest) {
-    blocks.push(publicBlock(entry.type, entryContent(entry), entry.section_kind));
-  }
+  for (const entry of view.rest) pushEntry(entry);
   return { locale: 'fr', schema_version: 1, blocks };
 }

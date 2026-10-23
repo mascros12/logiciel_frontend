@@ -8,8 +8,16 @@
     </section>
   } @else {
     <div class="carnet-public__bar">
-      <button type="button" (click)="download()" [disabled]="downloading()">
-        {{ downloading() ? 'Préparation…' : 'Télécharger le PDF' }}
+      <button type="button" (click)="download('illustrated')" [disabled]="downloading() !== null">
+        {{ downloading() === 'illustrated' ? 'Préparation…' : 'Télécharger le PDF illustré' }}
+      </button>
+      <button
+        type="button"
+        class="is-secondary"
+        (click)="download('simple')"
+        [disabled]="downloading() !== null"
+      >
+        {{ downloading() === 'simple' ? 'Préparation…' : 'Télécharger le PDF simplifié' }}
       </button>
       @if (pdfError()) {
         <p>Le PDF n'est pas disponible.</p>

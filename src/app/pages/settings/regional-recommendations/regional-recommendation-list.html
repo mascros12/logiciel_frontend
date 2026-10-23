@@ -1,0 +1,102 @@
+<p-toast />
+<section class="regional-recommendations">
+  <header class="regional-recommendations__head">
+    <div>
+      <h1 class="page-title">Recomendaciones regionales</h1>
+      <p>Catálogo independiente. No crea productos ni modifica precios.</p>
+    </div>
+    <p-button label="Nueva recomendación" icon="pi pi-plus" (onClick)="openCreate()" />
+  </header>
+
+  <div class="regional-recommendations__filters">
+    <input pInputText [(ngModel)]="search" placeholder="Buscar" (keyup.enter)="load()" />
+    <p-select
+      [options]="[{ label: 'Todas las zonas', value: '' }, ...zoneOptions()]"
+      [(ngModel)]="zoneFilter"
+      (ngModelChange)="load()"
+      appendTo="body"
+    />
+    <p-select
+      [options]="[{ label: 'Todas las categorías', value: '' }, ...categories]"
+      [(ngModel)]="categoryFilter"
+      (ngModelChange)="load()"
+      appendTo="body"
+    />
+    <p-select
+      [options]="[{ label: 'Todos', value: 'all' }, { label: 'Activas', value: 'yes' }, { label: 'Inactivas', value: 'no' }]"
+      [(ngModel)]="activeFilter"
+      (ngModelChange)="load()"
+      appendTo="body"
+    />
+  </div>
+
+  <p-table [value]="rows()" [loading]="loading()" [paginator]="true" [rows]="25">
+    <ng-template #header>
+      <tr>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Zona</th>
+        <th>Teléfono</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td>{{ row.name }}</td>
+        <td>{{ row.category === 'restaurant' ? 'Restaurante' : 'Actividad' }}</td>
+        <td>{{ row.zone_name }}</td>
+        <td>{{ row.phone }}</td>
+        <td>{{ row.active ? 'Activa' : 'Inactiva' }}</td>
+        <td>
+          <p-button label="Editar" [text]="true" (onClick)="openEdit(row)" />
+          @if (row.active) {
+            <p-button label="Desactivar" [text]="true" severity="danger" (onClick)="deactivate(row)" />
+          }
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<p-dialog
+  [header]="editing() ? 'Editar recomendación' : 'Nueva recomendación'"
+  [visible]="showDialog()"
+  (visibleChange)="showDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '40rem' }"
+>
+  <form [formGroup]="form" class="regional-recommendations__form" (ngSubmit)="save()">
+    <label>Categoría
+      <p-select [options]="categories" formControlName="category" appendTo="body" />
+    </label>
+    <label>Zona
+      <p-select [options]="zoneOptions()" formControlName="zone_id" appendTo="body" placeholder="Elegir zona" />
+    </label>
+    @if (form.value.category === 'activity') {
+      <label>Actividad comercial, opcional
+        <p-select
+          [options]="activityOptions()"
+          formControlName="activity_id"
+          appendTo="body"
+          placeholder="Sin vincular"
+          [showClear]="true"
+        />
+      </label>
+      <p-button type="button" label="Copiar datos públicos" [outlined]="true" (onClick)="copyActivity()" />
+      <label>Tipo <input pInputText formControlName="activity_type" /></label>
+      <label>Duración <input pInputText formControlName="duration_text" /></label>
+      <label>Dificultad <input pInputText formControlName="difficulty_text" /></label>
+      <label>Descripción <textarea pInputTextarea rows="4" formControlName="description"></textarea></label>
+    }
+    <label>Nombre <input pInputText formControlName="name" /></label>
+    <label>Horario <input pInputText formControlName="opening_hours" /></label>
+    <label>Teléfono <input pInputText formControlName="phone" /></label>
+    <label>Latitud <input pInputText formControlName="latitude" /></label>
+    <label>Longitud <input pInputText formControlName="longitude" /></label>
+    <label>Enlace http o https <input pInputText formControlName="url" /></label>
+    <label class="regional-recommendations__switch">Activa <p-toggleSwitch formControlName="active" /></label>
+    <p>Indique el par de coordenadas o un enlace. Un restaurante no lleva duración ni dificultad.</p>
+    <p-button type="submit" label="Guardar" [loading]="saving()" />
+  </form>
+</p-dialog>

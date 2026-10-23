@@ -38,12 +38,20 @@
         (onClick)="save()"
       />
       <p-button
-        label="PDF borrador"
+        label="PDF ilustrado"
         icon="pi pi-file-pdf"
         [outlined]="true"
         [loading]="downloading()"
         [disabled]="!document()"
-        (onClick)="downloadDraft()"
+        (onClick)="downloadDraft('illustrated')"
+      />
+      <p-button
+        label="PDF simplificado"
+        icon="pi pi-file"
+        [outlined]="true"
+        [loading]="downloading()"
+        [disabled]="!document()"
+        (onClick)="downloadDraft('simple')"
       />
       <p-button
         label="Publicar"
@@ -123,7 +131,8 @@
           @for (item of revisions(); track item.revision_number) {
             <li class="carnet-editor__history-item">
               <span>Revisión {{ item.revision_number }} · {{ item.created_at | date: 'dd/MM/yyyy HH:mm' }}</span>
-              <button type="button" (click)="downloadRevision(item.revision_number)">PDF</button>
+              <button type="button" (click)="downloadRevision(item.revision_number, 'illustrated')">PDF ilustrado</button>
+              <button type="button" (click)="downloadRevision(item.revision_number, 'simple')">PDF simplificado</button>
             </li>
           }
         </ol>
@@ -341,16 +350,84 @@
                   <p class="carnet-editor__hint">Pendiente: esta página no se publica hasta que Operaciones cargue la imagen.</p>
                 }
               }
+              @case ('regional_recommendation') {
+                <label class="carnet-editor__switch">
+                  <input type="checkbox" [checked]="block.content['included'] !== false" (change)="onIncluded(block.id, checkboxValue($event))" />
+                  Incluir en el Carnet del viajero
+                </label>
+                <label>Zona <input pInputText [value]="text(block, 'zone_name')" (input)="onText(block.id, 'zone_name', inputValue($event))" /></label>
+                <label>Nombre <input pInputText [value]="text(block, 'name')" (input)="onText(block.id, 'name', inputValue($event))" /></label>
+                @if (block.content['category'] === 'activity') {
+                  <label>Tipo <input pInputText [value]="text(block, 'activity_type')" (input)="onText(block.id, 'activity_type', inputValue($event))" /></label>
+                }
+                <label>Horario <input pInputText [value]="text(block, 'opening_hours')" (input)="onText(block.id, 'opening_hours', inputValue($event))" /></label>
+                <label>Teléfono <input pInputText [value]="text(block, 'phone')" (input)="onText(block.id, 'phone', inputValue($event))" /></label>
+                <label>Latitud <input pInputText [value]="text(block, 'latitude')" (input)="onText(block.id, 'latitude', inputValue($event))" /></label>
+                <label>Longitud <input pInputText [value]="text(block, 'longitude')" (input)="onText(block.id, 'longitude', inputValue($event))" /></label>
+                <label>Enlace <input pInputText [value]="text(block, 'url')" (input)="onText(block.id, 'url', inputValue($event))" /></label>
+                @if (block.content['category'] === 'activity') {
+                  <label>Duración <input pInputText [value]="text(block, 'duration_text')" (input)="onText(block.id, 'duration_text', inputValue($event))" /></label>
+                  <label>Dificultad <input pInputText [value]="text(block, 'difficulty_text')" (input)="onText(block.id, 'difficulty_text', inputValue($event))" /></label>
+                  <label>Descripción <textarea pInputTextarea rows="4" [value]="text(block, 'description')" (input)="onText(block.id, 'description', inputValue($event))"></textarea></label>
+                  @if (canUsePurple(block)) {
+                    <p>
+                      <button type="button" (click)="setRecommendationTone(block.id, 'purple')">Marcar elección manual</button>
+                      <button type="button" (click)="setRecommendationTone(block.id, 'automatic')">Restaurar color automático</button>
+                    </p>
+                  }
+                }
+                <p class="carnet-editor__hint">Estos textos pertenecen a este Carnet. El catálogo no cambia.</p>
+              }
+              @case ('itinerary_route') {
+                <label class="carnet-editor__switch">
+                  <input type="checkbox" [checked]="block.content['included'] !== false" (change)="onIncluded(block.id, checkboxValue($event))" />
+                  Incluir en el Carnet del viajero
+                </label>
+                <label>Zona de origen <input pInputText [value]="text(block, 'origin_zone')" (input)="onText(block.id, 'origin_zone', inputValue($event))" /></label>
+                <label>Zona de destino <input pInputText [value]="text(block, 'destination_zone')" (input)="onText(block.id, 'destination_zone', inputValue($event))" /></label>
+                <label>Lugar de origen <input pInputText [value]="text(block, 'origin_place')" (input)="onText(block.id, 'origin_place', inputValue($event))" /></label>
+                <label>Lugar de destino <input pInputText [value]="text(block, 'destination_place')" (input)="onText(block.id, 'destination_place', inputValue($event))" /></label>
+                <label>Distancia (km) <input pInputText [value]="text(block, 'distance_km')" (input)="onText(block.id, 'distance_km', inputValue($event))" /></label>
+                <label>Duración (minutos) <input type="number" min="0" [value]="number(block, 'duration_minutes')" (input)="onInt(block.id, 'duration_minutes', numberValue($event))" /></label>
+                <label>Instrucciones de llegada <textarea pInputTextarea rows="5" [value]="text(block, 'instructions')" (input)="onText(block.id, 'instructions', inputValue($event))"></textarea></label>
+                <p class="carnet-editor__hint">Estos textos pertenecen a este Carnet. El catálogo no cambia.</p>
+              }
               @default {
                 <label>Título <input pInputText [value]="text(block, 'heading')" (input)="onText(block.id, 'heading', inputValue($event))" /></label>
                 <label>Texto <textarea pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
+                @if (block.section_kind === 'regional_recommendations' || block.template_section_id === restaurantsSectionId) {
+                  <label>Añadir desde el catálogo
+                    <p-select
+                      [options]="recommendationOptions(block)"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Elegir recomendación activa"
+                      appendTo="body"
+                      (onChange)="addCatalogRecommendation(block.id, $event.value)"
+                    />
+                  </label>
+                  <p class="carnet-editor__hint">Excluir una recomendación la oculta al viajero y no cambia el catálogo. El orden se cambia en la lista.</p>
+                }
+                @if (block.section_kind === 'route_collection') {
+                  <label>Añadir desde el catálogo
+                    <p-select
+                      [options]="catalogOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Elegir trayecto activo"
+                      appendTo="body"
+                      (onChange)="addCatalogRoute(block.id, $event.value)"
+                    />
+                  </label>
+                  <p class="carnet-editor__hint">Excluir un trayecto lo oculta al viajero y no cambia el catálogo. El orden se cambia en la lista.</p>
+                }
                 @if (pending(block)) {
                   <p class="carnet-editor__hint">Pendiente: este apartado no se publica hasta que Operaciones escriba el texto. No incluya teléfonos ni condiciones inventados.</p>
                 }
               }
             }
 
-            @if (block.type !== 'day' && block.type !== 'cover' && block.type !== 'general' && block.type !== 'full_page_image') {
+            @if (block.type !== 'day' && block.type !== 'cover' && block.type !== 'general' && block.type !== 'full_page_image' && block.type !== 'regional_recommendation') {
               <label>
                 Colocar en el día
                 <select (change)="placeOnDay(inputValue($event))">

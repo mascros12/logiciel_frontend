@@ -15,6 +15,8 @@ import {
 } from '../models/carnet.model';
 import { MediaAsset } from '../models/carnet-template.model';
 
+export type CarnetPdfStyle = 'illustrated' | 'simple';
+
 @Injectable({ providedIn: 'root' })
 export class CarnetService {
   private readonly http = inject(HttpClient);
@@ -91,21 +93,28 @@ export class CarnetService {
     );
   }
 
-  draftPdf(carnetId: string) {
-    return this.http.get(apiUrl(`/carnets/${carnetId}/draft.pdf`), { responseType: 'blob' });
+  draftPdf(carnetId: string, style: CarnetPdfStyle = 'illustrated') {
+    return this.http.get(apiUrl(`/carnets/${carnetId}/draft.pdf`), {
+      responseType: 'blob',
+      params: { style },
+    });
   }
 
-  revisionPdf(carnetId: string, revisionNumber: number) {
+  revisionPdf(
+    carnetId: string,
+    revisionNumber: number,
+    style: CarnetPdfStyle = 'illustrated',
+  ) {
     return this.http.get(
       apiUrl(`/carnets/${carnetId}/revisions/${revisionNumber}/document.pdf`),
-      { responseType: 'blob' },
+      { responseType: 'blob', params: { style } },
     );
   }
 
-  publishedPdf(token: string) {
+  publishedPdf(token: string, style: CarnetPdfStyle = 'illustrated') {
     return this.http.get(
       apiUrl(`/public/carnets/${encodeURIComponent(token)}/document.pdf`),
-      { responseType: 'blob' },
+      { responseType: 'blob', params: { style } },
     );
   }
 

@@ -1,0 +1,50 @@
+.routes {
+  background: #fff;
+  border: 1px solid #e4e7ef;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  color: #111;
+}
+
+.routes h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+  color: #111;
+}
+
+.routes__body {
+  white-space: pre-wrap;
+}
+
+.routes__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.routes__table th,
+.routes__table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid #e4e7ef;
+}
+
+.routes__table th {
+  color: #fff;
+  background: #111;
+  font-size: 0.78rem;
+}
+
+.routes__detail h3,
+.routes__places,
+.routes__instructions {
+  margin: 0.15rem 0;
+  white-space: pre-wrap;
+}
+
+.routes__detail--excursion,
+.routes__detail--excursion h3,
+.routes__detail--excursion p {
+  color: #9b1b1b;
+}

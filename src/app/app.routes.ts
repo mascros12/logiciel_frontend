@@ -127,6 +127,24 @@ export const routes: Routes = [
             .then(m => m.ZoneList)
       },
       {
+        path: 'configuraciones/trayectos',
+        title: 'Logiciel - Trayectos',
+        canActivate: [authGuard],
+        data: { roles: ['admin', 'operaciones'] },
+        loadComponent: () =>
+          import('./pages/settings/travel-routes/travel-route-list')
+            .then(m => m.TravelRouteListPage)
+      },
+      {
+        path: 'configuraciones/recomendaciones',
+        title: 'Logiciel - Recomendaciones regionales',
+        canActivate: [authGuard],
+        data: { roles: ['admin', 'operaciones'] },
+        loadComponent: () =>
+          import('./pages/settings/regional-recommendations/regional-recommendation-list')
+            .then(m => m.RegionalRecommendationListPage)
+      },
+      {
         path: 'configuraciones/plantillas-carnet',
         title: 'Logiciel - Plantillas del Carnet',
         canActivate: [authGuard],

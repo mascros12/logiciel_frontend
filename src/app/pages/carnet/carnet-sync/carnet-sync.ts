@@ -75,6 +75,11 @@ export class CarnetSyncPanel implements OnInit {
       { title: 'Servicios nuevos', kinds: ['add_service', 'add_room'] },
       { title: 'Servicios eliminados', kinds: ['hide_service', 'remove_service', 'remove_room'] },
       { title: 'Servicios modificados', kinds: ['update_field', 'realign_days'] },
+      { title: 'Trayectos aplicables', kinds: ['route_add'] },
+      { title: 'Trayectos que ya no corresponden', kinds: ['route_exclude'] },
+      { title: 'Recomendaciones nuevas', kinds: ['recommendation_add'] },
+      { title: 'Recomendaciones que ya no corresponden', kinds: ['recommendation_exclude'] },
+      { title: 'Color de actividades', kinds: ['recommendation_recolor'] },
     ];
     return buckets
       .map((bucket) => ({

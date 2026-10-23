@@ -1,0 +1,43 @@
+<section class="routes">
+  <h2>{{ heading() }}</h2>
+  @if (body()) {
+    <p class="routes__body">{{ body() }}</p>
+  }
+  @if (zoneRows().length) {
+    <table class="routes__table">
+      <thead>
+        <tr>
+          <th>Départ</th>
+          <th>Destination</th>
+          <th>Distance</th>
+          <th>Durée</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of zoneRows(); track $index) {
+          <tr>
+            <td>{{ row.originZone }}</td>
+            <td>{{ row.destinationZone }}</td>
+            <td>{{ row.distanceLabel }}</td>
+            <td>{{ row.durationLabel }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+  @for (row of rows(); track $index) {
+    <article class="routes__detail" [class.routes__detail--excursion]="row.tone === 'excursion'">
+      @if (row.tone === 'zone') {
+        <h3>{{ row.originZone }} – {{ row.destinationZone }} · {{ row.distanceLabel }}</h3>
+        @if (row.originPlace && row.destinationPlace) {
+          <p class="routes__places">{{ row.originPlace }} – {{ row.destinationPlace }}</p>
+        }
+      } @else {
+        <h3>Hôtel {{ row.originPlace || row.originZone }} – Activité {{ row.destinationPlace || row.destinationZone }} ({{ row.durationLabel }})</h3>
+      }
+      @if (row.instructions) {
+        <p class="routes__instructions">{{ row.instructions }}</p>
+      }
+    </article>
+  }
+</section>

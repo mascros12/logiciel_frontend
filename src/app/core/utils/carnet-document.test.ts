@@ -11,10 +11,13 @@ import {
   moveDayEntry,
   documentFromPublic,
   formatDateFr,
+  formatDuration,
+  itineraryRoutes,
   organisationRows,
   pageAssetId,
   previewOf,
   previewText,
+  recommendationLines,
   sectionPending,
   publicationLabel,
   reorderVisible,
@@ -806,5 +809,282 @@ describe('página de imagen', () => {
     });
     assert.equal(published.blocks[0].type, 'full_page_image');
     assert.equal(pageAssetId(published.blocks[0]), 'asset-cover');
+  });
+
+  it('reconstruye Les trajets y omite los excluidos', () => {
+    const document = sample();
+    document.blocks.push(
+      {
+        id: 'routes',
+        type: 'free_text',
+        position: 20,
+        visible: true,
+        removed: false,
+        manual: false,
+        source_detail_id: null,
+        product_kind: null,
+        product_id: null,
+        section_kind: 'route_collection',
+        content: { heading: text('Les trajets'), body: text(null) },
+      },
+      {
+        id: 'road',
+        type: 'itinerary_route',
+        position: 21,
+        visible: true,
+        removed: false,
+        manual: false,
+        source_detail_id: null,
+        product_kind: null,
+        product_id: null,
+        parent_id: 'routes',
+        content: {
+          catalog_route_id: '11111111-1111-1111-1111-111111111111',
+          mode: 'zone_to_zone',
+          tone: 'zone',
+          included: true,
+          origin_zone: text('Guanacaste'),
+          destination_zone: text('Puntarenas'),
+          origin_place: text('Arco'),
+          destination_place: text('Ponts'),
+          distance_km: text('120.5'),
+          duration_minutes: { value: 90, origin: 'generated', generated_value: 90 },
+          instructions: text('Continuer tout droit.'),
+        },
+      },
+      {
+        id: 'hidden-road',
+        type: 'itinerary_route',
+        position: 22,
+        visible: true,
+        removed: false,
+        manual: false,
+        source_detail_id: null,
+        product_kind: null,
+        product_id: null,
+        parent_id: 'routes',
+        content: {
+          catalog_route_id: '22222222-2222-2222-2222-222222222222',
+          mode: 'zone_to_zone',
+          tone: 'zone',
+          included: false,
+          origin_zone: text('Oculta'),
+          destination_zone: text('Oculta'),
+          origin_place: text(null),
+          destination_place: text(null),
+          distance_km: text('1'),
+          duration_minutes: { value: 10, origin: 'generated', generated_value: 10 },
+          instructions: text(null),
+        },
+      },
+    );
+    const lines = itineraryRoutes(document, 'routes');
+    assert.equal(lines.length, 1);
+    assert.equal(lines[0].distanceLabel, '120,5 km');
+    assert.equal(lines[0].durationLabel, '1H30');
+    assert.equal(formatDuration(45), '45 min');
+    assert.equal(formatDuration(120), '2H00');
+    const preview = previewOf(document);
+    assert.equal(preview.lead.some((block) => block.type === 'itinerary_route'), false);
+    assert.equal(preview.rest.some((block) => block.id === 'routes'), true);
+    const written = toDraftWrite(document, 1);
+    const saved = written.blocks.find((block) => block.id === 'road');
+    assert.equal(saved?.parent_id, 'routes');
+    assert.equal(saved?.content.duration_minutes, 90);
+    const published = documentFromPublic({
+      locale: 'fr',
+      cover: null,
+      general: null,
+      front: [],
+      preamble: [],
+      days: [],
+      rest: [{
+        type: 'free_text',
+        role: null,
+        title: null,
+        schedule: null,
+        description_fr: null,
+        short_description_fr: null,
+        recommendation_fr: null,
+        selling_points_fr: [],
+        highlights_fr: [],
+        address: null,
+        phone: null,
+        locality: null,
+        check_in: null,
+        check_out: null,
+        dates: [],
+        departure_time: null,
+        return_time: null,
+        pickup_text: null,
+        dropoff_text: null,
+        origin_label: null,
+        destination_label: null,
+        latitude: null,
+        longitude: null,
+        origin_latitude: null,
+        origin_longitude: null,
+        destination_latitude: null,
+        destination_longitude: null,
+        reservation_number: null,
+        link: null,
+        notes: null,
+        heading: 'Les trajets',
+        body: null,
+        visit_tips: null,
+        rooms: [],
+        section_kind: 'route_collection',
+        routes: [{
+          mode: 'zone_to_zone',
+          tone: 'zone',
+          origin_zone: 'Guanacaste',
+          destination_zone: 'Puntarenas',
+          origin_place: 'Arco',
+          destination_place: 'Ponts',
+          distance_km: '120.5',
+          duration_minutes: 90,
+          distance_label: '120,5 km',
+          duration_label: '1H30',
+          instructions: 'Continuer tout droit.',
+        }],
+      }],
+    });
+    const rebuilt = itineraryRoutes(published);
+    assert.equal(rebuilt.length, 1);
+    assert.equal(rebuilt[0].originZone, 'Guanacaste');
+    assert.equal(rebuilt[0].durationLabel, '1H30');
+  });
+
+  it('reconstruye actividades y restaurantes sin datos comerciales', () => {
+    const published = documentFromPublic({
+      locale: 'fr',
+      cover: null,
+      general: null,
+      front: [],
+      preamble: [],
+      days: [],
+      rest: [
+        {
+          type: 'free_text',
+          role: null,
+          title: null,
+          schedule: null,
+          description_fr: null,
+          short_description_fr: null,
+          recommendation_fr: null,
+          selling_points_fr: [],
+          highlights_fr: [],
+          address: null,
+          phone: null,
+          locality: null,
+          check_in: null,
+          check_out: null,
+          dates: [],
+          departure_time: null,
+          return_time: null,
+          pickup_text: null,
+          dropoff_text: null,
+          origin_label: null,
+          destination_label: null,
+          latitude: null,
+          longitude: null,
+          origin_latitude: null,
+          origin_longitude: null,
+          destination_latitude: null,
+          destination_longitude: null,
+          reservation_number: null,
+          link: null,
+          notes: null,
+          heading: 'Activités dans la région',
+          body: 'Autour de votre hôtel.',
+          visit_tips: null,
+          rooms: [],
+          section_kind: 'regional_recommendations',
+          recommendation_section: 'activities',
+          recommendations: [{
+            category: 'activity',
+            zone_name: 'Guanacaste',
+            name: 'Canopy',
+            activity_type: 'Visite',
+            opening_hours: '8 h',
+            phone: '+50622223333',
+            latitude: '10.12345',
+            longitude: '-85.12345',
+            url: 'https://example.com/canopy',
+            duration_text: '2 heures',
+            difficulty_text: 'Facile',
+            description: 'Sentier court.',
+            tone: 'red',
+          }],
+        },
+        {
+          type: 'free_text',
+          role: null,
+          title: null,
+          schedule: null,
+          description_fr: null,
+          short_description_fr: null,
+          recommendation_fr: null,
+          selling_points_fr: [],
+          highlights_fr: [],
+          address: null,
+          phone: null,
+          locality: null,
+          check_in: null,
+          check_out: null,
+          dates: [],
+          departure_time: null,
+          return_time: null,
+          pickup_text: null,
+          dropoff_text: null,
+          origin_label: null,
+          destination_label: null,
+          latitude: null,
+          longitude: null,
+          origin_latitude: null,
+          origin_longitude: null,
+          destination_latitude: null,
+          destination_longitude: null,
+          reservation_number: null,
+          link: null,
+          notes: null,
+          heading: 'Les restaurants conseillés',
+          body: null,
+          visit_tips: null,
+          rooms: [],
+          recommendation_section: 'restaurants',
+          recommendations: [{
+            category: 'restaurant',
+            zone_name: 'Guanacaste',
+            name: 'Soda',
+            activity_type: null,
+            opening_hours: '11 h',
+            phone: '+50688887777',
+            latitude: null,
+            longitude: null,
+            url: 'https://example.com/soda',
+            duration_text: null,
+            difficulty_text: null,
+            description: null,
+            tone: 'black',
+          }],
+        },
+      ],
+    });
+    const activities = recommendationLines(
+      published,
+      published.blocks.find((block) => block.section_kind === 'regional_recommendations')?.id,
+    );
+    const restaurants = recommendationLines(
+      published,
+      published.blocks.find((block) => block.template_section_id === '642f2b2a-7f1f-513d-8b10-30ec17e370f2')?.id,
+    );
+    assert.equal(activities.length, 1);
+    assert.equal(activities[0].tone, 'red');
+    assert.equal(activities[0].durationText, '2 heures');
+    assert.equal(restaurants.length, 1);
+    assert.equal(restaurants[0].name, 'Soda');
+    assert.equal(restaurants[0].durationText, '');
+    assert.equal(previewOf(published).rest.some((block) => block.type === 'regional_recommendation'), false);
   });
 });

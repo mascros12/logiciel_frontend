@@ -48,6 +48,23 @@
         [heading]="text(block, 'heading') || 'Organisation du voyage'"
         [rows]="preview().organisation ?? []"
       />
+    } @else if (block.section_kind === 'route_collection') {
+      @if (routeLines(block).length || text(block, 'body')) {
+        <app-route-section
+          [heading]="text(block, 'heading') || 'Les trajets'"
+          [body]="text(block, 'body')"
+          [rows]="routeLines(block)"
+        />
+      }
+    } @else if (isRecommendation(block)) {
+      @if (recommendationRows(block).length || text(block, 'body')) {
+        <app-recommendation-section
+          [heading]="text(block, 'heading') || (recommendationKind(block) === 'restaurants' ? 'Les restaurants conseillés' : 'Activités dans la région')"
+          [body]="text(block, 'body')"
+          [rows]="recommendationRows(block)"
+          [kind]="recommendationKind(block)"
+        />
+      }
     } @else {
       <article class="carnet-preview__card">
         <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
@@ -83,6 +100,23 @@
         [heading]="text(block, 'heading') || 'Organisation du voyage'"
         [rows]="preview().organisation ?? []"
       />
+    } @else if (block.section_kind === 'route_collection') {
+      @if (routeLines(block).length || text(block, 'body')) {
+        <app-route-section
+          [heading]="text(block, 'heading') || 'Les trajets'"
+          [body]="text(block, 'body')"
+          [rows]="routeLines(block)"
+        />
+      }
+    } @else if (isRecommendation(block)) {
+      @if (recommendationRows(block).length || text(block, 'body')) {
+        <app-recommendation-section
+          [heading]="text(block, 'heading') || (recommendationKind(block) === 'restaurants' ? 'Les restaurants conseillés' : 'Activités dans la région')"
+          [body]="text(block, 'body')"
+          [rows]="recommendationRows(block)"
+          [kind]="recommendationKind(block)"
+        />
+      }
     } @else {
       <article class="carnet-preview__card">
         <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />

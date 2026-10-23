@@ -16,7 +16,9 @@ export type BlockType =
   | 'free_text'
   | 'practical'
   | 'conditions'
-  | 'full_page_image';
+  | 'full_page_image'
+  | 'itinerary_route'
+  | 'regional_recommendation';
 
 export interface TrackedText {
   value: string | null;
@@ -155,6 +157,22 @@ export interface PublicFlight {
   at_time: string | null;
 }
 
+export interface PublicRecommendation {
+  category: 'activity' | 'restaurant';
+  zone_name: string;
+  name: string;
+  activity_type: string | null;
+  opening_hours: string | null;
+  phone: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  url: string | null;
+  duration_text: string | null;
+  difficulty_text: string | null;
+  description: string | null;
+  tone: 'black' | 'red' | 'purple';
+}
+
 export interface PublicEntry {
   type: BlockType;
   role: 'stay' | 'activity' | 'transport' | 'included' | null;
@@ -192,7 +210,24 @@ export interface PublicEntry {
   rooms: PublicRoom[];
   section_kind?: string | null;
   organisation?: PublicOrganisationRow[] | null;
+  routes?: PublicRoute[] | null;
+  recommendations?: PublicRecommendation[] | null;
+  recommendation_section?: 'activities' | 'restaurants' | null;
   asset_id?: string | null;
+}
+
+export interface PublicRoute {
+  mode: 'zone_to_zone' | 'place_to_place';
+  tone: 'zone' | 'excursion';
+  origin_zone: string;
+  destination_zone: string;
+  origin_place: string | null;
+  destination_place: string | null;
+  distance_km: string;
+  duration_minutes: number;
+  distance_label: string;
+  duration_label: string;
+  instructions: string | null;
 }
 
 export interface PublicOrganisationRow {
@@ -253,6 +288,7 @@ export interface DraftBlockWrite {
   type: BlockType;
   visible: boolean;
   removed: boolean;
+  parent_id?: string | null;
   content: Record<string, unknown>;
 }
 

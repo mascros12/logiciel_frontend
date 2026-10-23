@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { CarnetDocument } from '../../../core/models/carnet.model';
-import { CarnetService } from '../../../core/services/carnet.service';
+import { CarnetPdfStyle, CarnetService } from '../../../core/services/carnet.service';
 import { documentFromPublic } from '../../../core/utils/carnet-document';
 import { apiUrl } from '../../../core/config/api.config';
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
@@ -21,7 +21,7 @@ export class CarnetPublic implements OnInit, OnDestroy {
 
   readonly loading = signal(true);
   readonly missing = signal(false);
-  readonly downloading = signal(false);
+  readonly downloading = signal<CarnetPdfStyle | null>(null);
   readonly pdfError = signal(false);
   readonly document = signal<CarnetDocument | null>(null);
 
@@ -49,17 +49,20 @@ export class CarnetPublic implements OnInit, OnDestroy {
     this.meta.removeTag('name="referrer"');
   }
 
-  download(): void {
+  download(style: CarnetPdfStyle): void {
     const token = this.route.snapshot.paramMap.get('token') ?? '';
-    this.downloading.set(true);
+    if (this.downloading()) return;
+    this.downloading.set(style);
     this.pdfError.set(false);
-    this.carnets.publishedPdf(token).subscribe({
+    const filename =
+      style === 'simple' ? 'carnet-de-route-simple.pdf' : 'carnet-de-route.pdf';
+    this.carnets.publishedPdf(token, style).subscribe({
       next: (blob) => {
-        this.downloading.set(false);
-        this.carnets.saveBlob(blob, 'carnet-de-route.pdf');
+        this.downloading.set(null);
+        this.carnets.saveBlob(blob, filename);
       },
       error: () => {
-        this.downloading.set(false);
+        this.downloading.set(null);
         this.pdfError.set(true);
       },
     });

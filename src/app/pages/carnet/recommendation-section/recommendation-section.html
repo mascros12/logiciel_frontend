@@ -1,0 +1,50 @@
+<section class="recommendation-section">
+  <h2>{{ heading() }}</h2>
+  @if (body()) {
+    <p class="recommendation-section__intro">{{ body() }}</p>
+  }
+  @for (group of groups(); track group.zone) {
+    <section>
+      @if (group.zone) {
+        <h3>{{ group.zone }}</h3>
+      }
+      @for (row of group.rows; track row.name + row.zoneName) {
+        <article [class]="'recommendation-section__item tone-' + row.tone">
+          <h4>
+            {{ row.name }}
+            @if (kind() === 'activities' && row.activityType) {
+              <span>· {{ row.activityType }}</span>
+            }
+          </h4>
+          @if (row.openingHours) {
+            <p>Horaire : {{ row.openingHours }}</p>
+          }
+          @if (row.phone) {
+            <p>Tél. : {{ row.phone }}</p>
+          }
+          @if (row.latitude && row.longitude) {
+            <p>
+              <a [href]="maps(row)" target="_blank" rel="noopener noreferrer">
+                {{ row.latitude }}, {{ row.longitude }}
+              </a>
+            </p>
+          }
+          @if (row.url) {
+            <p><a [href]="row.url" target="_blank" rel="noopener noreferrer">Lien</a></p>
+          }
+          @if (kind() === 'activities') {
+            @if (row.durationText) {
+              <p>Durée : {{ row.durationText }}</p>
+            }
+            @if (row.difficultyText) {
+              <p>Difficulté : {{ row.difficultyText }}</p>
+            }
+            @if (row.description) {
+              <p>{{ row.description }}</p>
+            }
+          }
+        </article>
+      }
+    </section>
+  }
+</section>

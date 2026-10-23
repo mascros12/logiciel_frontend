@@ -20,7 +20,11 @@ import {
   RevisionItem,
 } from '../../../core/models/carnet.model';
 import { apiUrl } from '../../../core/config/api.config';
-import { CarnetService } from '../../../core/services/carnet.service';
+import { CarnetPdfStyle, CarnetService } from '../../../core/services/carnet.service';
+import { TravelRouteService } from '../../../core/services/travel-route.service';
+import { TravelRoute } from '../../../core/models/travel-route.model';
+import { RegionalRecommendationService } from '../../../core/services/regional-recommendation.service';
+import { RegionalRecommendation } from '../../../core/models/regional-recommendation.model';
 import {
   ADDABLE_TYPES,
   BLOCK_LABELS,
@@ -42,11 +46,13 @@ import {
   loadEditor,
   markRemoved,
   publicationLabel,
+  RESTAURANTS_SECTION_ID,
   moveDayEntry,
   pointsOf,
   reorderVisible,
   roomsOf,
   setCoords,
+  setRouteIncluded,
   setDate,
   setAges,
   setDates,
@@ -100,10 +106,13 @@ import { CarnetSyncPanel } from '../carnet-sync/carnet-sync';
 export class CarnetEditor implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly carnets = inject(CarnetService);
+  private readonly travelRoutes = inject(TravelRouteService);
+  private readonly recommendationsApi = inject(RegionalRecommendationService);
   private readonly messages = inject(MessageService);
   private readonly confirmation = inject(ConfirmationService);
 
   readonly labels = BLOCK_LABELS;
+  readonly restaurantsSectionId = RESTAURANTS_SECTION_ID;
   readonly addable = ADDABLE_TYPES.map((type) => ({ label: BLOCK_LABELS[type], value: type }));
 
   readonly loading = signal(true);
@@ -117,6 +126,14 @@ export class CarnetEditor implements OnInit {
   readonly selectedId = signal<string | null>(null);
   readonly collapsedDays = signal<ReadonlySet<string>>(new Set());
   readonly addChoice = signal<BlockType | null>(null);
+  readonly catalogRoutes = signal<TravelRoute[]>([]);
+  readonly catalogRecommendations = signal<RegionalRecommendation[]>([]);
+  readonly catalogOptions = computed(() =>
+    this.catalogRoutes().map((route) => ({
+      label: `${route.origin_zone_name} → ${route.destination_zone_name} · ${route.duration_label}`,
+      value: route.id,
+    })),
+  );
   readonly updatedAt = signal('');
   readonly fileAaId = signal('');
   readonly status = signal('draft');
@@ -146,6 +163,33 @@ export class CarnetEditor implements OnInit {
     this.quotationId = this.route.snapshot.paramMap.get('quotationId') ?? '';
     this.carnetId = this.route.snapshot.paramMap.get('carnetId') ?? '';
     this.reload();
+    this.travelRoutes.list(true).subscribe({
+      next: (res) => this.catalogRoutes.set(res.items),
+      error: () => this.catalogRoutes.set([]),
+    });
+    this.recommendationsApi.list({ active: true }).subscribe({
+      next: (res) => this.catalogRecommendations.set(res.items),
+      error: () => this.catalogRecommendations.set([]),
+    });
+  }
+
+  recommendationOptions(block: CarnetBlock) {
+    const category = block.section_kind === 'regional_recommendations'
+      ? 'activity'
+      : block.template_section_id === RESTAURANTS_SECTION_ID
+        ? 'restaurant'
+        : null;
+    if (!category) return [];
+    return this.catalogRecommendations()
+      .filter((item) => item.category === category && item.active)
+      .map((item) => ({
+        label: `${item.zone_name} · ${item.name}`,
+        value: item.id,
+      }));
+  }
+
+  canUsePurple(block: CarnetBlock): boolean {
+    return block.content['category'] === 'activity' && block.content['identified'] === true;
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -243,6 +287,154 @@ export class CarnetEditor implements OnInit {
 
   inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  checkboxValue(event: Event): boolean {
+    return (event.target as HTMLInputElement).checked;
+  }
+
+  onIncluded(blockId: string, included: boolean): void {
+    const current = this.state();
+    if (!current) return;
+    this.state.set(withDocument(current, setRouteIncluded(current.document, blockId, included)));
+  }
+
+  setRecommendationTone(blockId: string, choice: 'purple' | 'automatic'): void {
+    const current = this.state();
+    const block = current ? blockById(current.document, blockId) : null;
+    if (!current || !block || block.type !== 'regional_recommendation') return;
+    const identified = block.content['identified'] === true
+      && block.content['category'] === 'activity';
+    const tone = choice === 'purple' && identified ? 'purple' : identified ? 'red' : 'black';
+    const origin = tone === 'purple' ? 'edited' : 'generated';
+    this.state.set(withDocument(current, {
+      ...current.document,
+      blocks: current.document.blocks.map((item) => item.id === blockId
+        ? { ...item, content: { ...item.content, tone, tone_origin: origin } }
+        : item),
+    }));
+  }
+
+  addCatalogRecommendation(parentId: string, recommendationId: string | null): void {
+    const current = this.state();
+    const item = this.catalogRecommendations().find((row) => row.id === recommendationId);
+    if (!current || !item) return;
+    const exists = current.document.blocks.some(
+      (block) => !block.removed && block.content['recommendation_id'] === item.id,
+    );
+    if (exists) {
+      this.messages.add({ severity: 'info', summary: 'Esa recomendación ya está en el Carnet' });
+      return;
+    }
+    const fileIds = new Set(
+      current.document.blocks
+        .filter((block) => block.type === 'activity' && block.visible && !block.removed)
+        .map((block) => block.product_id)
+        .filter((id): id is string => !!id),
+    );
+    const identified = item.category === 'activity' && !!item.activity_id && fileIds.has(item.activity_id);
+    const tone = identified ? 'red' : 'black';
+    const text = (value: string | null) => ({
+      value,
+      origin: 'generated' as const,
+      generated_value: value,
+    });
+    const id = `new-${crypto.randomUUID()}`;
+    const block: CarnetBlock = {
+      id,
+      type: 'regional_recommendation',
+      position: current.document.blocks.length,
+      visible: true,
+      removed: false,
+      manual: true,
+      source_detail_id: null,
+      product_kind: null,
+      product_id: null,
+      parent_id: parentId,
+      content: {
+        recommendation_id: item.id,
+        category: item.category,
+        zone_id: item.zone_id,
+        zone_name: text(item.zone_name),
+        activity_id: item.activity_id,
+        identified,
+        included: true,
+        selection_origin: 'manual',
+        tone,
+        tone_origin: 'generated',
+        name: text(item.name),
+        activity_type: text(item.activity_type),
+        opening_hours: text(item.opening_hours),
+        phone: text(item.phone),
+        latitude: text(item.latitude),
+        longitude: text(item.longitude),
+        url: text(item.url || null),
+        duration_text: text(item.duration_text),
+        difficulty_text: text(item.difficulty_text),
+        description: text(item.description),
+      },
+    };
+    this.state.set(withDocument(current, {
+      ...current.document,
+      blocks: [...current.document.blocks, block],
+    }));
+    this.selectedId.set(id);
+  }
+
+  addCatalogRoute(parentId: string, routeId: string | null): void {
+    const current = this.state();
+    const route = this.catalogRoutes().find((item) => item.id === routeId);
+    if (!current || !route) return;
+    const exists = current.document.blocks.some(
+      (block) => !block.removed && block.content['catalog_route_id'] === route.id,
+    );
+    if (exists) {
+      this.messages.add({ severity: 'info', summary: 'Ese trayecto ya está en el Carnet' });
+      return;
+    }
+    const text = (value: string | null) => ({
+      value,
+      origin: 'edited' as const,
+      generated_value: null,
+    });
+    const excursion = route.mode === 'place_to_place'
+      && route.origin_kind === 'hotel'
+      && route.destination_kind === 'activity';
+    const id = `new-${crypto.randomUUID()}`;
+    const block: CarnetBlock = {
+      id,
+      type: 'itinerary_route',
+      position: current.document.blocks.length,
+      visible: true,
+      removed: false,
+      manual: true,
+      source_detail_id: null,
+      product_kind: null,
+      product_id: null,
+      parent_id: parentId,
+      content: {
+        catalog_route_id: route.id,
+        mode: route.mode,
+        tone: excursion ? 'excursion' : 'zone',
+        included: true,
+        origin_zone: text(route.origin_zone_name),
+        destination_zone: text(route.destination_zone_name),
+        origin_place: text(route.origin_name),
+        destination_place: text(route.destination_name),
+        distance_km: text(String(route.distance_km)),
+        duration_minutes: {
+          value: route.duration_minutes,
+          origin: 'edited',
+          generated_value: route.duration_minutes,
+        },
+        instructions: text(route.instructions || null),
+      },
+    };
+    this.state.set(withDocument(current, {
+      ...current.document,
+      blocks: [...current.document.blocks, block],
+    }));
+    this.selectedId.set(id);
   }
 
   numberValue(event: Event): number {
@@ -585,13 +777,15 @@ export class CarnetEditor implements OnInit {
     if (path) window.open(path, '_blank', 'noopener,noreferrer');
   }
 
-  downloadDraft(): void {
+  downloadDraft(style: CarnetPdfStyle): void {
     if (!this.carnetId || this.downloading()) return;
     this.downloading.set(true);
-    this.carnets.draftPdf(this.carnetId).subscribe({
+    const filename =
+      style === 'simple' ? 'carnet-brouillon-simple.pdf' : 'carnet-brouillon.pdf';
+    this.carnets.draftPdf(this.carnetId, style).subscribe({
       next: (blob) => {
         this.downloading.set(false);
-        this.carnets.saveBlob(blob, 'carnet-brouillon.pdf');
+        this.carnets.saveBlob(blob, filename);
       },
       error: () => {
         this.downloading.set(false);
@@ -600,9 +794,13 @@ export class CarnetEditor implements OnInit {
     });
   }
 
-  downloadRevision(revisionNumber: number): void {
-    this.carnets.revisionPdf(this.carnetId, revisionNumber).subscribe({
-      next: (blob) => this.carnets.saveBlob(blob, `carnet-revision-${revisionNumber}.pdf`),
+  downloadRevision(revisionNumber: number, style: CarnetPdfStyle): void {
+    const filename =
+      style === 'simple'
+        ? `carnet-revision-${revisionNumber}-simple.pdf`
+        : `carnet-revision-${revisionNumber}.pdf`;
+    this.carnets.revisionPdf(this.carnetId, revisionNumber, style).subscribe({
+      next: (blob) => this.carnets.saveBlob(blob, filename),
       error: () => this.messages.add({ severity: 'error', summary: 'No se pudo descargar la revisión' }),
     });
   }
