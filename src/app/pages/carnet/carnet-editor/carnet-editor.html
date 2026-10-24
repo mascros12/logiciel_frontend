@@ -100,6 +100,24 @@
         (closed)="examining.set(false)"
       />
     }
+    @if (structuring() && state(); as current) {
+      <app-carnet-structure
+        [carnetId]="carnetId"
+        [lockVersion]="current.lockVersion"
+        (applied)="onStructured($event)"
+        (closed)="structuring.set(false)"
+      />
+    } @else if (state()) {
+      <p-button
+        label="Actualizar estructura desde plantilla"
+        [outlined]="true"
+        [disabled]="dirty()"
+        (onClick)="structuring.set(true)"
+      />
+      @if (dirty()) {
+        <p>Guarde el borrador antes de actualizar la estructura.</p>
+      }
+    }
     <section class="carnet-editor__publish">
       <div>
         <h2>Publicación</h2>

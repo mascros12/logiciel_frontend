@@ -9,6 +9,7 @@ import {
   PublicationView,
   RevisionItem,
   SourceStatusView,
+  StructureProposal,
   SyncApply,
   SyncPreview,
   SyncProposal,
@@ -55,6 +56,16 @@ export class CarnetService {
     return this.http.post<SyncPreview>(apiUrl(`/carnets/${carnetId}/sync`), {
       ...body,
       dry_run: true,
+    });
+  }
+
+  structureProposal(carnetId: string) {
+    return this.http.get<StructureProposal>(apiUrl(`/carnets/${carnetId}/structure-proposal`));
+  }
+
+  applyStructure(carnetId: string, lockVersion: number) {
+    return this.http.post<CarnetView>(apiUrl(`/carnets/${carnetId}/structure`), {
+      lock_version: lockVersion,
     });
   }
 

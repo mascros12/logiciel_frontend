@@ -1,0 +1,59 @@
+<section class="carnet-structure" aria-labelledby="carnet-structure-title">
+  <header class="carnet-structure__header">
+    <div>
+      <h2 id="carnet-structure-title">Actualizar estructura desde plantilla</h2>
+      <p>La vista previa no guarda ni modifica la revisión publicada.</p>
+    </div>
+    <p-button label="Cerrar" [outlined]="true" (onClick)="closed.emit()" />
+  </header>
+
+  @if (loading()) {
+    <p>Calculando la estructura…</p>
+  } @else if (error() && !proposal()) {
+    <p role="alert">{{ error() }}</p>
+  } @else if (proposal(); as proposal) {
+    <p>{{ proposal.template_label }}</p>
+    @if (proposal.template_source === 'initial') {
+      <p class="carnet-structure__warning" role="status">
+        No hay una versión publicada. La propuesta usa la plantilla inicial del sistema.
+      </p>
+    }
+    <div>
+      <h3>Orden resultante</h3>
+      <ol>
+        @for (title of proposal.order; track title) {
+          <li>{{ title }}</li>
+        }
+      </ol>
+    </div>
+    @if (!proposal.changes.length) {
+      <p role="status">El borrador ya sigue esta plantilla. No hay cambios que aplicar.</p>
+    } @else {
+      <div>
+        <h3>Cambios</h3>
+        <ul>
+          @for (change of proposal.changes; track change.title + change.action) {
+            <li>
+              <strong>{{ actionLabel[change.action] }}:</strong>
+              {{ change.title }}
+              @if (change.detail) {
+                <span>. {{ change.detail }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+      <div class="carnet-structure__actions">
+        <p-button
+          label="Actualizar borrador"
+          [loading]="busy()"
+          [disabled]="busy()"
+          (onClick)="askApply()"
+        />
+      </div>
+    }
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+  }
+</section>

@@ -324,6 +324,22 @@ export interface SyncPreview {
   source_fingerprint: string;
 }
 
+export interface StructureChange {
+  action: 'add' | 'move' | 'retitle' | 'hide' | 'unplaced';
+  title: string;
+  detail: string;
+}
+
+export interface StructureProposal {
+  lock_version: number;
+  template_label: string;
+  template_source: 'active' | 'initial';
+  template_version_id: string | null;
+  template_version: number | null;
+  changes: StructureChange[];
+  order: string[];
+}
+
 export interface SyncApply {
   lock_version: number;
   source_fingerprint: string;

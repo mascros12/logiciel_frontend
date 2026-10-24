@@ -78,6 +78,7 @@ import {
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
 import { FullPageImage } from '../full-page-image/full-page-image';
 import { CarnetSyncPanel } from '../carnet-sync/carnet-sync';
+import { CarnetStructurePanel } from '../carnet-structure/carnet-structure';
 
 @Component({
   selector: 'app-carnet-editor',
@@ -97,6 +98,7 @@ import { CarnetSyncPanel } from '../carnet-sync/carnet-sync';
     TagModule,
     CarnetPreview,
     CarnetSyncPanel,
+    CarnetStructurePanel,
     FullPageImage,
   ],
   providers: [MessageService, ConfirmationService],
@@ -123,6 +125,7 @@ export class CarnetEditor implements OnInit {
   readonly warnings = signal<CarnetWarning[]>([]);
   readonly sourceStatus = signal('unavailable');
   readonly examining = signal(false);
+  readonly structuring = signal(false);
   readonly selectedId = signal<string | null>(null);
   readonly collapsedDays = signal<ReadonlySet<string>>(new Set());
   readonly addChoice = signal<BlockType | null>(null);
@@ -705,6 +708,16 @@ export class CarnetEditor implements OnInit {
     if (this.selectedId() && !next.document.blocks.some((block) => block.id === this.selectedId())) {
       this.selectedId.set(next.document.blocks[0]?.id ?? null);
     }
+  }
+
+  onStructured(view: CarnetView): void {
+    this.applyServer(view);
+    this.structuring.set(false);
+    this.messages.add({
+      severity: 'info',
+      summary: 'Estructura actualizada',
+      detail: 'El borrador cambió. La revisión publicada no se modificó.',
+    });
   }
 
   onSynced(view: CarnetView): void {
