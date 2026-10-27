@@ -68,7 +68,7 @@ export class TravelRouteListPage implements OnInit {
     this.form = this.fb.group({
       mode: ['zone_to_zone' as RouteMode, Validators.required],
       active: [true],
-      distance_km: [0, [Validators.required, Validators.min(0)]],
+      distance_km: [null as number | null, [Validators.required, Validators.min(0)]],
       duration_minutes: [0, [Validators.required, Validators.min(0)]],
       instructions: [''],
       origin_zone_id: [null as string | null, Validators.required],
@@ -77,6 +77,9 @@ export class TravelRouteListPage implements OnInit {
       origin_id: [null as string | null],
       destination_kind: [null as PlaceKind | null],
       destination_id: [null as string | null],
+    });
+    this.form.controls['mode'].valueChanges.subscribe((mode: RouteMode) => {
+      this.applyMeasures(mode);
     });
   }
 
@@ -108,7 +111,7 @@ export class TravelRouteListPage implements OnInit {
     this.form.reset({
       mode: 'zone_to_zone',
       active: true,
-      distance_km: 0,
+      distance_km: null,
       duration_minutes: 0,
       instructions: '',
       origin_zone_id: null,
@@ -126,7 +129,10 @@ export class TravelRouteListPage implements OnInit {
     this.form.reset({
       mode: row.mode,
       active: row.active,
-      distance_km: Number(row.distance_km),
+      distance_km:
+        row.distance_km == null || row.distance_km === ''
+          ? null
+          : Number(row.distance_km),
       duration_minutes: row.duration_minutes,
       instructions: row.instructions,
       origin_zone_id: row.origin_zone_id,
@@ -158,6 +164,27 @@ export class TravelRouteListPage implements OnInit {
     return formatDuration(Number(this.form.value.duration_minutes ?? 0));
   }
 
+  private applyMeasures(mode: RouteMode): void {
+    const distance = this.form.controls['distance_km'];
+    const duration = this.form.controls['duration_minutes'];
+    if (mode === 'place_to_place') {
+      distance.setValidators([Validators.min(0)]);
+      duration.clearValidators();
+      duration.setValue(null, { emitEvent: false });
+    } else {
+      distance.setValidators([Validators.required, Validators.min(0)]);
+      duration.setValidators([Validators.required, Validators.min(0)]);
+      if (distance.value == null || distance.value === '') {
+        distance.setValue(0, { emitEvent: false });
+      }
+      if (duration.value == null) {
+        duration.setValue(0, { emitEvent: false });
+      }
+    }
+    distance.updateValueAndValidity({ emitEvent: false });
+    duration.updateValueAndValidity({ emitEvent: false });
+  }
+
   save(): void {
     if (this.form.invalid || this.saving()) return;
     const value = this.form.getRawValue();
@@ -165,8 +192,14 @@ export class TravelRouteListPage implements OnInit {
       this.messages.add({ severity: 'warn', summary: 'Elija el origen y el destino' });
       return;
     }
+    const place = value.mode === 'place_to_place';
+    const rawDistance = value.distance_km;
+    const distance =
+      rawDistance === '' || rawDistance == null ? null : Number(rawDistance);
     const body = {
       ...value,
+      distance_km: place ? distance : Number(rawDistance),
+      duration_minutes: place ? null : Number(value.duration_minutes),
       origin_kind: value.mode === 'zone_to_zone' ? null : value.origin_kind,
       origin_id: value.mode === 'zone_to_zone' ? null : value.origin_id,
       destination_kind: value.mode === 'zone_to_zone' ? null : value.destination_kind,

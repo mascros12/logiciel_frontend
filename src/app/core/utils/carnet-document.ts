@@ -1090,7 +1090,10 @@ export function itineraryRoutes(document: CarnetDocument, parentId?: string): Ro
       originPlace: textOf(block.content, 'origin_place'),
       destinationPlace: textOf(block.content, 'destination_place'),
       distanceLabel: formatDistance(textOf(block.content, 'distance_km')),
-      durationLabel: formatDuration(intOf(block.content, 'duration_minutes')),
+      durationLabel:
+        block.content['mode'] === 'place_to_place'
+          ? ''
+          : formatDuration(intOf(block.content, 'duration_minutes')),
       instructions: textOf(block.content, 'instructions'),
     }));
 }

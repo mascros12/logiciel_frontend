@@ -5,8 +5,8 @@ export interface TravelRoute {
   id: string;
   mode: RouteMode;
   active: boolean;
-  distance_km: string | number;
-  duration_minutes: number;
+  distance_km: string | number | null;
+  duration_minutes: number | null;
   duration_label: string;
   distance_label: string;
   instructions: string;
@@ -32,8 +32,8 @@ export interface TravelRouteList {
 export interface TravelRouteWrite {
   mode: RouteMode;
   active: boolean;
-  distance_km: number;
-  duration_minutes: number;
+  distance_km: number | null;
+  duration_minutes: number | null;
   instructions: string;
   origin_zone_id: string;
   destination_zone_id: string;

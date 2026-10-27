@@ -406,7 +406,9 @@
                 <label>Lugar de origen <input pInputText [value]="text(block, 'origin_place')" (input)="onText(block.id, 'origin_place', inputValue($event))" /></label>
                 <label>Lugar de destino <input pInputText [value]="text(block, 'destination_place')" (input)="onText(block.id, 'destination_place', inputValue($event))" /></label>
                 <label>Distancia (km) <input pInputText [value]="text(block, 'distance_km')" (input)="onText(block.id, 'distance_km', inputValue($event))" /></label>
-                <label>Duración (minutos) <input type="number" min="0" [value]="number(block, 'duration_minutes')" (input)="onInt(block.id, 'duration_minutes', numberValue($event))" /></label>
+                @if (block.content['mode'] !== 'place_to_place') {
+                  <label>Duración (minutos) <input type="number" min="0" [value]="number(block, 'duration_minutes')" (input)="onInt(block.id, 'duration_minutes', numberValue($event))" /></label>
+                }
                 <label>Instrucciones de llegada <textarea pInputTextarea rows="5" [value]="text(block, 'instructions')" (input)="onText(block.id, 'instructions', inputValue($event))"></textarea></label>
                 <p class="carnet-editor__hint">Estos textos pertenecen a este Carnet. El catálogo no cambia.</p>
               }

@@ -133,7 +133,9 @@ export class CarnetEditor implements OnInit {
   readonly catalogRecommendations = signal<RegionalRecommendation[]>([]);
   readonly catalogOptions = computed(() =>
     this.catalogRoutes().map((route) => ({
-      label: `${route.origin_zone_name} → ${route.destination_zone_name} · ${route.duration_label}`,
+      label: route.duration_label
+        ? `${route.origin_zone_name} → ${route.destination_zone_name} · ${route.duration_label}`
+        : `${route.origin_zone_name} → ${route.destination_zone_name}`,
       value: route.id,
     })),
   );
@@ -424,11 +426,11 @@ export class CarnetEditor implements OnInit {
         destination_zone: text(route.destination_zone_name),
         origin_place: text(route.origin_name),
         destination_place: text(route.destination_name),
-        distance_km: text(String(route.distance_km)),
+        distance_km: text(route.distance_km == null ? null : String(route.distance_km)),
         duration_minutes: {
-          value: route.duration_minutes,
+          value: route.mode === 'place_to_place' ? 0 : (route.duration_minutes ?? 0),
           origin: 'edited',
-          generated_value: route.duration_minutes,
+          generated_value: route.mode === 'place_to_place' ? 0 : (route.duration_minutes ?? 0),
         },
         instructions: text(route.instructions || null),
       },
