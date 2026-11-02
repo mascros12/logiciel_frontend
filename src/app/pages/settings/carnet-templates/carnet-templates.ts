@@ -178,11 +178,13 @@ export class CarnetTemplates implements OnInit {
             : { severity: 'success', summary: 'Imagen cargada en el borrador' },
         );
       },
-      error: (error: { error?: { detail?: string } }) => {
+      error: (error: { status?: number; error?: { detail?: string } }) => {
         this.busy.set(false);
         const detail = typeof error.error?.detail === 'string'
           ? error.error.detail
-          : 'No se pudo cargar la imagen';
+          : error.status === 413
+            ? 'El servidor rechazó el archivo por tamaño.'
+            : 'No se pudo cargar la imagen';
         this.messages.add({ severity: 'error', summary: detail });
       },
     });

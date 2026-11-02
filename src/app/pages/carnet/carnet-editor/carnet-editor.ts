@@ -543,10 +543,12 @@ export class CarnetEditor implements OnInit {
           });
         }
       },
-      error: (error: { error?: { detail?: string } }) => {
+      error: (error: { status?: number; error?: { detail?: string } }) => {
         const detail = typeof error.error?.detail === 'string'
           ? error.error.detail
-          : 'No se pudo cargar la imagen';
+          : error.status === 413
+            ? 'El servidor rechazó el archivo por tamaño.'
+            : 'No se pudo cargar la imagen';
         this.messages.add({ severity: 'error', summary: detail });
       },
     });
