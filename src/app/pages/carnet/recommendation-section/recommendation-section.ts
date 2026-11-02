@@ -1,9 +1,11 @@
 import { Component, input } from '@angular/core';
 import { RecommendationLine } from '../../../core/utils/carnet-document';
+import { RichText } from '../rich-text/rich-text';
 
 @Component({
   selector: 'app-recommendation-section',
   standalone: true,
+  imports: [RichText],
   templateUrl: './recommendation-section.html',
   styleUrl: './recommendation-section.scss',
 })

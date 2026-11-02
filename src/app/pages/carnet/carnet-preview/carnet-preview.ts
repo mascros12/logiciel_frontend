@@ -19,6 +19,7 @@ import { NavigationView, navigationOf } from '../../../core/utils/carnet-navigat
 import { FullPageImage } from '../full-page-image/full-page-image';
 import { OrganisationTable } from '../organisation-table/organisation-table';
 import { RecommendationSection } from '../recommendation-section/recommendation-section';
+import { RichText } from '../rich-text/rich-text';
 import { RouteSection } from '../route-section/route-section';
 
 @Component({
@@ -30,6 +31,7 @@ import { RouteSection } from '../route-section/route-section';
     FullPageImage,
     RouteSection,
     RecommendationSection,
+    RichText,
   ],
   templateUrl: './carnet-preview.html',
   styleUrl: './carnet-preview.scss',

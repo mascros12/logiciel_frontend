@@ -187,6 +187,21 @@
   width: 100%;
 }
 
+.format-bar {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
+}
+
+.format-bar button {
+  border: 1px solid #d5d9e4;
+  background: #fff;
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  color: inherit;
+  cursor: pointer;
+}
+
 .cdk-drag-preview {
   box-shadow: 0 8px 20px rgb(3 12 61 / 12%);
 }

@@ -1,7 +1,7 @@
 <section class="routes">
   <h2>{{ heading() }}</h2>
   @if (body()) {
-    <p class="routes__body">{{ body() }}</p>
+    <app-rich-text [value]="body()" />
   }
   @if (zoneRows().length) {
     <table class="routes__table">

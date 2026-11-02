@@ -17,6 +17,7 @@ import {
 import { apiUrl } from '../../../core/config/api.config';
 import { CarnetTemplateService } from '../../../core/services/carnet-template.service';
 import { FullPageImage } from '../../carnet/full-page-image/full-page-image';
+import { applyRichMark } from '../../../core/utils/rich-text';
 
 @Component({
   selector: 'app-carnet-templates',
@@ -91,7 +92,7 @@ export class CarnetTemplates implements OnInit {
 
   sourceLabel(node: LayoutNode): string {
     if (node.kind === 'full_page_image') {
-      return 'Página A4 vertical completa, sin márgenes ni texto automático.';
+      return 'Página carta vertical completa, sin márgenes ni texto automático.';
     }
     return LAYOUT_SOURCES[node.config.source] ?? node.config.source;
   }
@@ -195,6 +196,19 @@ export class CarnetTemplates implements OnInit {
 
   touch(): void {
     this.dirty.set(true);
+  }
+
+  formatTemplate(area: HTMLTextAreaElement, node: LayoutNode, kind: 'bold' | 'bullet' | 'title'): void {
+    if (!area) return;
+    const start = area.selectionStart ?? area.value.length;
+    const end = area.selectionEnd ?? start;
+    const next = applyRichMark(area.value, start, end, kind);
+    node.body = next.value;
+    this.touch();
+    setTimeout(() => {
+      area.focus();
+      area.setSelectionRange(next.caret, next.caret);
+    });
   }
 
   save(): void {

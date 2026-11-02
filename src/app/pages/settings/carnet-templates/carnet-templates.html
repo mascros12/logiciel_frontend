@@ -110,7 +110,7 @@
                 (change)="onImage(node, $event)"
               />
             </label>
-            <p class="source-note">Proporción 210 × 297 mm. Si no coincide, se rechaza: no se recorta.</p>
+            <p class="source-note">Proporción carta (8,5 × 11 in). Si no coincide, se rechaza: no se recorta.</p>
             @if (node.config.asset_id) {
               <p-button
                 label="Quitar imagen del borrador"
@@ -123,12 +123,19 @@
             <label>
               Texto predeterminado
               <textarea
+                #templateBody
                 pInputTextarea
                 rows="8"
                 [ngModel]="node.body"
                 (ngModelChange)="node.body = $event; touch()"
               ></textarea>
             </label>
+            <div class="format-bar">
+              <button type="button" (click)="formatTemplate(templateBody, node, 'bold')">Negrita</button>
+              <button type="button" (click)="formatTemplate(templateBody, node, 'bullet')">Viñeta</button>
+              <button type="button" (click)="formatTemplate(templateBody, node, 'title')">Título</button>
+            </div>
+            <p class="source-note">**texto** es negrita, una línea «- » es viñeta y una línea «# » es título.</p>
           }
           <p class="source-note">{{ sourceLabel(node) }}</p>
           <div class="layout-actions">

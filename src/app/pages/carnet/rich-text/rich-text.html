@@ -1,0 +1,28 @@
+@for (block of blocks(); track $index) {
+  @if (block.kind === 'title') {
+    <h4 class="rich-text__title">
+      @for (span of block.spans; track $index) {
+        @if (span.bold) { <strong>{{ span.text }}</strong> } @else { {{ span.text }} }
+      }
+    </h4>
+  } @else if (block.kind === 'list') {
+    <ul>
+      @for (item of block.items; track $index) {
+        <li>
+          @for (span of item; track $index) {
+            @if (span.bold) { <strong>{{ span.text }}</strong> } @else { {{ span.text }} }
+          }
+        </li>
+      }
+    </ul>
+  } @else {
+    <p>
+      @for (line of block.lines; track $index) {
+        @if ($index > 0) { <br /> }
+        @for (span of line; track $index) {
+          @if (span.bold) { <strong>{{ span.text }}</strong> } @else { {{ span.text }} }
+        }
+      }
+    </p>
+  }
+}

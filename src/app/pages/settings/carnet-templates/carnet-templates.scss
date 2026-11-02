@@ -23,6 +23,21 @@
   margin: 1rem 0;
 }
 
+.format-bar {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
+}
+
+.format-bar button {
+  border: 1px solid var(--p-content-border-color, #d5d9e4);
+  background: #fff;
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  color: inherit;
+  cursor: pointer;
+}
+
 .layout-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 0.9fr);

@@ -353,14 +353,14 @@
                   [privateBase]="pageMediaBase()"
                 />
                 <label>
-                  Imagen de página A4
+                  Imagen de página carta
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
                     (change)="onPageFile($event)"
                   />
                 </label>
-                <p class="carnet-editor__hint">PNG, JPG o WebP con proporción 210 × 297 mm. El reemplazo solo afecta a este Carnet.</p>
+                <p class="carnet-editor__hint">PNG, JPG o WebP con proporción carta (8,5 × 11 in). El reemplazo solo afecta a este Carnet.</p>
                 @if (asset(block)) {
                   <p-button label="Quitar imagen del borrador" severity="danger" [text]="true" (onClick)="clearPage(block.id)" />
                 }
@@ -414,7 +414,13 @@
               }
               @default {
                 <label>Título <input pInputText [value]="text(block, 'heading')" (input)="onText(block.id, 'heading', inputValue($event))" /></label>
-                <label>Texto <textarea pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
+                <div class="format-bar">
+                  <button type="button" (click)="formatBody(bodyField, block.id, 'bold')">Negrita</button>
+                  <button type="button" (click)="formatBody(bodyField, block.id, 'bullet')">Viñeta</button>
+                  <button type="button" (click)="formatBody(bodyField, block.id, 'title')">Título</button>
+                </div>
+                <label>Texto <textarea #bodyField pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
+                <p class="carnet-editor__hint">La negrita envuelve la selección con **. Una viñeta es una línea que empieza por «-». Un título es una línea que empieza por «#».</p>
                 @if (block.section_kind === 'regional_recommendations' || block.template_section_id === restaurantsSectionId) {
                   <label>Añadir desde el catálogo
                     <p-select

@@ -182,7 +182,7 @@
   @if (text(block, 'heading') && text(block, 'heading') !== title(block)) {
     <p class="carnet-preview__day-title">{{ text(block, 'heading') }}</p>
   }
-  @if (text(block, 'body')) { <p class="carnet-preview__prose">{{ text(block, 'body') }}</p> }
+  @if (text(block, 'body')) { <app-rich-text [value]="text(block, 'body')" /> }
   @if (text(block, 'notes')) { <p>{{ text(block, 'notes') }}</p> }
   @if (text(block, 'link')) {
     <p><a [href]="text(block, 'link')" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Site web</a></p>

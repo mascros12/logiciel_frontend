@@ -25,6 +25,7 @@ import { TravelRouteService } from '../../../core/services/travel-route.service'
 import { TravelRoute } from '../../../core/models/travel-route.model';
 import { RegionalRecommendationService } from '../../../core/services/regional-recommendation.service';
 import { RegionalRecommendation } from '../../../core/models/regional-recommendation.model';
+import { applyRichMark } from '../../../core/utils/rich-text';
 import {
   ADDABLE_TYPES,
   BLOCK_LABELS,
@@ -561,6 +562,26 @@ export class CarnetEditor implements OnInit {
     const current = this.document();
     if (!current) return;
     this.edit(setText(current, blockId, field, value));
+  }
+
+  formatBody(area: HTMLTextAreaElement, blockId: string, kind: 'bold' | 'bullet' | 'title'): void {
+    this.applyFormat(area, kind, (value) => this.onText(blockId, 'body', value));
+  }
+
+  private applyFormat(
+    area: HTMLTextAreaElement,
+    kind: 'bold' | 'bullet' | 'title',
+    write: (value: string) => void,
+  ): void {
+    if (!area) return;
+    const start = area.selectionStart ?? area.value.length;
+    const end = area.selectionEnd ?? start;
+    const next = applyRichMark(area.value, start, end, kind);
+    write(next.value);
+    setTimeout(() => {
+      area.focus();
+      area.setSelectionRange(next.caret, next.caret);
+    });
   }
 
   onDate(blockId: string, field: string, value: string): void {
