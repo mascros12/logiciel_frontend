@@ -11,6 +11,7 @@ const ACTION_LABEL: Record<StructureChange['action'], string> = {
   retitle: 'Cambia el título generado',
   hide: 'Se oculta, sin borrar',
   unplaced: 'Se conserva al final',
+  update: 'Se actualiza',
 };
 
 @Component({

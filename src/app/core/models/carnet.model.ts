@@ -325,7 +325,7 @@ export interface SyncPreview {
 }
 
 export interface StructureChange {
-  action: 'add' | 'move' | 'retitle' | 'hide' | 'unplaced';
+  action: 'add' | 'move' | 'retitle' | 'hide' | 'unplaced' | 'update';
   title: string;
   detail: string;
 }
