@@ -88,6 +88,11 @@ export class CarnetTemplates implements OnInit {
     return this.kinds.find((item) => item.id === kind)?.label ?? kind;
   }
 
+  questionsOf(node: LayoutNode) {
+    node.config.questions ??= [];
+    return node.config.questions;
+  }
+
   readonly templateMediaBase = apiUrl('carnet-templates/media');
 
   sourceLabel(node: LayoutNode): string {

@@ -77,6 +77,7 @@ import {
   withDocument,
 } from '../../../core/utils/carnet-document';
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
+import { QuestionnaireForm } from '../questionnaire-form/questionnaire-form';
 import { FullPageImage } from '../full-page-image/full-page-image';
 import { CarnetSyncPanel } from '../carnet-sync/carnet-sync';
 import { CarnetStructurePanel } from '../carnet-structure/carnet-structure';
@@ -101,6 +102,7 @@ import { CarnetStructurePanel } from '../carnet-structure/carnet-structure';
     CarnetSyncPanel,
     CarnetStructurePanel,
     FullPageImage,
+    QuestionnaireForm,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './carnet-editor.html',
@@ -122,6 +124,7 @@ export class CarnetEditor implements OnInit {
   readonly loadError = signal<string | null>(null);
   readonly saving = signal(false);
   readonly previewing = signal(false);
+  readonly questionnaire = signal(false);
   readonly state = signal<EditorState | null>(null);
   readonly warnings = signal<CarnetWarning[]>([]);
   readonly sourceStatus = signal('unavailable');

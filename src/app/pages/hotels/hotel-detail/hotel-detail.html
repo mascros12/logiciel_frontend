@@ -31,7 +31,21 @@
           @if (h.reservation_email) {
             <span class="meta-item"><i class="pi pi-envelope"></i> {{ h.reservation_email }}</span>
           }
+          @if (ranking(); as rank) {
+            <span class="meta-item">
+              <i class="pi pi-star-fill"></i>
+              {{ rank.average === null ? 'Sin notas' : (rank.average | number:'1.2-2') + ' / 5' }}
+              · {{ rank.count }} {{ rank.count === 1 ? 'respuesta' : 'respuestas' }}
+            </span>
+          }
         </div>
+        @if (ranking()?.comments?.length) {
+          <ul class="hotel-ranking">
+            @for (item of ranking()!.comments; track item.submitted_at + item.comment) {
+              <li>{{ item.score }}/5 — {{ item.comment }}</li>
+            }
+          </ul>
+        }
       </div>
     </div>
     @if (canManageHotels()) {

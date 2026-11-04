@@ -1,0 +1,86 @@
+@if (form(); as survey) {
+  <form class="survey" (ngSubmit)="save()">
+    @if (survey.intro) {
+      <p class="intro">{{ survey.intro }}</p>
+    }
+    @if (groups().length) {
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            @for (score of [1, 2, 3, 4, 5]; track score) {
+              <th>{{ score }}</th>
+            }
+            <th>Commentaire</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (group of groups(); track group.title) {
+            <tr class="band">
+              <th colspan="7">{{ group.title }}</th>
+            </tr>
+            @for (row of group.rows; track row.key) {
+              <tr>
+                <td>{{ row.label }}</td>
+                @for (score of [1, 2, 3, 4, 5]; track score) {
+                  <td>
+                    <button
+                      type="button"
+                      [class.marked]="row.score === score"
+                      (click)="setScore(row, score)"
+                    >
+                      {{ row.score === score ? 'X' : '' }}
+                    </button>
+                  </td>
+                }
+                <td>
+                  <input [(ngModel)]="row.comment" [name]="'comment-' + row.key" />
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    }
+    @for (question of survey.questions; track question.key) {
+      <label class="prompt">
+        {{ question.prompt }}
+        @if (question.kind === 'single') {
+          @for (option of question.options; track option) {
+            <span class="choice">
+              <input
+                type="radio"
+                [name]="question.key"
+                [value]="option"
+                [checked]="answer(question.key).value === option"
+                (change)="setAnswer(question.key, option)"
+              />
+              {{ option }}
+            </span>
+          }
+          @if (allowsDetail(question.key)) {
+            <input
+              [ngModel]="answer(question.key).detail"
+              (ngModelChange)="setDetail(question.key, $event)"
+              [name]="'detail-' + question.key"
+              placeholder="Précisez"
+            />
+          }
+        } @else {
+          <textarea
+            rows="3"
+            [ngModel]="answer(question.key).value"
+            (ngModelChange)="setAnswer(question.key, $event)"
+            [name]="'answer-' + question.key"
+          ></textarea>
+        }
+      </label>
+    }
+    <div class="actions">
+      <p-button type="button" label="Enregistrer" [loading]="busy()" (onClick)="save()" />
+      @if (note()) {
+        <span>{{ note() }}</span>
+      }
+    </div>
+  </form>
+}

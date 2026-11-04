@@ -6,6 +6,14 @@
   color: var(--app-primary, #030c3d);
 }
 
+.carnet-public__survey {
+  max-width: 72rem;
+  margin: 2rem auto 0;
+  padding: 1.25rem;
+  background: #fff;
+  border-radius: 0.75rem;
+}
+
 .carnet-public__bar {
   max-width: 72rem;
   margin: 0 auto 1rem;

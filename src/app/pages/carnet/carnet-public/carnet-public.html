@@ -28,5 +28,9 @@
       [mode]="'published'"
       [publicMediaBase]="mediaBase()"
     />
+    <section class="carnet-public__survey">
+      <h2>Questionnaire</h2>
+      <app-questionnaire-form [mode]="'public'" [token]="token()" />
+    </section>
   }
 </main>

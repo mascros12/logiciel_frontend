@@ -5,6 +5,7 @@ import {
   Room, RoomCreate, RoomSeasonCreate,
   HotelSeason, HotelSeasonCreate,
 } from '../models/hotel.model';
+import { HotelRanking } from '../models/carnet-feedback.model';
 import { apiUrl } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
@@ -70,6 +71,10 @@ export class HotelService {
   // Room seasons (temporadas por habitación)
   addRoomSeason(hotelId: string, roomId: string, body: RoomSeasonCreate) {
     return this.http.post(`${this.url}/${hotelId}/rooms/${roomId}/seasons`, body);
+  }
+
+  ranking(id: string) {
+    return this.http.get<HotelRanking>(`${this.url}/${id}/ranking`);
   }
 
   deleteRoomSeason(hotelId: string, roomId: string, seasonId: string) {

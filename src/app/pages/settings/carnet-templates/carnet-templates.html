@@ -136,6 +136,32 @@
               <button type="button" (click)="formatTemplate(templateBody, node, 'title')">Título</button>
             </div>
             <p class="source-note">**texto** es negrita, una línea «- » es viñeta y una línea «# » es título.</p>
+            @if (node.kind === 'questionnaire') {
+              <div class="questions">
+                @for (question of questionsOf(node); track question.key; let index = $index) {
+                  <label>
+                    Pregunta {{ index + 1 }}
+                    <textarea
+                      rows="3"
+                      [ngModel]="question.prompt"
+                      (ngModelChange)="question.prompt = $event; touch()"
+                    ></textarea>
+                  </label>
+                  @if (question.kind === 'single') {
+                    @for (option of question.options; track $index; let optionIndex = $index) {
+                      <label>
+                        Opción {{ optionIndex + 1 }}
+                        <input
+                          pInputText
+                          [ngModel]="option"
+                          (ngModelChange)="question.options[optionIndex] = $event; touch()"
+                        />
+                      </label>
+                    }
+                  }
+                }
+              </div>
+            }
           }
           <p class="source-note">{{ sourceLabel(node) }}</p>
           <div class="layout-actions">

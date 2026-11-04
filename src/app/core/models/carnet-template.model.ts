@@ -10,6 +10,13 @@ export type LayoutKind =
   | 'conditions'
   | 'full_page_image';
 
+export interface TemplateQuestion {
+  key: string;
+  prompt: string;
+  kind: 'text' | 'single';
+  options: string[];
+}
+
 export interface LayoutNode {
   id: string;
   kind: LayoutKind;
@@ -17,7 +24,11 @@ export interface LayoutNode {
   position: number;
   visible: boolean;
   body: string;
-  config: { source: string; asset_id?: string | null };
+  config: {
+    source: string;
+    asset_id?: string | null;
+    questions?: TemplateQuestion[];
+  };
   children: LayoutNode[];
 }
 

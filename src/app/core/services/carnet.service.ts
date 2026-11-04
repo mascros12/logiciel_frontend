@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { FeedbackForm, FeedbackWrite } from '../models/carnet-feedback.model';
 import { apiUrl } from '../config/api.config';
 import {
   CarnetView,
@@ -126,6 +127,27 @@ export class CarnetService {
     return this.http.get(
       apiUrl(`/public/carnets/${encodeURIComponent(token)}/document.pdf`),
       { responseType: 'blob', params: { style } },
+    );
+  }
+
+  feedback(carnetId: string) {
+    return this.http.get<FeedbackForm>(apiUrl(`/carnets/${carnetId}/feedback`));
+  }
+
+  saveFeedback(carnetId: string, body: FeedbackWrite) {
+    return this.http.put<FeedbackForm>(apiUrl(`/carnets/${carnetId}/feedback`), body);
+  }
+
+  publicFeedback(token: string) {
+    return this.http.get<FeedbackForm>(
+      apiUrl(`/public/carnets/${encodeURIComponent(token)}/feedback`),
+    );
+  }
+
+  savePublicFeedback(token: string, body: FeedbackWrite) {
+    return this.http.put<FeedbackForm>(
+      apiUrl(`/public/carnets/${encodeURIComponent(token)}/feedback`),
+      body,
     );
   }
 

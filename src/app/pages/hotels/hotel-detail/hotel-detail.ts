@@ -16,6 +16,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { HotelService } from '../../../core/services/hotel.service';
+import { HotelRanking } from '../../../core/models/carnet-feedback.model';
 import { Zone, zoneOptionLabel } from '../../../core/models/zone.model';
 import { ZoneService } from '../../../core/services/zone.service';
 import { RichTextPipe } from '../../../core/pipes/rich-text.pipe';
@@ -207,6 +208,15 @@ export class HotelDetail implements OnInit {
     return this.zones().find((zone) => zone.id === zoneId)?.name ?? '';
   }
 
+  readonly ranking = signal<HotelRanking | null>(null);
+
+  loadRanking(id: string) {
+    this.hotelService.ranking(id).subscribe({
+      next: (ranking) => this.ranking.set(ranking),
+      error: () => this.ranking.set(null),
+    });
+  }
+
   load(id: string) {
     this.loading.set(true);
     this.hotelService.getById(id).subscribe({
@@ -214,6 +224,7 @@ export class HotelDetail implements OnInit {
         this.hotel.set(h);
         this.loading.set(false);
         this.loadHotelSeasons(id);
+        this.loadRanking(id);
       },
       error: () => { this.loading.set(false); this.router.navigate(['/hoteles']); },
     });

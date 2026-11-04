@@ -54,6 +54,12 @@
         (onClick)="downloadDraft('simple')"
       />
       <p-button
+        [label]="questionnaire() ? 'Cerrar cuestionario' : 'Cuestionario'"
+        icon="pi pi-list"
+        [outlined]="true"
+        (onClick)="questionnaire.set(!questionnaire())"
+      />
+      <p-button
         label="Publicar"
         icon="pi pi-send"
         [loading]="publishing()"
@@ -62,6 +68,14 @@
       />
     </div>
   </header>
+
+  @if (questionnaire() && carnetId) {
+    <section class="carnet-editor__questionnaire">
+      <h2>Cuestionario del viajero</h2>
+      <p>Si el cliente lo llenó en el PDF, cargue aquí las mismas respuestas.</p>
+      <app-questionnaire-form [mode]="'staff'" [carnetId]="carnetId" />
+    </section>
+  }
 
   @if (loading()) {
     <p class="carnet-editor__status">Cargando el Carnet…</p>

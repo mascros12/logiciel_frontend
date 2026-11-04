@@ -6,11 +6,12 @@ import { CarnetPdfStyle, CarnetService } from '../../../core/services/carnet.ser
 import { documentFromPublic } from '../../../core/utils/carnet-document';
 import { apiUrl } from '../../../core/config/api.config';
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
+import { QuestionnaireForm } from '../questionnaire-form/questionnaire-form';
 
 @Component({
   selector: 'app-carnet-public',
   standalone: true,
-  imports: [CarnetPreview],
+  imports: [CarnetPreview, QuestionnaireForm],
   templateUrl: './carnet-public.html',
   styleUrl: './carnet-public.scss',
 })
@@ -24,6 +25,10 @@ export class CarnetPublic implements OnInit, OnDestroy {
   readonly downloading = signal<CarnetPdfStyle | null>(null);
   readonly pdfError = signal(false);
   readonly document = signal<CarnetDocument | null>(null);
+
+  token(): string {
+    return this.route.snapshot.paramMap.get('token') ?? '';
+  }
 
   mediaBase(): string {
     const token = this.route.snapshot.paramMap.get('token') ?? '';
