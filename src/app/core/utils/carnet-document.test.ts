@@ -12,7 +12,10 @@ import {
   documentFromPublic,
   formatDateFr,
   formatDuration,
+  excursionRouteTitle,
   itineraryRoutes,
+  zoneActivityTitle,
+  zoneRouteTitle,
   organisationRows,
   pageAssetId,
   previewOf,
@@ -845,8 +848,10 @@ describe('página de imagen', () => {
           included: true,
           origin_zone: text('Guanacaste'),
           destination_zone: text('Puntarenas'),
-          origin_place: text('Arco'),
-          destination_place: text('Ponts'),
+          origin_place: text('Tour del Tenorio'),
+          destination_place: text('Selva Color'),
+          origin_lodging: text('Arco'),
+          destination_lodging: text('Ponts'),
           distance_km: text('120.5'),
           duration_minutes: { value: 90, origin: 'generated', generated_value: 90 },
           instructions: text('Continuer tout droit.'),
@@ -882,6 +887,24 @@ describe('página de imagen', () => {
     assert.equal(lines.length, 1);
     assert.equal(lines[0].distanceLabel, '120,5 km');
     assert.equal(lines[0].durationLabel, '1H30');
+    assert.equal(
+      zoneRouteTitle(lines[0]),
+      'Guanacaste - Puntarenas · 120,5 km · Arco - Ponts',
+    );
+    assert.equal(
+      zoneActivityTitle(lines[0]),
+      'Pour aller de Tour del Tenorio au Selva Color',
+    );
+    assert.equal(
+      excursionRouteTitle({
+        ...lines[0],
+        tone: 'excursion',
+        originPlace: 'Playa',
+        destinationPlace: 'Spa',
+        durationLabel: '45 min',
+      }),
+      'Pour aller de Playa au Spa (45 min)',
+    );
     assert.equal(formatDuration(45), '45 min');
     assert.equal(formatDuration(120), '2H00');
     const preview = previewOf(document);

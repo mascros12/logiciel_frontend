@@ -223,6 +223,8 @@ export interface PublicRoute {
   destination_zone: string;
   origin_place: string | null;
   destination_place: string | null;
+  origin_lodging?: string | null;
+  destination_lodging?: string | null;
   distance_km: string;
   duration_minutes: number;
   distance_label: string;

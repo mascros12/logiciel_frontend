@@ -6,10 +6,22 @@
   color: #111;
 }
 
-.routes h2 {
-  margin: 0 0 0.75rem;
+.routes__title {
+  margin: 0.4rem 0 0.75rem;
   font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
   color: #111;
+}
+
+.routes__zone {
+  color: #111;
+  font-weight: 700;
+}
+
+.routes__excursion {
+  color: #9b1b1b;
+  font-weight: 700;
 }
 
 .routes__body {

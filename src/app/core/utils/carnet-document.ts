@@ -936,6 +936,8 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       destination_zone: writeText(content, 'destination_zone'),
       origin_place: writeText(content, 'origin_place'),
       destination_place: writeText(content, 'destination_place'),
+      origin_lodging: writeText(content, 'origin_lodging'),
+      destination_lodging: writeText(content, 'destination_lodging'),
       distance_km: writeText(content, 'distance_km'),
       duration_minutes: intOf(content, 'duration_minutes'),
       instructions: writeText(content, 'instructions'),
@@ -1070,6 +1072,8 @@ export interface RouteLine {
   destinationZone: string;
   originPlace: string;
   destinationPlace: string;
+  originLodging: string;
+  destinationLodging: string;
   distanceLabel: string;
   durationLabel: string;
   instructions: string;
@@ -1089,13 +1093,43 @@ export function itineraryRoutes(document: CarnetDocument, parentId?: string): Ro
       destinationZone: textOf(block.content, 'destination_zone'),
       originPlace: textOf(block.content, 'origin_place'),
       destinationPlace: textOf(block.content, 'destination_place'),
+      originLodging: textOf(block.content, 'origin_lodging'),
+      destinationLodging: textOf(block.content, 'destination_lodging'),
       distanceLabel: formatDistance(textOf(block.content, 'distance_km')),
-      durationLabel:
-        block.content['mode'] === 'place_to_place'
-          ? ''
-          : formatDuration(intOf(block.content, 'duration_minutes')),
+      durationLabel: routeDuration(intOf(block.content, 'duration_minutes')),
       instructions: textOf(block.content, 'instructions'),
     }));
+}
+
+function routeDuration(minutes: number): string {
+  return minutes > 0 ? formatDuration(minutes) : '';
+}
+
+export function zoneRouteTitle(row: RouteLine): string {
+  const parts = [`${row.originZone} - ${row.destinationZone}`];
+  if (row.distanceLabel) parts.push(row.distanceLabel);
+  if (row.originLodging && row.destinationLodging) {
+    parts.push(`${row.originLodging} - ${row.destinationLodging}`);
+  }
+  return parts.join(' · ');
+}
+
+export function zoneActivityTitle(row: RouteLine): string | null {
+  if (row.tone !== 'zone' || !row.originPlace || !row.destinationPlace) return null;
+  if (
+    row.originPlace === row.originLodging
+    && row.destinationPlace === row.destinationLodging
+  ) {
+    return null;
+  }
+  return `Pour aller de ${row.originPlace} au ${row.destinationPlace}`;
+}
+
+export function excursionRouteTitle(row: RouteLine): string {
+  const origin = row.originPlace || row.originZone;
+  const destination = row.destinationPlace || row.destinationZone;
+  const title = `Pour aller de ${origin} au ${destination}`;
+  return row.durationLabel ? `${title} (${row.durationLabel})` : title;
 }
 
 export interface RecommendationLine {
@@ -1568,6 +1602,8 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
           destination_zone: displayText(route.destination_zone),
           origin_place: displayText(route.origin_place),
           destination_place: displayText(route.destination_place),
+          origin_lodging: displayText(route.origin_lodging),
+          destination_lodging: displayText(route.destination_lodging),
           distance_km: displayText(route.distance_km),
           duration_minutes: {
             value: route.duration_minutes,

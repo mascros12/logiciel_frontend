@@ -1,5 +1,4 @@
 <section class="routes">
-  <h2>{{ heading() }}</h2>
   @if (body()) {
     <app-rich-text [value]="body()" />
   }
@@ -25,15 +24,16 @@
       </tbody>
     </table>
   }
+  <h2 class="routes__title">{{ heading() }}</h2>
   @for (row of rows(); track $index) {
     <article class="routes__detail" [class.routes__detail--excursion]="row.tone === 'excursion'">
       @if (row.tone === 'zone') {
-        <h3>{{ row.originZone }} – {{ row.destinationZone }} · {{ row.distanceLabel }}</h3>
-        @if (row.originPlace && row.destinationPlace) {
-          <p class="routes__places">{{ row.originPlace }} – {{ row.destinationPlace }}</p>
+        <h3 class="routes__zone">{{ zoneTitle(row) }}</h3>
+        @if (activityTitle(row); as leg) {
+          <h3 class="routes__excursion">{{ leg }}</h3>
         }
       } @else {
-        <h3>Hôtel {{ row.originPlace || row.originZone }} – Activité {{ row.destinationPlace || row.destinationZone }} ({{ row.durationLabel }})</h3>
+        <h3 class="routes__excursion">{{ excursionTitle(row) }}</h3>
       }
       @if (row.instructions) {
         <p class="routes__instructions">{{ row.instructions }}</p>

@@ -1,5 +1,10 @@
 import { Component, input } from '@angular/core';
-import { RouteLine } from '../../../core/utils/carnet-document';
+import {
+  excursionRouteTitle,
+  RouteLine,
+  zoneActivityTitle,
+  zoneRouteTitle,
+} from '../../../core/utils/carnet-document';
 import { RichText } from '../rich-text/rich-text';
 
 @Component({
@@ -16,5 +21,17 @@ export class RouteSection {
 
   zoneRows(): RouteLine[] {
     return this.rows().filter((row) => row.tone === 'zone');
+  }
+
+  zoneTitle(row: RouteLine): string {
+    return zoneRouteTitle(row);
+  }
+
+  excursionTitle(row: RouteLine): string {
+    return excursionRouteTitle(row);
+  }
+
+  activityTitle(row: RouteLine): string | null {
+    return zoneActivityTitle(row);
   }
 }
