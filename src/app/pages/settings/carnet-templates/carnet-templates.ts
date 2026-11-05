@@ -156,6 +156,7 @@ export class CarnetTemplates implements OnInit {
   }
 
   changeKind(node: LayoutNode, kind: LayoutKind): void {
+    if (node.kind === kind) return;
     node.kind = kind;
     if (kind !== 'full_page_image') {
       node.config = { ...node.config, asset_id: null };
