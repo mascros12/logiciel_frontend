@@ -92,7 +92,6 @@ export const ADDABLE_TYPES: BlockType[] = [
   'free_text',
   'practical',
   'conditions',
-  'day',
 ];
 
 const WARNING_TEXT: Record<string, string> = {
@@ -144,8 +143,13 @@ export function blockTitle(block: CarnetBlock): string {
     || textOf(content, 'origin_label');
   if (named) return named;
   if (block.type === 'itinerary_route') {
-    const origin = textOf(content, 'origin_zone');
-    const destination = textOf(content, 'destination_zone');
+    const places = block.content['mode'] === 'place_to_place';
+    const origin = places
+      ? textOf(content, 'origin_lodging') || textOf(content, 'origin_place')
+      : textOf(content, 'origin_zone');
+    const destination = places
+      ? textOf(content, 'destination_lodging') || textOf(content, 'destination_place')
+      : textOf(content, 'destination_zone');
     if (origin || destination) return `${origin} – ${destination}`;
   }
   if (block.type === 'day') {
@@ -557,6 +561,31 @@ export function reorderVisible(
   if (!moved) return document;
   next.splice(currentIndex, 0, moved);
   const blocks = [...next, ...removed].map((block, position) => ({ ...block, position }));
+  return { ...document, blocks };
+}
+
+export function reorderListed(
+  document: CarnetDocument,
+  ids: string[],
+  previousIndex: number,
+  currentIndex: number,
+): CarnetDocument {
+  if (previousIndex === currentIndex) return document;
+  const order = [...ids];
+  const [moved] = order.splice(previousIndex, 1);
+  if (!moved) return document;
+  order.splice(currentIndex, 0, moved);
+  const listed = new Set(ids);
+  const byId = new Map(document.blocks.map((block) => [block.id, block]));
+  let cursor = 0;
+  const blocks = document.blocks
+    .map((block) => {
+      if (!listed.has(block.id)) return block;
+      const replacement = byId.get(order[cursor]);
+      cursor += 1;
+      return replacement ?? block;
+    })
+    .map((block, position) => ({ ...block, position }));
   return { ...document, blocks };
 }
 

@@ -22,7 +22,7 @@ import {
 import { apiUrl } from '../../../core/config/api.config';
 import { CarnetPdfStyle, CarnetService } from '../../../core/services/carnet.service';
 import { TravelRouteService } from '../../../core/services/travel-route.service';
-import { TravelRoute } from '../../../core/models/travel-route.model';
+import { TravelRoute, TravelRouteOptions } from '../../../core/models/travel-route.model';
 import { RegionalRecommendationService } from '../../../core/services/regional-recommendation.service';
 import { RegionalRecommendation } from '../../../core/models/regional-recommendation.model';
 import { applyRichMark } from '../../../core/utils/rich-text';
@@ -50,7 +50,7 @@ import {
   RESTAURANTS_SECTION_ID,
   moveDayEntry,
   pointsOf,
-  reorderVisible,
+  reorderListed,
   roomsOf,
   setCoords,
   setRouteIncluded,
@@ -134,6 +134,9 @@ export class CarnetEditor implements OnInit {
   readonly selectedId = signal<string | null>(null);
   readonly daysOpen = signal(false);
   readonly openDays = signal<ReadonlySet<string>>(new Set());
+  readonly openRouteGroups = signal<ReadonlySet<string>>(new Set());
+  readonly routeOptions = signal<TravelRouteOptions | null>(null);
+  readonly savedCatalogRoutes = signal<ReadonlySet<string>>(new Set());
   readonly addChoice = signal<BlockType | null>(null);
   readonly catalogRoutes = signal<TravelRoute[]>([]);
   readonly catalogRecommendations = signal<RegionalRecommendation[]>([]);
@@ -157,10 +160,27 @@ export class CarnetEditor implements OnInit {
   carnetId = '';
 
   readonly document = computed(() => this.state()?.document ?? null);
+  private readonly listed = computed(() =>
+    (this.document() ? visibleBlocks(this.document()!) : []).filter((block) => block.type !== 'day'),
+  );
   readonly dirty = computed(() => this.state()?.dirty ?? false);
   readonly conflict = computed(() => this.state()?.conflict ?? false);
-  readonly structure = computed(() => (this.document() ? visibleBlocks(this.document()!) : []));
-  readonly days = computed(() => this.structure().filter((block) => block.type === 'day'));
+  readonly structure = computed(() =>
+    this.listed().filter((block) => block.type !== 'itinerary_route'),
+  );
+  readonly zoneRoutes = computed(() =>
+    this.listed().filter(
+      (block) => block.type === 'itinerary_route' && block.content['mode'] !== 'place_to_place',
+    ),
+  );
+  readonly placeRoutes = computed(() =>
+    this.listed().filter(
+      (block) => block.type === 'itinerary_route' && block.content['mode'] === 'place_to_place',
+    ),
+  );
+  readonly days = computed(() =>
+    (this.document() ? visibleBlocks(this.document()!) : []).filter((block) => block.type === 'day'),
+  );
   readonly dayDropIds = computed(() => this.days().map((block) => `day-${block.id}`));
   readonly selected = computed(() =>
     this.document() ? blockById(this.document()!, this.selectedId()) : null,
@@ -177,6 +197,10 @@ export class CarnetEditor implements OnInit {
     this.travelRoutes.list(true).subscribe({
       next: (res) => this.catalogRoutes.set(res.items),
       error: () => this.catalogRoutes.set([]),
+    });
+    this.travelRoutes.options().subscribe({
+      next: (options) => this.routeOptions.set(options),
+      error: () => this.routeOptions.set(null),
     });
     this.recommendationsApi.list({ active: true }).subscribe({
       next: (res) => this.catalogRecommendations.set(res.items),
@@ -456,6 +480,21 @@ export class CarnetEditor implements OnInit {
     this.daysOpen.update((open) => !open);
   }
 
+  routeGroupOpen(id: string): boolean {
+    return this.openRouteGroups().has(id);
+  }
+
+  toggleRouteGroup(id: string): void {
+    const next = new Set(this.openRouteGroups());
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.openRouteGroups.set(next);
+  }
+
+  routeListLabel(block: CarnetBlock): string {
+    return block.content['mode'] === 'place_to_place' ? 'Entre hoteles' : 'Entre zonas';
+  }
+
   isDayOpen(id: string): boolean {
     return this.openDays().has(id);
   }
@@ -472,10 +511,15 @@ export class CarnetEditor implements OnInit {
     this.previewing.set(false);
   }
 
-  dropStructure(event: CdkDragDrop<CarnetBlock[]>): void {
+  dropStructure(event: CdkDragDrop<CarnetBlock[]>, blocks: CarnetBlock[]): void {
     const current = this.document();
     if (!current || event.previousIndex === event.currentIndex) return;
-    this.edit(reorderVisible(current, event.previousIndex, event.currentIndex));
+    this.edit(reorderListed(
+      current,
+      blocks.map((block) => block.id),
+      event.previousIndex,
+      event.currentIndex,
+    ));
   }
 
   dropEntry(event: CdkDragDrop<string>): void {
@@ -697,6 +741,136 @@ export class CarnetEditor implements OnInit {
 
   pending(block: CarnetBlock): boolean {
     return sectionPending(block) || routeNeedsData(block);
+  }
+
+  canSaveCatalogRoute(block: CarnetBlock): boolean {
+    if (block.type !== 'itinerary_route' || this.savedCatalogRoutes().has(block.id)) return false;
+    if (block.content['mode'] === 'place_to_place') {
+      return this.text(block, 'instructions').trim().length > 0;
+    }
+    const distance = Number(this.text(block, 'distance_km').replace(',', '.'));
+    return Number.isFinite(distance) && distance >= 0 && this.number(block, 'duration_minutes') > 0
+      && this.text(block, 'distance_km').trim().length > 0;
+  }
+
+  saveCatalogRoute(block: CarnetBlock): void {
+    const options = this.routeOptions();
+    if (!options) {
+      this.messages.add({ severity: 'warn', summary: 'El catálogo de zonas todavía no está disponible.' });
+      return;
+    }
+    if (block.content['mode'] === 'place_to_place') {
+      this.savePlaceRoute(block, options);
+      return;
+    }
+    this.saveZoneRoute(block, options);
+  }
+
+  private saveZoneRoute(block: CarnetBlock, options: TravelRouteOptions): void {
+    const origin = this.zoneMatch(options.zones, this.text(block, 'origin_zone'));
+    const destination = this.zoneMatch(options.zones, this.text(block, 'destination_zone'));
+    if (!origin || !destination) {
+      this.messages.add({ severity: 'warn', summary: 'No se encontró la zona en el catálogo.' });
+      return;
+    }
+    if (this.catalogRoutes().some((route) =>
+      route.mode === 'zone_to_zone'
+      && route.origin_zone_id === origin.id
+      && route.destination_zone_id === destination.id
+    )) {
+      this.markCatalogSaved(block.id);
+      this.messages.add({ severity: 'info', summary: 'Ese trayecto ya está en el catálogo.' });
+      return;
+    }
+    const distance = Number(this.text(block, 'distance_km').replace(',', '.'));
+    this.storeCatalogRoute(block, {
+      mode: 'zone_to_zone',
+      active: true,
+      distance_km: distance,
+      duration_minutes: this.number(block, 'duration_minutes'),
+      instructions: this.text(block, 'instructions').trim(),
+      origin_zone_id: origin.id,
+      destination_zone_id: destination.id,
+      origin_kind: null,
+      origin_id: null,
+      destination_kind: null,
+      destination_id: null,
+    });
+  }
+
+  private savePlaceRoute(block: CarnetBlock, options: TravelRouteOptions): void {
+    const origin = this.placeMatch(
+      options.hotels,
+      this.text(block, 'origin_lodging') || this.text(block, 'origin_place'),
+    );
+    const destination = this.placeMatch(
+      options.hotels,
+      this.text(block, 'destination_lodging') || this.text(block, 'destination_place'),
+    );
+    if (!origin || !destination || !origin.zone_id || !destination.zone_id) {
+      this.messages.add({ severity: 'warn', summary: 'No se encontró el hotel en el catálogo.' });
+      return;
+    }
+    if (this.catalogRoutes().some((route) =>
+      route.mode === 'place_to_place'
+      && route.origin_id === origin.id
+      && route.destination_id === destination.id
+    )) {
+      this.markCatalogSaved(block.id);
+      this.messages.add({ severity: 'info', summary: 'Ese trayecto ya está en el catálogo.' });
+      return;
+    }
+    const rawDistance = this.text(block, 'distance_km').trim();
+    const distance = Number(rawDistance.replace(',', '.'));
+    this.storeCatalogRoute(block, {
+      mode: 'place_to_place',
+      active: true,
+      distance_km: rawDistance && Number.isFinite(distance) ? distance : null,
+      duration_minutes: null,
+      instructions: this.text(block, 'instructions').trim(),
+      origin_zone_id: origin.zone_id,
+      destination_zone_id: destination.zone_id,
+      origin_kind: 'hotel',
+      origin_id: origin.id,
+      destination_kind: 'hotel',
+      destination_id: destination.id,
+    });
+  }
+
+  private storeCatalogRoute(block: CarnetBlock, body: Parameters<TravelRouteService['create']>[0]): void {
+    this.travelRoutes.create(body).subscribe({
+      next: (created) => {
+        this.catalogRoutes.update((items) => [...items, created]);
+        this.markCatalogSaved(block.id);
+        this.messages.add({ severity: 'success', summary: 'Trayecto guardado en el catálogo.' });
+      },
+      error: () => this.messages.add({ severity: 'error', summary: 'No se pudo guardar el trayecto.' }),
+    });
+  }
+
+  private markCatalogSaved(blockId: string): void {
+    const next = new Set(this.savedCatalogRoutes());
+    next.add(blockId);
+    this.savedCatalogRoutes.set(next);
+  }
+
+  private zoneMatch(zones: { id: string; name: string }[], name: string) {
+    const folded = this.foldName(name);
+    const found = zones.filter((zone) => this.foldName(zone.name) === folded);
+    return found.length === 1 ? found[0] : null;
+  }
+
+  private placeMatch(
+    places: { id: string; name: string; zone_id: string | null }[],
+    name: string,
+  ) {
+    const folded = this.foldName(name);
+    const found = places.filter((place) => this.foldName(place.name) === folded);
+    return found.length === 1 ? found[0] : null;
+  }
+
+  private foldName(value: string): string {
+    return value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('es').replace(/\s+/g, ' ').trim();
   }
 
   routeAlert(block: CarnetBlock): string {

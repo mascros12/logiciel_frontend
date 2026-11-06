@@ -202,36 +202,58 @@
           <div
             cdkDropList
             class="carnet-editor__list"
-            (cdkDropListDropped)="dropStructure($event)"
+            (cdkDropListDropped)="dropStructure($event, structure())"
           >
             @for (block of structure(); track block.id) {
-              <div
-                class="carnet-editor__row"
-                cdkDrag
-                [class.is-selected]="selectedId() === block.id"
-                [class.is-hidden]="!block.visible"
-              >
-                <button type="button" class="carnet-editor__row-main" (click)="select(block.id)">
-                  <span class="carnet-editor__type">{{ labels[block.type] }}</span>
-                  <span>{{ titleOf(block) }}</span>
-                  @if (edited(block)) {
-                    <span class="carnet-editor__edited">Editado</span>
-                  }
-                  @if (pending(block)) {
-                    <span class="carnet-editor__edited">Pendiente</span>
-                  }
-                  @if (!block.visible) {
-                    <span class="carnet-editor__edited">Oculto</span>
-                  }
-                </button>
-                <button type="button" cdkDragHandle class="carnet-editor__icon" aria-label="Reordenar">↕</button>
-                <button type="button" class="carnet-editor__icon" (click)="toggleVisible(block)">
-                  {{ block.visible ? 'Ocultar' : 'Mostrar' }}
-                </button>
-                <button type="button" class="carnet-editor__icon" (click)="askRemove(block)">Eliminar</button>
-              </div>
+              <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
             }
           </div>
+
+          <section class="carnet-editor__days">
+            <button
+              type="button"
+              class="carnet-editor__days-toggle"
+              (click)="toggleRouteGroup('zones')"
+              [attr.aria-expanded]="routeGroupOpen('zones')"
+            >
+              <span>{{ routeGroupOpen('zones') ? '▾' : '▸' }} Entre zonas</span>
+              <span class="carnet-editor__type">{{ zoneRoutes().length }}</span>
+            </button>
+            @if (routeGroupOpen('zones')) {
+              <div
+                cdkDropList
+                class="carnet-editor__list"
+                (cdkDropListDropped)="dropStructure($event, zoneRoutes())"
+              >
+                @for (block of zoneRoutes(); track block.id) {
+                  <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
+                }
+              </div>
+            }
+          </section>
+
+          <section class="carnet-editor__days">
+            <button
+              type="button"
+              class="carnet-editor__days-toggle"
+              (click)="toggleRouteGroup('places')"
+              [attr.aria-expanded]="routeGroupOpen('places')"
+            >
+              <span>{{ routeGroupOpen('places') ? '▾' : '▸' }} Entre hoteles</span>
+              <span class="carnet-editor__type">{{ placeRoutes().length }}</span>
+            </button>
+            @if (routeGroupOpen('places')) {
+              <div
+                cdkDropList
+                class="carnet-editor__list"
+                (cdkDropListDropped)="dropStructure($event, placeRoutes())"
+              >
+                @for (block of placeRoutes(); track block.id) {
+                  <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
+                }
+              </div>
+            }
+          </section>
 
           <section class="carnet-editor__days">
             <button
@@ -441,7 +463,18 @@
                   <label>Duración (minutos) <input type="number" min="0" [value]="number(block, 'duration_minutes')" (input)="onInt(block.id, 'duration_minutes', numberValue($event))" /></label>
                 }
                 <label>Instrucciones de llegada <textarea pInputTextarea rows="5" [value]="text(block, 'instructions')" (input)="onText(block.id, 'instructions', inputValue($event))"></textarea></label>
-                <p class="carnet-editor__hint">Estos textos pertenecen a este Carnet. El catálogo no cambia.</p>
+                @if (canSaveCatalogRoute(block)) {
+                  <p>
+                    <button type="button" (click)="saveCatalogRoute(block)">
+                      Guardar en {{ block.content['mode'] === 'place_to_place' ? 'trayectos entre hoteles' : 'trayectos entre zonas' }}
+                    </button>
+                  </p>
+                  <p class="carnet-editor__hint">El texto de este Carnet no cambia. El trayecto queda disponible para los viajes siguientes.</p>
+                } @else if (savedCatalogRoutes().has(block.id)) {
+                  <p class="carnet-editor__hint">Este trayecto ya quedó guardado en el catálogo.</p>
+                } @else {
+                  <p class="carnet-editor__hint">Estos textos pertenecen a este Carnet. Puede guardarlos en el catálogo cuando estén completos.</p>
+                }
               }
               @default {
                 <label>Título <input pInputText [value]="text(block, 'heading')" (input)="onText(block.id, 'heading', inputValue($event))" /></label>
@@ -517,6 +550,34 @@
     }
   }
 </section>
+
+<ng-template #structureRow let-block>
+  <div
+    class="carnet-editor__row"
+    cdkDrag
+    [class.is-selected]="selectedId() === block.id"
+    [class.is-hidden]="!block.visible"
+  >
+    <button type="button" class="carnet-editor__row-main" (click)="select(block.id)">
+      <span class="carnet-editor__type">{{ block.type === 'itinerary_route' ? routeListLabel(block) : labels[block.type] }}</span>
+      <span>{{ titleOf(block) }}</span>
+      @if (edited(block)) {
+        <span class="carnet-editor__edited">Editado</span>
+      }
+      @if (pending(block)) {
+        <span class="carnet-editor__edited">Pendiente</span>
+      }
+      @if (!block.visible) {
+        <span class="carnet-editor__edited">Oculto</span>
+      }
+    </button>
+    <button type="button" cdkDragHandle class="carnet-editor__icon" aria-label="Reordenar">↕</button>
+    <button type="button" class="carnet-editor__icon" (click)="toggleVisible(block)">
+      {{ block.visible ? 'Ocultar' : 'Mostrar' }}
+    </button>
+    <button type="button" class="carnet-editor__icon" (click)="askRemove(block)">Eliminar</button>
+  </div>
+</ng-template>
 
 <ng-template #locale let-block="block">
   <label>Descripción en francés <textarea pInputTextarea rows="4" [value]="text(block, 'description_fr')" (input)="onText(block.id, 'description_fr', inputValue($event))"></textarea></label>

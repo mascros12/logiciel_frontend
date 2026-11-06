@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   addBlock,
   attachBlockToDay,
+  blockTitle,
   canEditCarnet,
   keepLocalAfterConflict,
   keepLocalAfterNetworkError,
@@ -24,6 +25,7 @@ import {
   recommendationLines,
   sectionPending,
   publicationLabel,
+  reorderListed,
   reorderVisible,
   setCoords,
   setDate,
@@ -210,6 +212,23 @@ function view(document: CarnetDocument): CarnetView {
 }
 
 describe('carnet editor document', () => {
+  it('distingue el trayecto entre zonas del trayecto entre hoteles', () => {
+    const content = {
+      mode: 'zone_to_zone',
+      origin_zone: text('San José'),
+      destination_zone: text('Tortuguero'),
+      origin_lodging: text('Sleep Inn'),
+      destination_lodging: text('Aninga'),
+      origin_place: text('Sleep Inn'),
+      destination_place: text('Aninga'),
+    };
+    assert.equal(blockTitle({ type: 'itinerary_route', content } as never), 'San José – Tortuguero');
+    assert.equal(
+      blockTitle({ type: 'itinerary_route', content: { ...content, mode: 'place_to_place' } } as never),
+      'Sleep Inn – Aninga',
+    );
+  });
+
   it('muestra la acción solo a admin y operaciones', () => {
     assert.equal(canEditCarnet('admin'), true);
     assert.equal(canEditCarnet('operaciones'), true);
@@ -265,6 +284,11 @@ describe('carnet editor document', () => {
     const reordered = reorderVisible(sample(), 0, 1);
     assert.equal(reordered.blocks[0].id, 'day-1');
     assert.equal(reordered.blocks.find((block) => block.id === 'hotel-1')?.source_detail_id, 'detail-hotel');
+    const listed = reorderListed(sample(), ['cover-1', 'hotel-1', 'act-included', 'note-hidden'], 0, 1);
+    assert.deepEqual(
+      listed.blocks.map((block) => block.id),
+      ['hotel-1', 'day-1', 'day-2', 'cover-1', 'act-included', 'note-hidden'],
+    );
   });
 
   it('mueve un servicio entre días sin duplicar la reserva', () => {
