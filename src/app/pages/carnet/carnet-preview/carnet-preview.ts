@@ -9,6 +9,7 @@ import {
   itineraryRoutes,
   pageAssetId,
   previewOf,
+  rentalNotices,
   recommendationLines,
   RESTAURANTS_SECTION_ID,
   roomsOf,
@@ -38,6 +39,7 @@ import { RouteSection } from '../route-section/route-section';
 })
 export class CarnetPreview {
   readonly document = input.required<CarnetDocument>();
+  readonly rentalNotices = rentalNotices;
   readonly unsaved = input(false);
   readonly mode = input<'draft' | 'published'>('draft');
   readonly publicMediaBase = input<string | null>(null);

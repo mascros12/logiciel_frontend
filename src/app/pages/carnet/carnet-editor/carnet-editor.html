@@ -377,6 +377,13 @@
                 <label>Fechas <textarea pInputTextarea rows="3" [value]="dates(block)" (input)="onDates(block.id, inputValue($event))"></textarea></label>
                 <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
                 <label>Notas <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
+                @if (showsRentalNotice(block)) {
+                  <div class="format-bar">
+                    <button type="button" (click)="formatRental(rentalField, block.id)">Negrita</button>
+                  </div>
+                  <label>Aviso de alquiler <textarea #rentalField pInputTextarea rows="6" [value]="rentalNotice(block)" (input)="onRentalNotice(block.id, inputValue($event))"></textarea></label>
+                  <p class="carnet-editor__hint">Se imprime subrayado debajo de la tabla. Lo que va entre ** queda en negrita. Si no lo modifica, se arma con el nombre del vehículo, la reserva, el recibo, la devolución y el teléfono de la marca.</p>
+                }
               }
               @case ('route') {
                 <label>Nombre del trayecto <input pInputText [value]="text(block, 'title')" (input)="onText(block.id, 'title', inputValue($event))" /></label>

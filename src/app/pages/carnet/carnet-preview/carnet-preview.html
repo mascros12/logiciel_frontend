@@ -47,6 +47,7 @@
       <app-organisation-table
         [heading]="text(block, 'heading') || 'Organisation du voyage'"
         [rows]="preview().organisation ?? []"
+        [notices]="rentalNotices(document())"
       />
     } @else if (block.section_kind === 'route_collection') {
       @if (routeLines(block).length || text(block, 'body')) {
@@ -99,6 +100,7 @@
       <app-organisation-table
         [heading]="text(block, 'heading') || 'Organisation du voyage'"
         [rows]="preview().organisation ?? []"
+        [notices]="rentalNotices(document())"
       />
     } @else if (block.section_kind === 'route_collection') {
       @if (routeLines(block).length || text(block, 'body')) {

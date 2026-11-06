@@ -17,6 +17,12 @@
   table-layout: fixed;
 }
 
+.organisation__rental {
+  margin-top: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .organisation__date { width: 18%; }
 .organisation__region { width: 16%; }
 .organisation__stay,

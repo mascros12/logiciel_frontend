@@ -164,6 +164,83 @@ export function textOf(content: Record<string, unknown>, field: string): string 
   return tracked?.value ?? '';
 }
 
+const RENTAL_KIND = 'vehiculo de alquiler';
+const RENTAL_INSURANCE =
+  "L'assurance PLI + LDW est à régler lors de la prise du véhicule et le SPP est facultatif.";
+
+export function rentalNoticeText(block: CarnetBlock): string {
+  if (block.type !== 'transport' || block.removed || !block.visible) return '';
+  const field = block.content['rental_notice'] as TrackedText | undefined;
+  if (field?.origin === 'edited') return (field.value ?? '').trim();
+  const stored = (field?.value ?? '').trim();
+  if (stored) return stored;
+  return composeRentalNotice(block);
+}
+
+export function rentalNotices(document: CarnetDocument): string[] {
+  return document.blocks.map(rentalNoticeText).filter((item) => item.length > 0);
+}
+
+export function setRentalNotice(
+  document: CarnetDocument,
+  blockId: string,
+  value: string,
+): CarnetDocument {
+  const block = document.blocks.find((item) => item.id === blockId);
+  if (!block) return document;
+  const current = block.content['rental_notice'] as TrackedText | undefined;
+  return replaceBlock(document, blockId, {
+    ...block,
+    content: {
+      ...block.content,
+      rental_notice: {
+        value,
+        generated_value: current?.generated_value ?? null,
+        origin: 'edited',
+      },
+    },
+  });
+}
+
+function composeRentalNotice(block: CarnetBlock): string {
+  if (foldLabel(textOf(block.content, 'service_type')) !== RENTAL_KIND) return '';
+  const name = beforeSlash(textOf(block.content, 'public_name'));
+  const reservation = textOf(block.content, 'reservation_number').trim();
+  const pickup = textOf(block.content, 'pickup_text').trim();
+  const dropoff = textOf(block.content, 'dropoff_text').trim();
+  const brand = textOf(block.content, 'provider_label');
+  const provider = beforeSlash(brand);
+  const phone = afterSlash(brand);
+  const similar = name ? `${name} ou similaire` : 'ou similaire';
+  const booked = reservation ? `${similar} (${reservation})` : similar;
+  const lines = [`La voiture de location **${booked}**`];
+  const meeting: string[] = [];
+  if (pickup) meeting.push(`Rendez vous le **${pickup}**`);
+  if (dropoff) meeting.push(`retour le **${dropoff}**`);
+  if (meeting.length) lines.push(meeting.join(', '));
+  if (provider || phone) lines.push(phone ? `${provider} **${phone}**`.trim() : provider);
+  lines.push(`**${RENTAL_INSURANCE}**`);
+  return lines.join('\n');
+}
+
+function foldLabel(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLocaleLowerCase('es')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function beforeSlash(value: string): string {
+  return value.split('/', 1)[0].trim();
+}
+
+function afterSlash(value: string): string {
+  const index = value.indexOf('/');
+  return index < 0 ? '' : value.slice(index + 1).trim();
+}
+
 const EDITORIAL_TYPES = new Set(['note', 'warning', 'free_text', 'practical', 'conditions']);
 const STRUCTURAL_KINDS = new Set([
   'cover',
@@ -783,6 +860,7 @@ function emptyContent(type: BlockType): Record<string, unknown> {
       reservation_number: emptyText(),
       link: emptyText(),
       notes: emptyText(),
+      rental_notice: { value: null, origin: 'generated', generated_value: null },
     };
   }
   if (type === 'route') {
@@ -939,6 +1017,7 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       reservation_number: writeText(content, 'reservation_number'),
       link: writeText(content, 'link'),
       notes: writeText(content, 'notes'),
+      rental_notice: writeText(content, 'rental_notice'),
     };
   }
   if (block.type === 'regional_recommendation') {

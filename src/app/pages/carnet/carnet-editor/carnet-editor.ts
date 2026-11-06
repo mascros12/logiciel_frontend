@@ -29,6 +29,8 @@ import { applyRichMark } from '../../../core/utils/rich-text';
 import {
   ADDABLE_TYPES,
   BLOCK_LABELS,
+  rentalNoticeText,
+  setRentalNotice,
   EditorState,
   addBlock,
   attachBlockToDay,
@@ -616,6 +618,27 @@ export class CarnetEditor implements OnInit {
     const current = this.document();
     if (!current) return;
     this.edit(setPageAsset(current, blockId, null));
+  }
+
+  showsRentalNotice(block: CarnetBlock): boolean {
+    if (block.type !== 'transport') return false;
+    const notice = block.content['rental_notice'] as { origin?: string; value?: string | null } | undefined;
+    if (notice?.origin === 'edited') return true;
+    return rentalNoticeText(block).length > 0;
+  }
+
+  rentalNotice(block: CarnetBlock): string {
+    return rentalNoticeText(block);
+  }
+
+  onRentalNotice(blockId: string, value: string): void {
+    const current = this.document();
+    if (!current) return;
+    this.edit(setRentalNotice(current, blockId, value));
+  }
+
+  formatRental(area: HTMLTextAreaElement, blockId: string): void {
+    this.applyFormat(area, 'bold', (value) => this.onRentalNotice(blockId, value));
   }
 
   onText(blockId: string, field: string, value: string): void {

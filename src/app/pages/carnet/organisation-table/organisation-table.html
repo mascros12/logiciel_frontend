@@ -47,4 +47,9 @@
       }
     </tbody>
   </table>
+  @for (notice of notices(); track $index) {
+    <div class="organisation__rental">
+      <app-rich-text [value]="notice" />
+    </div>
+  }
 </section>

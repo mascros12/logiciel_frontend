@@ -26,6 +26,8 @@ import {
   sectionPending,
   publicationLabel,
   reorderListed,
+  rentalNoticeText,
+  setRentalNotice,
   reorderVisible,
   setCoords,
   setDate,
@@ -1149,5 +1151,41 @@ describe('página de imagen', () => {
     assert.equal(restaurants[0].name, 'Soda');
     assert.equal(restaurants[0].durationText, '');
     assert.equal(previewOf(published).rest.some((block) => block.type === 'regional_recommendation'), false);
+  });
+});
+
+describe('aviso de alquiler', () => {
+  it('arma el texto y conserva la edición del operador', () => {
+    const block: CarnetBlock = {
+      id: 'car-1',
+      type: 'transport',
+      position: 0,
+      visible: true,
+      removed: false,
+      manual: false,
+      source_detail_id: null,
+      product_kind: 'vehicle',
+      product_id: null,
+      content: {
+        public_name: text('Hyundai Kona 2WD / automático'),
+        service_type: text('Vehiculo de Alquiler'),
+        reservation_number: text('1304120'),
+        pickup_text: text("30/06/2025 à l'hôtel Aranjuez à 8H30"),
+        dropoff_text: text('16/07/2026 à l\'hôtel Aranjuez à 16H00'),
+        provider_label: text('Adobe rent a car / 2542-4848'),
+        rental_notice: { value: null, origin: 'generated', generated_value: null },
+      },
+    };
+    const notice = rentalNoticeText(block);
+    assert.match(notice, /Hyundai Kona 2WD ou similaire \(1304120\)/);
+    assert.equal(notice.includes('automático'), false);
+    assert.match(notice, /Adobe rent a car \*\*2542-4848\*\*/);
+    const document: CarnetDocument = {
+      locale: 'fr',
+      schema_version: 1,
+      blocks: [block],
+    };
+    const saved = setRentalNotice(document, 'car-1', 'Texte revu');
+    assert.equal(rentalNoticeText(saved.blocks[0]), 'Texte revu');
   });
 });
