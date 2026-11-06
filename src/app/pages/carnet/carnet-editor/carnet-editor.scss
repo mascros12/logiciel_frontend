@@ -148,6 +148,28 @@
   opacity: 0.55;
 }
 
+.carnet-editor__days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+}
+
+.carnet-editor__days-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 1px solid #e4e7ef;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
 .carnet-editor__row-main,
 .carnet-editor__day-toggle,
 .carnet-editor__icon {

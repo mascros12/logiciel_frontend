@@ -132,7 +132,8 @@ export class CarnetEditor implements OnInit {
   readonly examining = signal(false);
   readonly structuring = signal(false);
   readonly selectedId = signal<string | null>(null);
-  readonly collapsedDays = signal<ReadonlySet<string>>(new Set());
+  readonly daysOpen = signal(false);
+  readonly openDays = signal<ReadonlySet<string>>(new Set());
   readonly addChoice = signal<BlockType | null>(null);
   readonly catalogRoutes = signal<TravelRoute[]>([]);
   readonly catalogRecommendations = signal<RegionalRecommendation[]>([]);
@@ -451,15 +452,19 @@ export class CarnetEditor implements OnInit {
     return Number((event.target as HTMLInputElement).value) || 0;
   }
 
+  toggleDays(): void {
+    this.daysOpen.update((open) => !open);
+  }
+
   isDayOpen(id: string): boolean {
-    return !this.collapsedDays().has(id);
+    return this.openDays().has(id);
   }
 
   toggleDay(id: string): void {
-    const next = new Set(this.collapsedDays());
+    const next = new Set(this.openDays());
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    this.collapsedDays.set(next);
+    this.openDays.set(next);
   }
 
   select(id: string): void {

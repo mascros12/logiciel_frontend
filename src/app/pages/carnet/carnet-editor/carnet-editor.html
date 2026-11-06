@@ -233,31 +233,43 @@
             }
           </div>
 
-          <h2>Días</h2>
-          @for (day of days(); track day.id) {
-            <section class="carnet-editor__day">
-              <button type="button" class="carnet-editor__day-toggle" (click)="toggleDay(day.id)">
-                {{ isDayOpen(day.id) ? '▾' : '▸' }} {{ titleOf(day) }}
-              </button>
-              @if (isDayOpen(day.id)) {
-                <div
-                  class="carnet-editor__entries"
-                  cdkDropList
-                  [id]="'day-' + day.id"
-                  [cdkDropListData]="day.id"
-                  [cdkDropListConnectedTo]="dayDropIds()"
-                  (cdkDropListDropped)="dropEntry($event)"
-                >
-                  @for (entry of entries(day); track entry.block_id) {
-                    <div class="carnet-editor__entry" cdkDrag>
-                      <span cdkDragHandle>{{ entryTitle(entry.block_id) }}</span>
-                      <span class="carnet-editor__type">{{ entryRole(entry.role) }}</span>
+          <section class="carnet-editor__days">
+            <button
+              type="button"
+              class="carnet-editor__days-toggle"
+              (click)="toggleDays()"
+              [attr.aria-expanded]="daysOpen()"
+            >
+              <span>{{ daysOpen() ? '▾' : '▸' }} Días</span>
+              <span class="carnet-editor__type">{{ days().length }}</span>
+            </button>
+            @if (daysOpen()) {
+              @for (day of days(); track day.id) {
+                <section class="carnet-editor__day">
+                  <button type="button" class="carnet-editor__day-toggle" (click)="toggleDay(day.id)">
+                    {{ isDayOpen(day.id) ? '▾' : '▸' }} {{ titleOf(day) }}
+                  </button>
+                  @if (isDayOpen(day.id)) {
+                    <div
+                      class="carnet-editor__entries"
+                      cdkDropList
+                      [id]="'day-' + day.id"
+                      [cdkDropListData]="day.id"
+                      [cdkDropListConnectedTo]="dayDropIds()"
+                      (cdkDropListDropped)="dropEntry($event)"
+                    >
+                      @for (entry of entries(day); track entry.block_id) {
+                        <div class="carnet-editor__entry" cdkDrag>
+                          <span cdkDragHandle>{{ entryTitle(entry.block_id) }}</span>
+                          <span class="carnet-editor__type">{{ entryRole(entry.role) }}</span>
+                        </div>
+                      }
                     </div>
                   }
-                </div>
+                </section>
               }
-            </section>
-          }
+            }
+          </section>
         </aside>
 
         <div class="carnet-editor__form">
