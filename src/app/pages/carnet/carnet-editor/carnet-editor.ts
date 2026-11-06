@@ -63,6 +63,7 @@ import {
   setPoints,
   setRoomText,
   pageAssetId,
+  routeNeedsData,
   sectionPending,
   setPageAsset,
   setText,
@@ -690,7 +691,15 @@ export class CarnetEditor implements OnInit {
   }
 
   pending(block: CarnetBlock): boolean {
-    return sectionPending(block);
+    return sectionPending(block) || routeNeedsData(block);
+  }
+
+  routeAlert(block: CarnetBlock): string {
+    if (!routeNeedsData(block)) return '';
+    if (block.content['mode'] === 'place_to_place') {
+      return 'No hay una ruta entre estos establecimientos en el sentido del viaje. Escriba las instrucciones de llegada, o elimine la línea.';
+    }
+    return 'No hay un trayecto entre estas zonas, tampoco al revés. Complete distancia y duración, o elimine la línea.';
   }
 
   edited(block: CarnetBlock, field?: string): boolean {

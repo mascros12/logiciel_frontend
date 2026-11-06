@@ -25,16 +25,9 @@
     </table>
   }
   <h2 class="routes__title">{{ heading() }}</h2>
-  @for (row of rows(); track $index) {
-    <article class="routes__detail" [class.routes__detail--excursion]="row.tone === 'excursion'">
-      @if (row.tone === 'zone') {
-        <h3 class="routes__zone">{{ zoneTitle(row) }}</h3>
-        @if (activityTitle(row); as leg) {
-          <h3 class="routes__excursion">{{ leg }}</h3>
-        }
-      } @else {
-        <h3 class="routes__excursion">{{ excursionTitle(row) }}</h3>
-      }
+  @for (row of establishmentRows(); track $index) {
+    <article class="routes__detail">
+      <h3 class="routes__zone">{{ establishmentTitle(row) }}</h3>
       @if (row.instructions) {
         <p class="routes__instructions">{{ row.instructions }}</p>
       }

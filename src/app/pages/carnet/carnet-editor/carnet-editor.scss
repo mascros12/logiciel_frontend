@@ -47,6 +47,11 @@
   font-size: 0.9rem;
 }
 
+.carnet-editor__hint--alert {
+  color: #9b1b1b;
+  font-weight: 600;
+}
+
 .carnet-editor__save-state.is-dirty,
 .carnet-editor__edited {
   color: #8a5a00;

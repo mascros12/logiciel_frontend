@@ -12,6 +12,7 @@ import {
   documentFromPublic,
   formatDateFr,
   formatDuration,
+  establishmentRouteTitle,
   excursionRouteTitle,
   itineraryRoutes,
   zoneActivityTitle,
@@ -894,6 +895,21 @@ describe('página de imagen', () => {
     assert.equal(
       zoneActivityTitle(lines[0]),
       'Pour aller de Tour del Tenorio au Selva Color',
+    );
+    assert.equal(
+      establishmentRouteTitle({
+        tone: 'excursion',
+        originZone: 'Río Celeste',
+        destinationZone: 'Carara',
+        originPlace: 'Finca la Amistad',
+        destinationPlace: 'Selva Color',
+        originLodging: 'Finca la Amistad',
+        destinationLodging: 'Selva Color',
+        distanceLabel: '',
+        durationLabel: '',
+        instructions: 'Prendre la route.',
+      }),
+      'Finca la Amistad - Selva Color',
     );
     assert.equal(
       excursionRouteTitle({

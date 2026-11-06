@@ -175,6 +175,15 @@ export function pageAssetId(block: CarnetBlock): string | null {
   return typeof value === 'string' && value ? value : null;
 }
 
+export function routeNeedsData(block: CarnetBlock): boolean {
+  if (block.type !== 'itinerary_route' || block.removed || !block.visible) return false;
+  if (block.content['included'] === false) return false;
+  if (block.content['mode'] === 'place_to_place') {
+    return textOf(block.content, 'instructions').trim().length === 0;
+  }
+  return textOf(block.content, 'distance_km').trim().length === 0;
+}
+
 export function sectionPending(block: CarnetBlock): boolean {
   if (block.type === 'full_page_image') {
     if (block.removed || !block.visible) return false;
@@ -1130,6 +1139,12 @@ export function excursionRouteTitle(row: RouteLine): string {
   const destination = row.destinationPlace || row.destinationZone;
   const title = `Pour aller de ${origin} au ${destination}`;
   return row.durationLabel ? `${title} (${row.durationLabel})` : title;
+}
+
+export function establishmentRouteTitle(row: RouteLine): string {
+  const origin = row.originPlace || row.originLodging || row.originZone;
+  const destination = row.destinationPlace || row.destinationLodging || row.destinationZone;
+  return `${origin} - ${destination}`;
 }
 
 export interface RecommendationLine {

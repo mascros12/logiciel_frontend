@@ -411,6 +411,9 @@
                 <p class="carnet-editor__hint">Estos textos pertenecen a este Carnet. El catálogo no cambia.</p>
               }
               @case ('itinerary_route') {
+                @if (routeAlert(block); as alert) {
+                  <p class="carnet-editor__hint carnet-editor__hint--alert">{{ alert }}</p>
+                }
                 <label class="carnet-editor__switch">
                   <input type="checkbox" [checked]="block.content['included'] !== false" (change)="onIncluded(block.id, checkboxValue($event))" />
                   Incluir en el Carnet del viajero
