@@ -18,7 +18,12 @@ export interface RichList {
   items: RichSpan[][];
 }
 
-export type RichBlock = RichParagraph | RichTitle | RichList;
+export interface RichGap {
+  kind: 'gap';
+  lines: number;
+}
+
+export type RichBlock = RichParagraph | RichTitle | RichList | RichGap;
 
 const BULLET = /^[-*•]\s+(.+)$/;
 
@@ -26,6 +31,7 @@ export function parseRichText(value: string): RichBlock[] {
   const blocks: RichBlock[] = [];
   const paragraph: string[] = [];
   const bullets: string[] = [];
+  let gaps = 0;
 
   const flushParagraph = () => {
     if (!paragraph.length) return;
@@ -37,14 +43,21 @@ export function parseRichText(value: string): RichBlock[] {
     blocks.push({ kind: 'list', items: bullets.map(spansOf) });
     bullets.length = 0;
   };
+  const flushGaps = () => {
+    if (!gaps) return;
+    blocks.push({ kind: 'gap', lines: gaps });
+    gaps = 0;
+  };
 
   for (const raw of value.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')) {
     const line = raw.trim();
     if (!line) {
       flushParagraph();
       flushBullets();
+      gaps += 1;
       continue;
     }
+    flushGaps();
     if (line.startsWith('# ')) {
       flushParagraph();
       flushBullets();
@@ -63,6 +76,7 @@ export function parseRichText(value: string): RichBlock[] {
   }
   flushParagraph();
   flushBullets();
+  flushGaps();
   return blocks;
 }
 

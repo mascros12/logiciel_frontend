@@ -15,6 +15,8 @@
         </li>
       }
     </ul>
+  } @else if (block.kind === 'gap') {
+    <div class="rich-text__gap" [style.height.em]="block.lines"></div>
   } @else {
     <p>
       @for (line of block.lines; track $index) {
