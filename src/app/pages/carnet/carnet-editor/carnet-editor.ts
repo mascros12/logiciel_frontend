@@ -495,6 +495,11 @@ export class CarnetEditor implements OnInit {
     return block.content['mode'] === 'place_to_place' ? 'Entre hoteles' : 'Entre zonas';
   }
 
+  typeLabel(block: CarnetBlock): string {
+    if (block.type === 'itinerary_route') return this.routeListLabel(block);
+    return this.labels[block.type];
+  }
+
   isDayOpen(id: string): boolean {
     return this.openDays().has(id);
   }

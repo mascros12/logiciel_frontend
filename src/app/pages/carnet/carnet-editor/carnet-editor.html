@@ -559,7 +559,7 @@
     [class.is-hidden]="!block.visible"
   >
     <button type="button" class="carnet-editor__row-main" (click)="select(block.id)">
-      <span class="carnet-editor__type">{{ block.type === 'itinerary_route' ? routeListLabel(block) : labels[block.type] }}</span>
+      <span class="carnet-editor__type">{{ typeLabel(block) }}</span>
       <span>{{ titleOf(block) }}</span>
       @if (edited(block)) {
         <span class="carnet-editor__edited">Editado</span>
