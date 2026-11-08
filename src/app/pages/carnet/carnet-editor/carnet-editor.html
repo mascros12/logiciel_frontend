@@ -199,15 +199,51 @@
               appendTo="body"
             />
           </div>
-          <div
-            cdkDropList
-            class="carnet-editor__list"
-            (cdkDropListDropped)="dropStructure($event, structure())"
-          >
-            @for (block of structure(); track block.id) {
-              <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
+          <section class="carnet-editor__days">
+            <button
+              type="button"
+              class="carnet-editor__days-toggle"
+              (click)="toggleRouteGroup('sections')"
+              [attr.aria-expanded]="routeGroupOpen('sections')"
+            >
+              <span>{{ routeGroupOpen('sections') ? '▾' : '▸' }} Apartados</span>
+              <span class="carnet-editor__type">{{ sections().length }}</span>
+            </button>
+            @if (routeGroupOpen('sections')) {
+              <div
+                cdkDropList
+                class="carnet-editor__list"
+                (cdkDropListDropped)="dropStructure($event, sections())"
+              >
+                @for (block of sections(); track block.id) {
+                  <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
+                }
+              </div>
             }
-          </div>
+          </section>
+
+          <section class="carnet-editor__days">
+            <button
+              type="button"
+              class="carnet-editor__days-toggle"
+              (click)="toggleRouteGroup('recommendations')"
+              [attr.aria-expanded]="routeGroupOpen('recommendations')"
+            >
+              <span>{{ routeGroupOpen('recommendations') ? '▾' : '▸' }} Recomendación regional</span>
+              <span class="carnet-editor__type">{{ recommendations().length }}</span>
+            </button>
+            @if (routeGroupOpen('recommendations')) {
+              <div
+                cdkDropList
+                class="carnet-editor__list"
+                (cdkDropListDropped)="dropStructure($event, recommendations())"
+              >
+                @for (block of recommendations(); track block.id) {
+                  <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
+                }
+              </div>
+            }
+          </section>
 
           <section class="carnet-editor__days">
             <button
@@ -382,7 +418,7 @@
                     <button type="button" (click)="formatRental(rentalField, block.id)">Negrita</button>
                   </div>
                   <label>Aviso de alquiler <textarea #rentalField pInputTextarea rows="6" [value]="rentalNotice(block)" (input)="onRentalNotice(block.id, inputValue($event))"></textarea></label>
-                  <p class="carnet-editor__hint">Se imprime subrayado debajo de la tabla. Lo que va entre ** queda en negrita. Si no lo modifica, se arma con el nombre del vehículo, la reserva, el recibo, la devolución y el teléfono de la marca.</p>
+                  <p class="carnet-editor__hint">Se imprime subrayado debajo de la tabla. Lo que va entre ** queda en negrita. Si no lo modifica, el nombre sale del encabezado Voiture de Location de la ficha AA, junto con la reserva, el recibo, la devolución y el teléfono de la marca.</p>
                 }
               }
               @case ('route') {

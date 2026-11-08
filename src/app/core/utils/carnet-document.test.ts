@@ -1167,7 +1167,8 @@ describe('aviso de alquiler', () => {
       product_kind: 'vehicle',
       product_id: null,
       content: {
-        public_name: text('Hyundai Kona 2WD / automático'),
+        public_name: text('Kona nombre de ficha AA'),
+        header_name: text('Hyundai Kona 2WD (4x4) / extra'),
         service_type: text('Vehiculo de Alquiler'),
         reservation_number: text('1304120'),
         pickup_text: text("30/06/2025 à l'hôtel Aranjuez à 8H30"),
@@ -1178,7 +1179,8 @@ describe('aviso de alquiler', () => {
     };
     const notice = rentalNoticeText(block);
     assert.match(notice, /Hyundai Kona 2WD ou similaire \(1304120\)/);
-    assert.equal(notice.includes('automático'), false);
+    assert.equal(notice.includes('nombre de ficha AA'), false);
+    assert.equal(notice.includes('4x4'), false);
     assert.match(notice, /Adobe rent a car \*\*2542-4848\*\*/);
     const document: CarnetDocument = {
       locale: 'fr',

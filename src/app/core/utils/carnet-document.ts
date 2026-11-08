@@ -204,7 +204,7 @@ export function setRentalNotice(
 
 function composeRentalNotice(block: CarnetBlock): string {
   if (foldLabel(textOf(block.content, 'service_type')) !== RENTAL_KIND) return '';
-  const name = beforeSlash(textOf(block.content, 'public_name'));
+  const name = headerVehicleName(textOf(block.content, 'header_name'));
   const reservation = textOf(block.content, 'reservation_number').trim();
   const pickup = textOf(block.content, 'pickup_text').trim();
   const dropoff = textOf(block.content, 'dropoff_text').trim();
@@ -234,6 +234,12 @@ function foldLabel(value: string): string {
 
 function beforeSlash(value: string): string {
   return value.split('/', 1)[0].trim();
+}
+
+function headerVehicleName(value: string): string {
+  const paren = beforeSlash(value).indexOf('(');
+  const name = paren < 0 ? beforeSlash(value) : beforeSlash(value).slice(0, paren);
+  return name.trim();
 }
 
 function afterSlash(value: string): string {
@@ -860,6 +866,7 @@ function emptyContent(type: BlockType): Record<string, unknown> {
       reservation_number: emptyText(),
       link: emptyText(),
       notes: emptyText(),
+      header_name: { value: null, origin: 'generated', generated_value: null },
       rental_notice: { value: null, origin: 'generated', generated_value: null },
     };
   }
@@ -1017,6 +1024,7 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       reservation_number: writeText(content, 'reservation_number'),
       link: writeText(content, 'link'),
       notes: writeText(content, 'notes'),
+      header_name: writeText(content, 'header_name'),
       rental_notice: writeText(content, 'rental_notice'),
     };
   }
