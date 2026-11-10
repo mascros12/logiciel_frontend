@@ -876,6 +876,13 @@
     padding-top: 0.25rem;
   }
 
+.ficha-aa-blocked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
 .ficha-aa-blocked-msg {
   border: 1px solid #fbbf24;
   background: #fffbeb;

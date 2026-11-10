@@ -800,7 +800,7 @@
         <!-- Tab Ficha AA -->
         <p-tabpanel value="fileaa">
           <div class="fileaa-container" [class.fileaa-compact]="!!fichaFileAA()">
-            @if (fichaFileAA()) {
+            @if (fichaFileAA() && !isComercial()) {
               <p-tabs [value]="fichaAATab()" (valueChange)="setFichaAATab($event)" class="ficha-aa-subtabs">
                 <p-tablist>
                   <p-tab value="ficha">Ficha AA</p-tab>
@@ -809,7 +809,7 @@
               </p-tabs>
             }
 
-            @if (!fichaFileAA() || fichaAATab() === 'config') {
+            @if (!fichaFileAA() || isComercial() || fichaAATab() === 'config') {
             <div class="ficha-aa-intro">
               <p>
                 La Ficha AA sustituye la tabla en Word: encabezado con nombre del viaje, fechas y noches, y los datos
@@ -1193,8 +1193,20 @@
                 }
               </div>
             } @else {
-              <div class="ficha-aa-blocked-msg">
-                Esta Ficha AA ya fue generada. El rol Comercial no puede editarla.
+              <div class="ficha-aa-blocked">
+                <div class="ficha-aa-blocked-msg">
+                  Esta Ficha AA ya fue generada. Comercial no puede ver ni editar la tabla.
+                  Puede regenerarla con los datos de arriba; se pedirá confirmación porque la ficha actual dejará de usarse.
+                </div>
+                <div class="ficha-aa-actions">
+                  <p-button
+                    label="Regenerar Ficha AA"
+                    icon="pi pi-refresh"
+                    severity="warn"
+                    [loading]="saving()"
+                    (onClick)="generateFileAA()"
+                  />
+                </div>
               </div>
             }
 

@@ -719,7 +719,7 @@ export class QuotationDetail implements OnInit {
     const fichaTab = this.route.snapshot.queryParamMap.get('fichaTab');
     if (fichaTab === 'ficha' || fichaTab === 'config') {
       this.fichaTabRestoredFromUrl = true;
-      this.fichaAATab.set(fichaTab);
+      this.fichaAATab.set(this.isComercial() && fichaTab === 'ficha' ? 'config' : fichaTab);
     }
 
     const version = (this.route.snapshot.queryParamMap.get('version') || '').trim();
@@ -3557,6 +3557,7 @@ export class QuotationDetail implements OnInit {
   }
 
   setFichaAATab(value: unknown): void {
+    if (this.isComercial() && value === 'ficha') return;
     if (value === 'ficha' || value === 'config') {
       this.fichaAATab.set(value);
       this.syncFichaTabToRoute(value);
@@ -3584,6 +3585,7 @@ export class QuotationDetail implements OnInit {
 
   /** Persiste checklist en `FileAA.observations` y lo quita de filas de detalle. */
   private syncFichaChecklistToFicha(): void {
+    if (this.fichaAABlockedForComercial()) return;
     const ficha = this.fichaFileAA();
     if (ficha) this.applyChecklistToFicha(ficha);
   }
@@ -4089,9 +4091,11 @@ export class QuotationDetail implements OnInit {
         this.fichaFileAA.set(loaded);
         this.syncFichaVisibleDetailsList();
         this.hydrateChecklistFromFicha(loaded);
-        this.applyChecklistToFicha(loaded);
+        if (!this.isComercial()) this.applyChecklistToFicha(loaded);
         this.hydrateFichaFreeTextDrafts(loaded);
-        if (!this.fichaTabRestoredFromUrl) {
+        if (this.isComercial()) {
+          this.fichaAATab.set('config');
+        } else if (!this.fichaTabRestoredFromUrl) {
           this.fichaAATab.set('ficha');
         }
         // Para operaciones, al entrar con Ficha AA existente abrir directamente ese tab.
@@ -7152,7 +7156,28 @@ export class QuotationDetail implements OnInit {
   }
 
   generateFileAA(): void {
+    if (this.fichaAABlockedForComercial()) {
+      this.confirmationService.confirm({
+        header: 'Regenerar Ficha AA',
+        message:
+          'Se creará una ficha nueva con el itinerario y los datos de esta pantalla. ' +
+          'La ficha actual dejará de estar activa y se perderán los cambios hechos en ella ' +
+          '(precios, reservas, observaciones y uniones). ' +
+          'Si ya hay un Carnet de Route, seguirá ligado a la ficha anterior.',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Regenerar',
+        rejectLabel: 'Cancelar',
+        acceptButtonStyleClass: 'p-button-warn',
+        accept: () => this.submitGenerateFileAA(),
+      });
+      return;
+    }
+    this.submitGenerateFileAA();
+  }
+
+  private submitGenerateFileAA(): void {
     const q = this.quotation()!;
+    const replacing = !!this.fichaFileAA();
     const errs = this.validateFichaClient(q);
     if (errs.length) {
       this.messageService.add({
@@ -7177,11 +7202,16 @@ export class QuotationDetail implements OnInit {
         this.hydrateChecklistFromFicha(generated);
         this.hydrateFichaFreeTextDrafts(generated);
         this.fichaObservationsDraft.set((generated.observations ?? '').toString());
-        this.fichaAATab.set('ficha');
+        const comercial = this.isComercial();
+        this.fichaAATab.set(comercial ? 'config' : 'ficha');
         this.messageService.add({
           severity: 'success',
-          summary: 'Ficha AA generada',
-          detail: 'Tabla de servicios lista. Puede marcar confirmado, reservado y precios.',
+          summary: comercial && replacing ? 'Ficha AA regenerada' : 'Ficha AA generada',
+          detail: comercial
+            ? replacing
+              ? 'La ficha anterior quedó inactiva. Comercial no puede editar la tabla.'
+              : 'Quedó generada. Comercial no puede editar la tabla.'
+            : 'Tabla de servicios lista. Puede marcar confirmado, reservado y precios.',
         });
         this.load(q.id);
       },
