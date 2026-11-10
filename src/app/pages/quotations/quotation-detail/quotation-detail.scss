@@ -173,6 +173,31 @@
       font-size: 0.65rem;
     }
 
+    .version-notes-head {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .version-notes-edit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.4rem;
+      height: 1.4rem;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--p-text-muted-color);
+      cursor: pointer;
+
+      &:hover {
+        color: var(--p-text-color);
+        background: var(--p-content-hover-background);
+      }
+    }
+
     .version-notes-text {
       color: var(--p-text-color);
       font-weight: 500;
@@ -180,6 +205,20 @@
       line-height: 1.45;
       white-space: pre-wrap;
       word-break: break-word;
+    }
+
+    .version-notes-empty {
+      color: var(--p-text-muted-color);
+      font-size: 0.8rem;
+    }
+
+    .version-notes-input {
+      font-size: 0.85rem;
+    }
+
+    .version-notes-actions {
+      display: flex;
+      gap: 0.35rem;
     }
 
     .header-actions {

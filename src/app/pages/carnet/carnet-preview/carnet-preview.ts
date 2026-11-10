@@ -52,12 +52,12 @@ export class CarnetPreview {
   readonly tab = signal<DigitalTab>('organisation');
   readonly recommendationTab = signal<'activities' | 'restaurants'>('activities');
   readonly scores = [1, 2, 3, 4, 5];
-  readonly tabs: { id: DigitalTab; label: string }[] = [
-    { id: 'organisation', label: 'Organisation du voyage' },
-    { id: 'practical', label: 'Informations pratiques' },
-    { id: 'routes', label: 'Les trajets' },
-    { id: 'recommendations', label: 'Recommandations' },
-    { id: 'questionnaire', label: 'Questionnaire' },
+  readonly tabs: { id: DigitalTab; label: string; short: string }[] = [
+    { id: 'organisation', label: 'Organisation du voyage', short: 'Organisation' },
+    { id: 'practical', label: 'Informations pratiques', short: 'Pratique' },
+    { id: 'routes', label: 'Les trajets', short: 'Trajets' },
+    { id: 'recommendations', label: 'Recommandations', short: 'Conseils' },
+    { id: 'questionnaire', label: 'Questionnaire', short: 'Questionnaire' },
   ];
 
   preview(): PreviewModel {

@@ -285,6 +285,9 @@ export class QuotationDetail implements OnInit {
 
   // Versión seleccionada para ver
   selectedVersionId = signal<string | null>(null);
+  editingVersionNotes = signal(false);
+  savingVersionNotes = signal(false);
+  versionNotesDraft = '';
   selectedVersion = computed(() => {
     const q = this.quotation();
     if (!q) return null;
@@ -888,6 +891,7 @@ export class QuotationDetail implements OnInit {
   }
 
   load(id: string) {
+    this.editingVersionNotes.set(false);
     this.loading.set(true);
     const prevVersionId = this.selectedVersionId();
     this.quotationService.getById(id).subscribe({
@@ -1469,6 +1473,53 @@ export class QuotationDetail implements OnInit {
     });
   }
 
+  startEditVersionNotes() {
+    const version = this.selectedVersion();
+    if (!version) return;
+    this.versionNotesDraft = version.notes?.trim() ?? '';
+    this.editingVersionNotes.set(true);
+  }
+
+  cancelEditVersionNotes() {
+    this.editingVersionNotes.set(false);
+  }
+
+  saveVersionNotes() {
+    const q = this.quotation();
+    const version = this.selectedVersion();
+    if (!q || !version) return;
+    const notes = this.versionNotesDraft.trim() || null;
+    this.savingVersionNotes.set(true);
+    this.quotationService.updateVersionNotes(q.id, version.id, notes).subscribe({
+      next: (updated) => {
+        this.quotation.update((current) => {
+          if (!current) return current;
+          const versions = (current.versions ?? []).map((item) =>
+            item.id === updated.id ? { ...item, notes: updated.notes } : item,
+          );
+          const currentVersion =
+            current.current_version?.id === updated.id
+              ? { ...current.current_version, notes: updated.notes }
+              : current.current_version;
+          return { ...current, versions, current_version: currentVersion };
+        });
+        this.savingVersionNotes.set(false);
+        this.editingVersionNotes.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Nota de la versión actualizada',
+        });
+      },
+      error: (err) => {
+        this.savingVersionNotes.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: apiErrorSummary(err, 'No se pudo guardar la nota'),
+        });
+      },
+    });
+  }
+
   submitNewVersion() {
     const q = this.quotation()!;
     const sourceVersionId = this.selectedVersionId() ?? undefined;
@@ -1623,6 +1674,7 @@ export class QuotationDetail implements OnInit {
         ? versionId
         : versionId?.value ?? versionId?.id ?? null;
 
+    this.editingVersionNotes.set(false);
     this.selectedVersionId.set(normalizedId);
     this.syncVersionToRoute(normalizedId);
     const q = this.quotation()!;

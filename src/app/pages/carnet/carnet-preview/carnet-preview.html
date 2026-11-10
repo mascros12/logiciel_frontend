@@ -36,20 +36,24 @@
     </section>
   }
 
-  <div class="carnet-tabs" role="tablist" aria-label="Carnet de route">
-    @for (item of tabs; track item.id) {
-      <button
-        type="button"
-        role="tab"
-        class="carnet-tabs__tab"
-        [class.is-active]="tab() === item.id"
-        [attr.aria-selected]="tab() === item.id"
-        (click)="selectTab(item.id)"
-      >
-        {{ item.label }}
-      </button>
-    }
-  </div>
+  <nav class="carnet-nav" aria-label="Sections du carnet">
+    <p class="carnet-nav__hint">Sections du carnet</p>
+    <div class="carnet-tabs" role="tablist">
+      @for (item of tabs; track item.id) {
+        <button
+          type="button"
+          role="tab"
+          class="carnet-tabs__tab"
+          [class.is-active]="tab() === item.id"
+          [attr.aria-selected]="tab() === item.id"
+          (click)="selectTab(item.id)"
+        >
+          <span class="carnet-tabs__full">{{ item.label }}</span>
+          <span class="carnet-tabs__short">{{ item.short }}</span>
+        </button>
+      }
+    </div>
+  </nav>
 
   @switch (tab()) {
     @case ('organisation') {

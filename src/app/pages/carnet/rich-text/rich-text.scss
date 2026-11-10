@@ -1,5 +1,10 @@
 :host {
   display: block;
+  overflow-wrap: anywhere;
+}
+
+:host :is(img, table, video) {
+  max-width: 100%;
 }
 
 .rich-text__title {

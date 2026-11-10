@@ -50,13 +50,26 @@
 }
 
 .recommendation-section__button {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
+  padding: 0.35rem 0.85rem;
   background: #030c3d;
   color: #fff;
   text-decoration: none;
   font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .recommendation-section__item {
+    padding: 0.85rem;
+  }
+
+  .recommendation-section__button {
+    flex: 1 1 8rem;
+  }
 }
 
 .tone-red {

@@ -124,6 +124,13 @@ export class QuotationService {
     );
   }
 
+  updateVersionNotes(quotationId: string, versionId: string, notes: string | null) {
+    return this.http.patch<QuotationVersion>(
+      `${this.url}/${quotationId}/versions/${versionId}`,
+      { notes },
+    );
+  }
+
   deleteVersion(quotationId: string, versionId: string) {
     return this.http.delete<void>(`${this.url}/${quotationId}/versions/${versionId}`);
   }

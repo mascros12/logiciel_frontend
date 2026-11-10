@@ -133,12 +133,53 @@
                 Creador de esta versión:
                 <strong>{{ sv.created_by_name?.trim() || '—' }}</strong>
               </p>
-              @if (sv.notes?.trim()) {
-                <p class="version-notes-hint">
+              <div class="version-notes-hint">
+                <div class="version-notes-head">
                   <span class="version-notes-label">Nota al crear la versión</span>
+                  @if (!editingVersionNotes()) {
+                    <button
+                      type="button"
+                      class="version-notes-edit"
+                      aria-label="Editar nota"
+                      pTooltip="Editar nota"
+                      tooltipPosition="bottom"
+                      (click)="startEditVersionNotes()"
+                    >
+                      <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
+                  }
+                </div>
+                @if (editingVersionNotes()) {
+                  <textarea
+                    pInputTextarea
+                    class="w-full version-notes-input"
+                    rows="3"
+                    [(ngModel)]="versionNotesDraft"
+                    [disabled]="savingVersionNotes()"
+                    placeholder="Ej: Cambio de hotel en San José"
+                  ></textarea>
+                  <div class="version-notes-actions">
+                    <p-button
+                      label="Guardar"
+                      size="small"
+                      icon="pi pi-check"
+                      [loading]="savingVersionNotes()"
+                      (onClick)="saveVersionNotes()"
+                    />
+                    <p-button
+                      label="Cancelar"
+                      size="small"
+                      [text]="true"
+                      [disabled]="savingVersionNotes()"
+                      (onClick)="cancelEditVersionNotes()"
+                    />
+                  </div>
+                } @else if (sv.notes?.trim()) {
                   <span class="version-notes-text">{{ sv.notes!.trim() }}</span>
-                </p>
-              }
+                } @else {
+                  <span class="version-notes-empty">Sin nota</span>
+                }
+              </div>
             }
           </div>
 

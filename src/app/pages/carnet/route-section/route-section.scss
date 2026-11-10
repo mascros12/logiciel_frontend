@@ -48,6 +48,48 @@
   font-size: 0.78rem;
 }
 
+@media (max-width: 720px) {
+  .routes {
+    padding: 0.85rem;
+  }
+
+  .routes__table,
+  .routes__table tbody,
+  .routes__table tr,
+  .routes__table td {
+    display: block;
+    width: auto;
+  }
+
+  .routes__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .routes__table tr {
+    padding: 0.35rem 0 0.7rem;
+    border-bottom: 1px solid #e4e7ef;
+  }
+
+  .routes__table td {
+    border: 0;
+    padding: 0.2rem 0;
+    overflow-wrap: anywhere;
+  }
+
+  .routes__table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.1rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #5c647a;
+  }
+}
+
 .routes__detail h3,
 .routes__places,
 .routes__instructions {
