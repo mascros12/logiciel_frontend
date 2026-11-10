@@ -23,6 +23,7 @@ export interface ContentDraft {
 export interface ClassificationDraft {
   capacity_type: string;
   room_class: string;
+  included_meals: string[];
 }
 
 const TEXT_FIELDS = ['short_description', 'description', 'recommendation'] as const;
@@ -152,7 +153,14 @@ export function buildClassificationWrite(
   if (previousClass !== nextClass) {
     body.room_class = nextClass || null;
   }
+  if (mealKey(before.included_meals) !== mealKey(after.included_meals)) {
+    body.included_meals = [...after.included_meals] as RoomClassificationWrite['included_meals'];
+  }
   return Object.keys(body).length > 0 ? body : null;
+}
+
+function mealKey(meals: string[]): string {
+  return [...meals].sort().join(',');
 }
 
 function localeWrite(

@@ -42,6 +42,17 @@
   </header>
 
   <div class="detail-body">
+    <app-catalog-contact-form
+      entityType="hotels"
+      [entityId]="item.id"
+      [phone]="item.phone"
+      [email]="item.email"
+      [zoneId]="item.zone_id"
+      [zoneName]="item.zone_name"
+      [latitude]="item.latitude"
+      [longitude]="item.longitude"
+      (saved)="onContactSaved($event)"
+    />
     <app-content-editor
       entityType="hotels"
       [entityId]="item.id"

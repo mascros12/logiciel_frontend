@@ -7,6 +7,7 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
@@ -31,6 +32,7 @@ import { ContentEnrichAction } from '../content-enrich-action/content-enrich-act
     ButtonModule,
     InputTextModule,
     SelectModule,
+    MultiSelectModule,
     SkeletonModule,
     ToastModule,
     TooltipModule,
@@ -50,6 +52,11 @@ export class RoomContentPage implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   readonly capacityOptions = CAPACITY_OPTIONS;
+  readonly mealOptions = [
+    { label: 'Desayuno', value: 'breakfast' },
+    { label: 'Almuerzo', value: 'lunch' },
+    { label: 'Cena', value: 'dinner' },
+  ];
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -58,9 +65,14 @@ export class RoomContentPage implements OnInit {
   readonly classification = this.fb.nonNullable.group({
     capacity_type: this.fb.nonNullable.control('unknown'),
     room_class: this.fb.nonNullable.control('', Validators.maxLength(151)),
+    included_meals: this.fb.nonNullable.control<string[]>([]),
   });
 
-  private baseline: ClassificationDraft = { capacity_type: 'unknown', room_class: '' };
+  private baseline: ClassificationDraft = {
+    capacity_type: 'unknown',
+    room_class: '',
+    included_meals: [],
+  };
 
   ngOnInit(): void {
     this.route.paramMap.pipe(
@@ -83,7 +95,7 @@ export class RoomContentPage implements OnInit {
       takeUntilDestroyed(this.destroyRef),
     ).subscribe((room) => {
       this.room.set(room);
-      if (room) this.setClassification(room.capacity_type ?? 'unknown', room.room_class ?? '');
+      if (room) this.setClassification(room);
       this.loading.set(false);
     });
   }
@@ -105,11 +117,12 @@ export class RoomContentPage implements OnInit {
               ...current,
               capacity_type: view.capacity_type,
               room_class: view.room_class,
+              included_meals: view.included_meals,
               catalog_complete: quality.catalog_complete,
               missing_fields: quality.missing_fields,
             }
           : current);
-        this.setClassification(view.capacity_type ?? 'unknown', view.room_class ?? '');
+        this.setClassification(view);
         this.saving.set(false);
         this.messages.add({ severity: 'success', summary: 'Clasificación guardada' });
       },
@@ -138,12 +151,20 @@ export class RoomContentPage implements OnInit {
     this.service.getRoom(current.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((fresh) => {
       if (!fresh) return;
       this.room.set({ ...current, ...fresh, content: current.content });
-      this.setClassification(fresh.capacity_type ?? 'unknown', fresh.room_class ?? '');
+      this.setClassification(fresh);
     });
   }
 
-  private setClassification(capacityType: string, roomClass: string): void {
-    this.classification.setValue({ capacity_type: capacityType, room_class: roomClass });
+  private setClassification(source: {
+    capacity_type: string | null;
+    room_class: string | null;
+    included_meals: string[];
+  }): void {
+    this.classification.setValue({
+      capacity_type: source.capacity_type ?? 'unknown',
+      room_class: source.room_class ?? '',
+      included_meals: [...source.included_meals],
+    });
     this.baseline = this.classification.getRawValue();
   }
 }

@@ -6,6 +6,7 @@ import {
   ActivityContentListResponse,
   BulkEnqueueResponse,
   BulkPreview,
+  CatalogContactWrite,
   HotelContentDetail,
   HotelContentListResponse,
   ProductContentView,
@@ -79,6 +80,17 @@ export class ProductContentService {
   saveRoomClassification(roomId: string, body: RoomClassificationWrite) {
     return this.http.put<RoomClassificationView>(
       `${this.url}/rooms/${roomId}/classification`,
+      body,
+    );
+  }
+
+  saveCatalogContact(
+    entity: 'hotels' | 'activities',
+    id: string,
+    body: CatalogContactWrite,
+  ) {
+    return this.http.put<HotelContentDetail | ActivityContentDetail>(
+      `${this.url}/${entity}/${id}/contact`,
       body,
     );
   }

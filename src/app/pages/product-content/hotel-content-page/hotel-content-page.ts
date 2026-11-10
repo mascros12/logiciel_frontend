@@ -23,6 +23,7 @@ import {
 } from '../../../core/utils/product-content-labels';
 import { ContentEditor } from '../content-editor/content-editor';
 import { ContentEnrichAction } from '../content-enrich-action/content-enrich-action';
+import { CatalogContactForm, CatalogContactSaved } from '../catalog-contact-form/catalog-contact-form';
 import { RoomContentSummary } from '../../../core/models/product-content.model';
 
 @Component({
@@ -38,6 +39,7 @@ import { RoomContentSummary } from '../../../core/models/product-content.model';
     RichTextPipe,
     ContentEditor,
     ContentEnrichAction,
+    CatalogContactForm,
   ],
   templateUrl: './hotel-content-page.html',
   styleUrls: ['../content-shared.scss'],
@@ -113,6 +115,10 @@ export class HotelContentPage implements OnInit {
 
   missingTip(fields: string[]): string {
     return `Falta: ${missingFieldsLabel(fields)}`;
+  }
+
+  onContactSaved(detail: CatalogContactSaved): void {
+    this.hotel.update((current) => current ? { ...current, ...detail } : current);
   }
 
   visibleRooms(rooms: RoomContentSummary[]): RoomContentSummary[] {

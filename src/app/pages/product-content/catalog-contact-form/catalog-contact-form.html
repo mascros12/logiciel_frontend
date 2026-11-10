@@ -1,0 +1,55 @@
+<p-toast />
+
+<section class="section-card">
+  <h3 class="section-title">Contacto del catálogo</h3>
+  <p class="field-hint">
+    Estos datos se guardan en el hotel o la actividad. Las coordenadas van juntas y con 5 a 7 decimales.
+  </p>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="field-grid">
+      <div class="field">
+        <label for="catalog_phone">Teléfono</label>
+        <input pInputText id="catalog_phone" formControlName="phone" class="w-full" maxlength="25" />
+      </div>
+      <div class="field">
+        <label for="catalog_email">Correo</label>
+        <input pInputText id="catalog_email" formControlName="email" class="w-full" maxlength="255" type="email" />
+      </div>
+      <div class="field">
+        <label for="catalog_zone">Zona</label>
+        <p-select
+          inputId="catalog_zone"
+          formControlName="zone_id"
+          [options]="zoneOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [filter]="true"
+          filterBy="label"
+          filterPlaceholder="Buscar"
+          [resetFilterOnHide]="true"
+          [showClear]="true"
+          placeholder="Sin zona"
+          appendTo="body"
+          styleClass="w-full"
+        />
+      </div>
+      <div class="field">
+        <label for="catalog_latitude">Latitud</label>
+        <input pInputText id="catalog_latitude" formControlName="latitude" class="w-full" inputmode="decimal" />
+      </div>
+      <div class="field">
+        <label for="catalog_longitude">Longitud</label>
+        <input pInputText id="catalog_longitude" formControlName="longitude" class="w-full" inputmode="decimal" />
+      </div>
+    </div>
+    <div class="actions">
+      <p-button
+        type="submit"
+        label="Guardar contacto"
+        icon="pi pi-check"
+        [loading]="saving()"
+        [disabled]="saving() || !hasChanges()"
+      />
+    </div>
+  </form>
+</section>

@@ -20,13 +20,22 @@ import {
 } from '../../../core/utils/product-content-labels';
 import { ContentEditor } from '../content-editor/content-editor';
 import { ContentEnrichAction } from '../content-enrich-action/content-enrich-action';
+import { CatalogContactForm, CatalogContactSaved } from '../catalog-contact-form/catalog-contact-form';
 
 type CatalogKind = 'activities' | 'vehicles';
 
 @Component({
   selector: 'app-catalog-content-page',
   standalone: true,
-  imports: [RouterLink, SkeletonModule, TooltipModule, RichTextPipe, ContentEditor, ContentEnrichAction],
+  imports: [
+    RouterLink,
+    SkeletonModule,
+    TooltipModule,
+    RichTextPipe,
+    ContentEditor,
+    ContentEnrichAction,
+    CatalogContactForm,
+  ],
   templateUrl: './catalog-content-page.html',
   styleUrls: ['../content-shared.scss'],
 })
@@ -114,6 +123,10 @@ export class CatalogContentPage implements OnInit {
 
   missingTip(fields: string[]): string {
     return `Falta: ${missingFieldsLabel(fields)}`;
+  }
+
+  onContactSaved(detail: CatalogContactSaved): void {
+    this.activity.update((current) => current ? { ...current, ...detail } : current);
   }
 
   refresh(): void {

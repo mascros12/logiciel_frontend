@@ -97,12 +97,18 @@ export interface RoomContentSummary {
   missing_fields: string[];
 }
 
+export type MealInclusion = 'breakfast' | 'lunch' | 'dinner';
+
 export interface HotelContentDetail {
   id: string;
   name: string;
   province: string | null;
   category: string | null;
   address: string | null;
+  phone: string | null;
+  email: string | null;
+  zone_id: string | null;
+  zone_name: string | null;
   longitude: string | null;
   latitude: string | null;
   content: ProductContentView | null;
@@ -121,6 +127,7 @@ export interface RoomContentDetail {
   hotel_name: string;
   capacity_type: CapacityType | null;
   room_class: string | null;
+  included_meals: MealInclusion[];
   content: ProductContentView | null;
   pending_run: EnrichmentRunSummary | null;
   latest_run: EnrichmentRunSummary | null;
@@ -136,6 +143,7 @@ export interface RoomClassificationView {
   hotel_name: string;
   capacity_type: CapacityType | null;
   room_class: string | null;
+  included_meals: MealInclusion[];
 }
 
 export interface ActivityContentDetail {
@@ -145,6 +153,10 @@ export interface ActivityContentDetail {
   province: string | null;
   category: string | null;
   address: string | null;
+  phone: string | null;
+  email: string | null;
+  zone_id: string | null;
+  zone_name: string | null;
   longitude: string | null;
   latitude: string | null;
   content: ProductContentView | null;
@@ -211,4 +223,13 @@ export interface ProductContentWrite {
 export interface RoomClassificationWrite {
   capacity_type?: CapacityType | null;
   room_class?: string | null;
+  included_meals?: MealInclusion[] | null;
+}
+
+export interface CatalogContactWrite {
+  phone?: string | null;
+  email?: string | null;
+  zone_id?: string | null;
+  longitude?: string | null;
+  latitude?: string | null;
 }

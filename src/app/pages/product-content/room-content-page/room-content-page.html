@@ -60,6 +60,19 @@
             <label for="room_class">Clase</label>
             <input pInputText id="room_class" formControlName="room_class" class="w-full" maxlength="151" />
           </div>
+          <div class="field">
+            <label for="included_meals">Incluye</label>
+            <p-multiSelect
+              inputId="included_meals"
+              formControlName="included_meals"
+              [options]="mealOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Ninguna"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </div>
         </div>
         <div class="actions">
           <p-button
