@@ -10,9 +10,14 @@
 }
 
 .recommendation-section h3 {
-  margin: 1rem 0 0.4rem;
-  font-size: 1rem;
+  margin: 1.15rem 0 0.7rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: #030c3d;
+  border-bottom: 3px solid #fcca09;
+  display: inline-block;
+  padding-bottom: 0.15rem;
 }
 
 .recommendation-section__intro {
@@ -20,28 +25,59 @@
 }
 
 .recommendation-section__item {
-  margin: 0.6rem 0 1rem;
+  margin: 0.75rem 0;
+  padding: 0.95rem 1rem 1rem 1.05rem;
+  background: #fff;
+  border: 1px solid #e7eaf2;
+  border-left: 4px solid #030c3d;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(3, 12, 61, 0.08);
 }
 
 .recommendation-section__item h4 {
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.35rem;
 }
 
 .recommendation-section__item p {
-  margin: 0.15rem 0;
+  margin: 0.2rem 0;
+}
+
+.recommendation-section__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.recommendation-section__button {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: #030c3d;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.tone-red {
+  border-left-color: #9b1b1b;
+}
+
+.tone-purple {
+  border-left-color: #5c2d91;
 }
 
 .tone-black,
-.tone-black a {
+.tone-black a:not(.recommendation-section__button) {
   color: #111;
 }
 
 .tone-red,
-.tone-red a {
+.tone-red a:not(.recommendation-section__button) {
   color: #9b1b1b;
 }
 
 .tone-purple,
-.tone-purple a {
+.tone-purple a:not(.recommendation-section__button) {
   color: #5c2d91;
 }

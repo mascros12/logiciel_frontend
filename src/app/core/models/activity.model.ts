@@ -13,7 +13,7 @@ export interface Activity {
   name: string;
   name_es: string;
   file_aa_name?: string | null;
-  province: string;
+  province: string | null;
   zone_id?: string | null;
   address: string | null;
   phone?: string | null;
@@ -43,7 +43,7 @@ export interface ActivityCreate {
   name: string;
   name_es: string;
   file_aa_name?: string | null;
-  province: string;
+  province: string | null;
   zone_id?: string | null;
   address?: string;
   phone?: string | null;

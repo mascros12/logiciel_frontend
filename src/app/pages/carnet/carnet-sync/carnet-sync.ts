@@ -10,7 +10,6 @@ import {
   SyncProposal,
 } from '../../../core/models/carnet.model';
 import { acceptIds, syncKindLabel } from '../../../core/utils/carnet-sync';
-import { apiUrl } from '../../../core/config/api.config';
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
 
 @Component({
@@ -40,10 +39,6 @@ export class CarnetSyncPanel implements OnInit {
 
   ngOnInit(): void {
     this.load();
-  }
-
-  pageMediaBase(): string {
-    return apiUrl(`carnets/${this.carnetId()}/media`);
   }
 
   load(): void {

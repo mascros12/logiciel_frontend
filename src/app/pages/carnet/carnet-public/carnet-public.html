@@ -26,11 +26,8 @@
     <app-carnet-preview
       [document]="document()!"
       [mode]="'published'"
-      [publicMediaBase]="mediaBase()"
+      questionnaireMode="public"
+      [questionnaireKey]="token()"
     />
-    <section class="carnet-public__survey">
-      <h2>Questionnaire</h2>
-      <app-questionnaire-form [mode]="'public'" [token]="token()" />
-    </section>
   }
 </main>

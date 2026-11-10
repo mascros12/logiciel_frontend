@@ -1,27 +1,32 @@
-import { Component, input } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  PreviewDay,
+  PreviewEntry,
   PreviewModel,
   blockTitle,
   dateOf,
   entriesOf,
+  hideFromDayBreakdown,
   pointsOf,
   itineraryRoutes,
-  pageAssetId,
   previewOf,
   rentalNotices,
   recommendationLines,
   RESTAURANTS_SECTION_ID,
   roomsOf,
   textOf,
+  transportDayCounts,
 } from '../../../core/utils/carnet-document';
 import { CarnetBlock, CarnetDocument } from '../../../core/models/carnet.model';
 import { NavigationView, navigationOf } from '../../../core/utils/carnet-navigation';
-import { FullPageImage } from '../full-page-image/full-page-image';
 import { OrganisationTable } from '../organisation-table/organisation-table';
+import { QuestionnaireForm } from '../questionnaire-form/questionnaire-form';
 import { RecommendationSection } from '../recommendation-section/recommendation-section';
 import { RichText } from '../rich-text/rich-text';
 import { RouteSection } from '../route-section/route-section';
+
+type DigitalTab = 'organisation' | 'practical' | 'routes' | 'recommendations' | 'questionnaire';
 
 @Component({
   selector: 'app-carnet-preview',
@@ -29,9 +34,9 @@ import { RouteSection } from '../route-section/route-section';
   imports: [
     NgTemplateOutlet,
     OrganisationTable,
-    FullPageImage,
     RouteSection,
     RecommendationSection,
+    QuestionnaireForm,
     RichText,
   ],
   templateUrl: './carnet-preview.html',
@@ -42,11 +47,102 @@ export class CarnetPreview {
   readonly rentalNotices = rentalNotices;
   readonly unsaved = input(false);
   readonly mode = input<'draft' | 'published'>('draft');
-  readonly publicMediaBase = input<string | null>(null);
-  readonly privateMediaBase = input<string | null>(null);
+  readonly questionnaireMode = input<'public' | 'staff' | null>(null);
+  readonly questionnaireKey = input('');
+  readonly tab = signal<DigitalTab>('organisation');
+  readonly recommendationTab = signal<'activities' | 'restaurants'>('activities');
+  readonly scores = [1, 2, 3, 4, 5];
+  readonly tabs: { id: DigitalTab; label: string }[] = [
+    { id: 'organisation', label: 'Organisation du voyage' },
+    { id: 'practical', label: 'Informations pratiques' },
+    { id: 'routes', label: 'Les trajets' },
+    { id: 'recommendations', label: 'Recommandations' },
+    { id: 'questionnaire', label: 'Questionnaire' },
+  ];
 
   preview(): PreviewModel {
     return previewOf(this.document());
+  }
+
+  organisationBlock(): CarnetBlock | null {
+    return [...this.preview().lead, ...this.preview().rest]
+      .find((block) => block.section_kind === 'itinerary_summary') ?? null;
+  }
+
+  selectTab(tab: DigitalTab): void {
+    this.tab.set(tab);
+  }
+
+  practicalView(): { body: string; sections: CarnetBlock[] } {
+    const pool = [...this.preview().lead, ...this.preview().rest];
+    const parent = pool.find((block) =>
+      /informations pratiques/i.test(this.text(block, 'heading') || this.text(block, 'title')),
+    );
+    if (!parent) return { body: '', sections: [] };
+    const children = pool.filter((block) => block.parent_id === parent.id);
+    if (!children.length) return { body: '', sections: [parent] };
+    return { body: this.text(parent, 'body'), sections: children };
+  }
+
+  routeBlock(): CarnetBlock | null {
+    return [...this.preview().lead, ...this.preview().rest]
+      .find((block) => block.section_kind === 'route_collection') ?? null;
+  }
+
+  activityBlock(): CarnetBlock | null {
+    return [...this.preview().lead, ...this.preview().rest].find((block) =>
+      block.section_kind === 'regional_recommendations'
+      && this.recommendationKind(block) !== 'restaurants',
+    ) ?? null;
+  }
+
+  restaurantBlock(): CarnetBlock | null {
+    return [...this.preview().lead, ...this.preview().rest]
+      .find((block) => this.recommendationKind(block) === 'restaurants' && this.isRecommendation(block))
+      ?? null;
+  }
+
+  shownEntries(day: PreviewDay): PreviewEntry[] {
+    const counts = transportDayCounts(this.document());
+    return day.entries.filter(
+      (entry) => !hideFromDayBreakdown(entry.block, counts.get(entry.block.id) ?? 0),
+    );
+  }
+
+  isToday(block: CarnetBlock): boolean {
+    const value = textOf(block.content, 'on_date').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return value === `${now.getFullYear()}-${month}-${day}`;
+  }
+
+  ratingGroups(): { title: string; labels: string[] }[] {
+    const found = { hotel: [] as string[], activity: [] as string[], vehicle: [] as string[] };
+    const seen = new Set<string>();
+    for (const day of this.preview().days) {
+      for (const entry of day.entries) {
+        const category = entry.block.type === 'hotel'
+          ? 'hotel'
+          : entry.block.type === 'activity'
+            ? 'activity'
+            : entry.block.type === 'transport'
+              ? 'vehicle'
+              : null;
+        const label = this.title(entry.block).trim();
+        if (!category || !label) continue;
+        const key = `${category}:${label.toLocaleLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        found[category].push(label);
+      }
+    }
+    return [
+      { title: 'Hôtels', labels: found.hotel },
+      { title: 'Activités', labels: found.activity },
+      { title: 'Véhicules', labels: found.vehicle },
+    ].filter((group) => group.labels.length > 0);
   }
 
   recommendationKind(block: CarnetBlock): 'activities' | 'restaurants' {
@@ -75,10 +171,6 @@ export class CarnetPreview {
 
   text(block: CarnetBlock, field: string): string {
     return textOf(block.content, field);
-  }
-
-  asset(block: CarnetBlock): string | null {
-    return pageAssetId(block);
   }
 
   date(block: CarnetBlock, field: string): string {

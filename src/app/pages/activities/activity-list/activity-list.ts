@@ -44,6 +44,7 @@ import {
   latitudeValidator,
   longitudeValidator,
 } from '../../../core/utils/coordinate.util';
+import { apiErrorSummary, validateForm, warnInvalidForm } from '../../../core/utils/form-validation.util';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
@@ -265,16 +266,31 @@ export class ActivityList implements OnInit {
   }
 
   submit() {
+    const messages = validateForm(this.form, {
+      name: 'Nombre',
+      name_es: 'Nombre en español',
+      phone: 'Teléfono',
+      longitude: 'Longitud',
+      latitude: 'Latitud',
+      net_adult_price: 'Precio neto adulto',
+      rack_adult_price: 'Precio rack adulto',
+      net_child_price: 'Precio neto niño',
+      rack_child_price: 'Precio rack niño',
+    });
     if (this.form.invalid) {
-      this.form.markAllAsTouched();
+      warnInvalidForm(this.messageService, messages);
       return;
     }
     this.saving.set(true);
   
     const raw = this.form.getRawValue();
     const id = this.editingId();
+    const province = raw.province != null && String(raw.province).trim() !== ''
+      ? raw.province
+      : null;
     const val = {
       ...raw,
+      province,
       provider:
         raw.provider != null && String(raw.provider).trim() !== ''
           ? String(raw.provider).trim()
@@ -299,7 +315,7 @@ export class ActivityList implements OnInit {
         this.saving.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: err.error?.detail ?? 'Error al guardar',
+          summary: apiErrorSummary(err, 'Error al guardar'),
         });
       },
     });
@@ -433,7 +449,7 @@ export class ActivityList implements OnInit {
         this.savingProviderEmail.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: err.error?.detail ?? 'Error al guardar el correo',
+          summary: apiErrorSummary(err, 'Error al guardar el correo'),
         });
       },
     });

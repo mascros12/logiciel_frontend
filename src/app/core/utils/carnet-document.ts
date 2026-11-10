@@ -1320,14 +1320,8 @@ export function formatDateFr(value: string | null | undefined): string {
   return `${Number(match[3])} ${month} ${match[1]}`;
 }
 
-export function organisationRows(document: CarnetDocument): OrganisationRow[] | null {
-  const marker = document.blocks.find(
-    (block) =>
-      block.section_kind === 'itinerary_summary' && block.visible && !block.removed,
-  );
-  if (!marker) return null;
-  const byId = new Map(document.blocks.map((block) => [block.id, block]));
-  const days = document.blocks
+export function organisationDays(document: CarnetDocument): CarnetBlock[] {
+  return document.blocks
     .filter((block) => block.type === 'day' && block.visible && !block.removed)
     .sort((left, right) => {
       const a = textOf(left.content, 'on_date');
@@ -1338,7 +1332,51 @@ export function organisationRows(document: CarnetDocument): OrganisationRow[] | 
       if (a === b) return left.position - right.position;
       return a < b ? -1 : 1;
     });
-  return days.map((day) => {
+}
+
+export function transportDayCounts(document: CarnetDocument): Map<string, number> {
+  const byId = new Map(document.blocks.map((block) => [block.id, block]));
+  const counts = new Map<string, number>();
+  for (const day of organisationDays(document)) {
+    const seen = new Set<string>();
+    for (const entry of entriesOf(day)) {
+      const block = byId.get(entry.block_id);
+      if (
+        !block
+        || block.type !== 'transport'
+        || seen.has(block.id)
+        || block.removed
+        || !block.visible
+      ) {
+        continue;
+      }
+      seen.add(block.id);
+      counts.set(block.id, (counts.get(block.id) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+export function isRentalTransport(block: CarnetBlock): boolean {
+  if (block.type !== 'transport') return false;
+  return foldLabel(textOf(block.content, 'service_type')) === 'vehiculo de alquiler';
+}
+
+export function hideFromDayBreakdown(block: CarnetBlock, dayCount: number): boolean {
+  return isRentalTransport(block)
+    || (block.type === 'transport' && (dayCount > 1 || dateValues(block).length > 1));
+}
+
+export function organisationRows(document: CarnetDocument): OrganisationRow[] | null {
+  const marker = document.blocks.find(
+    (block) =>
+      block.section_kind === 'itinerary_summary' && block.visible && !block.removed,
+  );
+  if (!marker) return null;
+  const byId = new Map(document.blocks.map((block) => [block.id, block]));
+  const spans = transportDayCounts(document);
+  const emitted = new Set<string>();
+  return organisationDays(document).map((day) => {
     const onDate = textOf(day.content, 'on_date') || null;
     const lodging: string[] = [];
     const included: string[] = [];
@@ -1354,8 +1392,17 @@ export function organisationRows(document: CarnetDocument): OrganisationRow[] | 
         seen.add(block.id);
         lodging.push(name);
       } else if (INCLUDED_ROLES.has(entry.role) && INCLUDED_TYPES.has(block.type)) {
+        const span = Math.max(spans.get(block.id) ?? 0, dateValues(block).length);
+        const repeated = block.type === 'transport' && span > 1;
+        const key = repeated
+          ? `${name}|${dateValues(block).join(',') || block.id}`
+          : block.id;
+        if (repeated) {
+          if (emitted.has(key)) continue;
+          emitted.add(key);
+        }
         seen.add(block.id);
-        included.push(name);
+        included.push(includedLabel(block, name, span));
       }
     }
     return {
@@ -1366,6 +1413,37 @@ export function organisationRows(document: CarnetDocument): OrganisationRow[] | 
       included,
     };
   });
+}
+
+function includedLabel(block: CarnetBlock, name: string, dayCount: number): string {
+  const extras: string[] = [];
+  const number = textOf(block.content, 'reservation_number').trim();
+  if (number) extras.push(`N° ${number}`);
+  const when = textOf(block.content, 'schedule').trim()
+    || textOf(block.content, 'departure_time').trim();
+  if (when) extras.push(when);
+  if (block.type === 'transport' && dayCount > 1) {
+    const span = transportSpanLabel(block);
+    if (span) extras.push(span);
+  }
+  return extras.length ? `${name} · ${extras.join(' · ')}` : name;
+}
+
+function transportSpanLabel(block: CarnetBlock): string {
+  const days = dateValues(block).filter(Boolean).sort();
+  if (days.length < 2) return '';
+  const start = formatDateFr(days[0]);
+  const end = formatDateFr(days[days.length - 1]);
+  return start && end ? `Du ${start} au ${end}` : '';
+}
+
+function dateValues(block: CarnetBlock): string[] {
+  const raw = block.content['dates'];
+  if (Array.isArray(raw)) return raw.filter((item) => typeof item === 'string');
+  if (raw && typeof raw === 'object' && Array.isArray((raw as { value?: unknown }).value)) {
+    return (raw as { value: unknown[] }).value.filter((item) => typeof item === 'string');
+  }
+  return [];
 }
 
 function checkedOut(block: CarnetBlock, onDate: string | null): boolean {
@@ -1405,24 +1483,18 @@ export function previewOf(document: CarnetDocument): PreviewModel {
     }
     days.push({ block, entries });
   }
-  const coverIndex = document.blocks.findIndex(
-    (block) => block.type === 'cover' && usable(block),
-  );
   const front: CarnetBlock[] = [];
   const lead: CarnetBlock[] = [];
   const rest: CarnetBlock[] = [];
   let itineraryStarted = false;
-  document.blocks.forEach((block, index) => {
+  document.blocks.forEach((block) => {
     if (block.type === 'day' && usable(block)) {
       itineraryStarted = true;
       return;
     }
     if (block.type === 'itinerary_route' || block.type === 'regional_recommendation') return;
+    if (block.type === 'full_page_image') return;
     if (!usable(block) || shown.has(block.id)) return;
-    if (block.type === 'full_page_image' && coverIndex >= 0 && index < coverIndex) {
-      front.push(block);
-      return;
-    }
     (itineraryStarted ? rest : lead).push(block);
   });
   const title = cover ? textOf(cover.content, 'title') : general ? textOf(general.content, 'trip_title') : '';

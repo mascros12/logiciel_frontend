@@ -4,14 +4,12 @@ import { ActivatedRoute } from '@angular/router';
 import { CarnetDocument } from '../../../core/models/carnet.model';
 import { CarnetPdfStyle, CarnetService } from '../../../core/services/carnet.service';
 import { documentFromPublic } from '../../../core/utils/carnet-document';
-import { apiUrl } from '../../../core/config/api.config';
 import { CarnetPreview } from '../carnet-preview/carnet-preview';
-import { QuestionnaireForm } from '../questionnaire-form/questionnaire-form';
 
 @Component({
   selector: 'app-carnet-public',
   standalone: true,
-  imports: [CarnetPreview, QuestionnaireForm],
+  imports: [CarnetPreview],
   templateUrl: './carnet-public.html',
   styleUrl: './carnet-public.scss',
 })
@@ -28,11 +26,6 @@ export class CarnetPublic implements OnInit, OnDestroy {
 
   token(): string {
     return this.route.snapshot.paramMap.get('token') ?? '';
-  }
-
-  mediaBase(): string {
-    const token = this.route.snapshot.paramMap.get('token') ?? '';
-    return apiUrl(`public/carnets/${encodeURIComponent(token)}/media`);
   }
 
   ngOnInit(): void {

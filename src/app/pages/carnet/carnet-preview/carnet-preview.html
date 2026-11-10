@@ -9,10 +9,6 @@
     }
   </p>
 
-  @for (block of preview().front; track block.id) {
-    <ng-container [ngTemplateOutlet]="plate" [ngTemplateOutletContext]="{ block: block }" />
-  }
-
   @if (preview().cover; as cover) {
     <header class="carnet-preview__cover">
       <p class="carnet-preview__kicker">Carnet de route</p>
@@ -40,100 +36,177 @@
     </section>
   }
 
-  @for (block of preview().lead; track block.id) {
-    @if (block.type === 'full_page_image') {
-      <ng-container [ngTemplateOutlet]="plate" [ngTemplateOutletContext]="{ block: block }" />
-    } @else if (block.section_kind === 'itinerary_summary') {
-      <app-organisation-table
-        [heading]="text(block, 'heading') || 'Organisation du voyage'"
-        [rows]="preview().organisation ?? []"
-        [notices]="rentalNotices(document())"
-      />
-    } @else if (block.section_kind === 'route_collection') {
-      @if (routeLines(block).length || text(block, 'body')) {
-        <app-route-section
-          [heading]="text(block, 'heading') || 'Les trajets'"
-          [body]="text(block, 'body')"
-          [rows]="routeLines(block)"
-        />
-      }
-    } @else if (isRecommendation(block)) {
-      @if (recommendationRows(block).length || text(block, 'body')) {
-        <app-recommendation-section
-          [heading]="text(block, 'heading') || (recommendationKind(block) === 'restaurants' ? 'Les restaurants conseillés' : 'Activités dans la région')"
-          [body]="text(block, 'body')"
-          [rows]="recommendationRows(block)"
-          [kind]="recommendationKind(block)"
-        />
-      }
-    } @else {
-      <article class="carnet-preview__card">
-        <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
-      </article>
+  <div class="carnet-tabs" role="tablist" aria-label="Carnet de route">
+    @for (item of tabs; track item.id) {
+      <button
+        type="button"
+        role="tab"
+        class="carnet-tabs__tab"
+        [class.is-active]="tab() === item.id"
+        [attr.aria-selected]="tab() === item.id"
+        (click)="selectTab(item.id)"
+      >
+        {{ item.label }}
+      </button>
     }
-  }
+  </div>
 
-  @for (day of preview().days; track day.block.id) {
-    <section class="carnet-preview__day">
-      <h2>{{ date(day.block, 'on_date') || 'Jour' }}</h2>
-      @if (text(day.block, 'title')) {
-        <p class="carnet-preview__day-title">{{ text(day.block, 'title') }}</p>
+  @switch (tab()) {
+    @case ('organisation') {
+      @if (organisationBlock(); as block) {
+        <app-organisation-table
+          [heading]="text(block, 'heading') || 'Organisation du voyage'"
+          [rows]="preview().organisation ?? []"
+          [notices]="rentalNotices(document())"
+        />
       }
-      @if (text(day.block, 'notes')) {
-        <p>{{ text(day.block, 'notes') }}</p>
-      }
-      @for (entry of day.entries; track entry.block.id) {
-        <article class="carnet-preview__card">
-          @if (entry.role === 'included') {
-            <p class="carnet-preview__badge">Inclus</p>
+      <div class="day-list">
+        @for (day of preview().days; track day.block.id) {
+          <details class="day" [open]="isToday(day.block)">
+            <summary>
+              <span>{{ date(day.block, 'on_date') || 'Jour' }}</span>
+              @if (text(day.block, 'title')) {
+                <span class="day__title">{{ text(day.block, 'title') }}</span>
+              }
+            </summary>
+            <div class="day__body">
+              @if (text(day.block, 'notes')) {
+                <p>{{ text(day.block, 'notes') }}</p>
+              }
+              @for (entry of shownEntries(day); track entry.block.id) {
+                <article class="carnet-preview__card">
+                  @if (entry.role === 'included') {
+                    <p class="carnet-preview__badge">Inclus</p>
+                  }
+                  <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: entry.block }" />
+                </article>
+              }
+              @if (!shownEntries(day).length && !text(day.block, 'notes')) {
+                <p class="day__empty">Aucun service ce jour-là.</p>
+              }
+            </div>
+          </details>
+        }
+      </div>
+    }
+    @case ('practical') {
+      @if (practicalView(); as practical) {
+        @if (!practical.sections.length) {
+          <p class="carnet-preview__empty">Aucune information pratique.</p>
+        } @else {
+          @if (practical.body) {
+            <article class="carnet-preview__card">
+              <app-rich-text [value]="practical.body" />
+            </article>
           }
-          <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: entry.block }" />
-        </article>
+          @for (block of practical.sections; track block.id) {
+            <article class="carnet-preview__card">
+              <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
+            </article>
+          }
+        }
       }
-    </section>
-  }
-
-  @for (block of preview().rest; track block.id) {
-    @if (block.type === 'full_page_image') {
-      <ng-container [ngTemplateOutlet]="plate" [ngTemplateOutletContext]="{ block: block }" />
-    } @else if (block.section_kind === 'itinerary_summary') {
-      <app-organisation-table
-        [heading]="text(block, 'heading') || 'Organisation du voyage'"
-        [rows]="preview().organisation ?? []"
-        [notices]="rentalNotices(document())"
-      />
-    } @else if (block.section_kind === 'route_collection') {
-      @if (routeLines(block).length || text(block, 'body')) {
+    }
+    @case ('routes') {
+      @if (routeBlock(); as block) {
         <app-route-section
           [heading]="text(block, 'heading') || 'Les trajets'"
           [body]="text(block, 'body')"
           [rows]="routeLines(block)"
         />
+      } @else {
+        <p class="carnet-preview__empty">Aucun trajet.</p>
       }
-    } @else if (isRecommendation(block)) {
-      @if (recommendationRows(block).length || text(block, 'body')) {
+    }
+    @case ('recommendations') {
+      <div class="carnet-tabs carnet-tabs--inner" role="tablist" aria-label="Recommandations">
+        <button
+          type="button"
+          role="tab"
+          class="carnet-tabs__tab"
+          [class.is-active]="recommendationTab() === 'activities'"
+          [attr.aria-selected]="recommendationTab() === 'activities'"
+          (click)="recommendationTab.set('activities')"
+        >
+          Activités
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="carnet-tabs__tab"
+          [class.is-active]="recommendationTab() === 'restaurants'"
+          [attr.aria-selected]="recommendationTab() === 'restaurants'"
+          (click)="recommendationTab.set('restaurants')"
+        >
+          Restaurants
+        </button>
+      </div>
+      @if (recommendationTab() === 'activities') {
+        @if (activityBlock(); as block) {
+          <app-recommendation-section
+            [heading]="text(block, 'heading') || 'Activités dans la région'"
+            [body]="text(block, 'body')"
+            [rows]="recommendationRows(block)"
+            kind="activities"
+          />
+        } @else {
+          <p class="carnet-preview__empty">Aucune activité recommandée.</p>
+        }
+      } @else if (restaurantBlock(); as block) {
         <app-recommendation-section
-          [heading]="text(block, 'heading') || (recommendationKind(block) === 'restaurants' ? 'Les restaurants conseillés' : 'Activités dans la région')"
+          [heading]="text(block, 'heading') || 'Les restaurants conseillés'"
           [body]="text(block, 'body')"
           [rows]="recommendationRows(block)"
-          [kind]="recommendationKind(block)"
+          kind="restaurants"
+        />
+      } @else {
+        <p class="carnet-preview__empty">Aucun restaurant recommandé.</p>
+      }
+    }
+    @case ('questionnaire') {
+      @if (!questionnaireMode() || !questionnaireKey()) {
+        <section class="rating">
+          <h2>Questionnaire</h2>
+          @if (!ratingGroups().length) {
+            <p class="carnet-preview__empty">Aucun service à noter.</p>
+          }
+          @for (group of ratingGroups(); track group.title) {
+            <h3>{{ group.title }}</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  @for (score of scores; track score) {
+                    <th>{{ score }}</th>
+                  }
+                  <th>Commentaire</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (label of group.labels; track label) {
+                  <tr>
+                    <td>{{ label }}</td>
+                    @for (score of scores; track score) {
+                      <td><span class="rating__box"></span></td>
+                    }
+                    <td></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </section>
+      }
+      @if (questionnaireMode() && questionnaireKey()) {
+        <app-questionnaire-form
+          [mode]="questionnaireMode()!"
+          [token]="questionnaireMode() === 'public' ? questionnaireKey() : ''"
+          [carnetId]="questionnaireMode() === 'staff' ? questionnaireKey() : ''"
         />
       }
-    } @else {
-      <article class="carnet-preview__card">
-        <ng-container [ngTemplateOutlet]="service" [ngTemplateOutletContext]="{ block: block }" />
-      </article>
     }
   }
 </section>
-
-<ng-template #plate let-block="block">
-  <app-full-page-image
-    [assetId]="asset(block)"
-    [publicBase]="publicMediaBase()"
-    [privateBase]="privateMediaBase()"
-  />
-</ng-template>
 
 <ng-template #service let-block="block">
   <h3>{{ title(block) }}</h3>

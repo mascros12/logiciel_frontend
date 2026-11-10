@@ -12,6 +12,7 @@ import {
   moveDayEntry,
   documentFromPublic,
   formatDateFr,
+  hideFromDayBreakdown,
   formatDuration,
   establishmentRouteTitle,
   excursionRouteTitle,
@@ -520,14 +521,24 @@ describe('organisation du voyage', () => {
     assert.deepEqual(rows[1].lodging, ['Hôtel Arco']);
     assert.deepEqual(rows[2].lodging, ['Hôtel Arco']);
     assert.deepEqual(rows[3].lodging, []);
-    assert.deepEqual(rows[0].included, ['Thermal', 'Ponts', 'Transfert hôtel', 'Navette']);
+    assert.deepEqual(rows[0].included, [
+      'Thermal',
+      'Ponts',
+      'Transfert hôtel',
+      'Navette',
+      'Voiture · Du 20 mars 2026 au 22 mars 2026',
+    ]);
     assert.deepEqual(rows[1].included, []);
+    assert.deepEqual(rows[2].included, []);
     assert.deepEqual(rows[3].included, ['Ponts']);
     assert.deepEqual(rows[4].lodging, []);
     assert.deepEqual(rows[4].included, []);
     assert.equal(rows.some((row) => row.lodging.includes('Hôtel Secret')), false);
     assert.equal(rows.some((row) => row.included.includes('Ancien tour')), false);
     assert.equal(rows.some((row) => row.included.includes('Cascade')), false);
+    const car = document.blocks.find((block) => block.id === 'car');
+    assert.ok(car);
+    assert.equal(hideFromDayBreakdown(car, 3), true);
     assert.equal(JSON.stringify(rows).includes('Petit-déjeuner'), false);
     assert.equal(JSON.stringify(rows).includes('Guanacaste'), false);
     const preview = previewOf(document);
@@ -588,8 +599,9 @@ function organisationDocument(): CarnetDocument {
       day('day-c', '2026-03-22', null, [
         ['hotel', 'stay'],
         ['old', 'activity'],
+        ['car', 'transport'],
       ]),
-      day('day-b', '2026-03-21', null, [['hotel', 'stay']]),
+      day('day-b', '2026-03-21', null, [['hotel', 'stay'], ['car', 'transport']]),
       day('day-e', '2026-03-24', null, []),
       day('day-d', '2026-03-23', null, [
         ['hotel', 'stay'],
@@ -602,6 +614,7 @@ function organisationDocument(): CarnetDocument {
         ['transfer', 'included'],
         ['transfer', 'transport'],
         ['shuttle', 'transport'],
+        ['car', 'transport'],
         ['poi', 'activity'],
         ['secret', 'stay'],
       ]),
@@ -612,6 +625,14 @@ function organisationDocument(): CarnetDocument {
       service('visit', 'activity', 'Ponts'),
       service('transfer', 'transport', 'Transfert hôtel'),
       service('shuttle', 'transport', 'Navette'),
+      service('car', 'transport', 'Voiture', {
+        service_type: text('Vehículo de alquiler'),
+        dates: {
+          value: ['2026-03-20', '2026-03-21', '2026-03-22'],
+          origin: 'generated',
+          generated_value: ['2026-03-20', '2026-03-21', '2026-03-22'],
+        },
+      }),
       service('poi', 'point_of_interest', 'Cascade'),
       removed,
     ],
@@ -652,7 +673,7 @@ function publicEntry(block: CarnetBlock, role: PublicEntry['role'] = null): Publ
     locality: value('locality'),
     check_in: value('check_in'),
     check_out: value('check_out'),
-    dates: [],
+    dates: dateList(block),
     departure_time: null,
     return_time: null,
     pickup_text: null,
@@ -674,6 +695,14 @@ function publicEntry(block: CarnetBlock, role: PublicEntry['role'] = null): Publ
     rooms: [],
     section_kind: block.section_kind ?? null,
   };
+}
+
+function dateList(block: CarnetBlock): string[] {
+  const raw = block.content['dates'];
+  if (raw && typeof raw === 'object' && Array.isArray((raw as { value?: unknown }).value)) {
+    return (raw as { value: string[] }).value;
+  }
+  return [];
 }
 
 function textOf(block: CarnetBlock, field: string): string {
@@ -780,8 +809,9 @@ describe('página de imagen', () => {
     document.blocks.unshift(plate);
     document.blocks.splice(2, 0, middle);
     const preview = previewOf(document);
-    assert.deepEqual(preview.front.map((block) => block.id), ['plate']);
-    assert.equal(preview.lead.some((block) => block.id === 'middle'), true);
+    assert.deepEqual(preview.front, []);
+    assert.equal(preview.lead.some((block) => block.id === 'middle'), false);
+    assert.equal(preview.rest.some((block) => block.id === 'middle'), false);
     assert.equal(sectionPending(plate), false);
     assert.equal(sectionPending({ ...plate, content: { asset_id: null, label: 'Couverture' } }), true);
 
@@ -839,6 +869,10 @@ describe('página de imagen', () => {
     });
     assert.equal(published.blocks[0].type, 'full_page_image');
     assert.equal(pageAssetId(published.blocks[0]), 'asset-cover');
+    const publishedPreview = previewOf(published);
+    assert.deepEqual(publishedPreview.front, []);
+    assert.equal(publishedPreview.lead.some((block) => block.type === 'full_page_image'), false);
+    assert.equal(publishedPreview.rest.some((block) => block.type === 'full_page_image'), false);
   });
 
   it('reconstruye Les trajets y omite los excluidos', () => {

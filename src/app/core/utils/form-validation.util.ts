@@ -65,20 +65,54 @@ export function fieldStyleClass(
   return controlShowError(control) ? `${base} ng-invalid ng-dirty` : base;
 }
 
-/** Detalle de error FastAPI / HTTP. */
+/** Detalle de error FastAPI / HTTP. Nunca deja un objeto como texto. */
 export function apiErrorSummary(err: { error?: { detail?: unknown } }, fallback: string): string {
   const d = err?.error?.detail;
-  if (typeof d === 'string') return d;
+  if (typeof d === 'string' && d.trim()) return d;
   if (Array.isArray(d)) {
-    return d
-      .map((item) => {
-        if (item && typeof item === 'object' && 'msg' in item) {
-          return String((item as { msg: string }).msg);
-        }
-        return String(item);
-      })
-      .join(', ');
+    const messages = d.map(validationMessage).filter((message) => message.length > 0);
+    return messages.length ? messages.join(' ') : fallback;
   }
-  if (d && typeof d === 'object') return JSON.stringify(d);
+  if (d && typeof d === 'object') {
+    const message = validationMessage(d);
+    return message || fallback;
+  }
   return fallback;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Nombre',
+  name_es: 'Nombre en español',
+  province: 'Provincia',
+  zone_id: 'Zona',
+  address: 'Dirección',
+  phone: 'Teléfono',
+  longitude: 'Longitud',
+  latitude: 'Latitud',
+  category: 'Categoría',
+  provider: 'Proveedor',
+  commission: 'Comisión',
+  reservation_email: 'Correo',
+  net_adult_price: 'Precio neto adulto',
+  rack_adult_price: 'Precio rack adulto',
+  net_child_price: 'Precio neto niño',
+  rack_child_price: 'Precio rack niño',
+};
+
+function validationMessage(item: unknown): string {
+  if (typeof item === 'string') return item;
+  if (!item || typeof item !== 'object') return '';
+  const row = item as { msg?: unknown; loc?: unknown };
+  const loc = Array.isArray(row.loc)
+    ? row.loc.map(String).filter((part) => part !== 'body')
+    : [];
+  const fieldKey = loc.at(-1) ?? '';
+  const field = FIELD_LABELS[fieldKey] ?? fieldKey;
+  let msg = typeof row.msg === 'string' ? row.msg.replace(/^Value error,\s*/i, '').trim() : '';
+  if (/^field required$/i.test(msg)) msg = 'es obligatorio';
+  if (!msg) return field ? `${field} no es válido.` : '';
+  if (field && !msg.toLocaleLowerCase().includes(field.toLocaleLowerCase())) {
+    return `${field}: ${msg}`;
+  }
+  return msg;
 }

@@ -1,5 +1,6 @@
 import { Component, input } from '@angular/core';
 import { RecommendationLine } from '../../../core/utils/carnet-document';
+import { wazeUrl } from '../../../core/utils/carnet-navigation';
 import { RichText } from '../rich-text/rich-text';
 
 @Component({
@@ -34,5 +35,10 @@ export class RecommendationSection {
   maps(row: RecommendationLine): string | null {
     if (!row.latitude || !row.longitude) return null;
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${row.latitude},${row.longitude}`)}`;
+  }
+
+  waze(row: RecommendationLine): string | null {
+    if (!row.latitude || !row.longitude) return null;
+    return wazeUrl(`${row.latitude},${row.longitude}`);
   }
 }

@@ -23,9 +23,12 @@
             <p>Tél. : {{ row.phone }}</p>
           }
           @if (row.latitude && row.longitude) {
-            <p>
-              <a [href]="maps(row)" target="_blank" rel="noopener noreferrer">
-                {{ row.latitude }}, {{ row.longitude }}
+            <p class="recommendation-section__nav">
+              <a class="recommendation-section__button" [href]="maps(row)" target="_blank" rel="noopener noreferrer">
+                Google Maps
+              </a>
+              <a class="recommendation-section__button" [href]="waze(row)" target="_blank" rel="noopener noreferrer">
+                Waze
               </a>
             </p>
           }
