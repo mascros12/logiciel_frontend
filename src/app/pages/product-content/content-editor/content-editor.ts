@@ -4,7 +4,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
-import { TabsModule } from 'primeng/tabs';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
@@ -27,7 +26,6 @@ import {
     ButtonModule,
     InputTextModule,
     TextareaModule,
-    TabsModule,
     SelectModule,
     TooltipModule,
     ToastModule,
@@ -48,7 +46,6 @@ export class ContentEditor {
   readonly attributeKind = input.required<AttributeKind>();
   readonly pending = input(false);
 
-  readonly localeTab = signal<'es' | 'fr'>('es');
   readonly ready = signal(false);
   readonly saving = signal(false);
 
@@ -59,14 +56,13 @@ export class ContentEditor {
   });
 
   private baseline: ContentDraft = draftFromContent('none', null);
-  private loadedId = '';
 
   constructor() {
     effect(() => {
-      const id = this.entityId();
+      this.entityId();
       const kind = this.attributeKind();
       const content = this.content();
-      untracked(() => this.apply(id, kind, content));
+      untracked(() => this.apply(kind, content));
     });
   }
 
@@ -86,10 +82,6 @@ export class ContentEditor {
   validationError(): string | null {
     if (!this.hasChanges()) return null;
     return buildContentWrite(this.baseline, this.currentDraft(), this.attributeKind()).error;
-  }
-
-  onLocaleTab(value: string | number | undefined): void {
-    this.localeTab.set(value === 'fr' ? 'fr' : 'es');
   }
 
   addPoint(locale: 'es' | 'fr'): void {
@@ -119,7 +111,7 @@ export class ContentEditor {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {
-          this.apply(this.entityId(), this.attributeKind(), view);
+          this.apply(this.attributeKind(), view);
           this.saving.set(false);
           this.messages.add({ severity: 'success', summary: 'Contenido guardado' });
         },
@@ -135,11 +127,7 @@ export class ContentEditor {
       });
   }
 
-  private apply(id: string, kind: AttributeKind, content: ProductContentView | null): void {
-    if (id !== this.loadedId) {
-      this.localeTab.set('es');
-      this.loadedId = id;
-    }
+  private apply(kind: AttributeKind, content: ProductContentView | null): void {
     this.ensureAttributes(kind);
     const draft = draftFromContent(kind, content);
     this.patchLocale('es', draft.es);

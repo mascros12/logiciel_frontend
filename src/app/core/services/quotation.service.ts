@@ -103,6 +103,12 @@ export class QuotationService {
     return this.http.patch<Quotation>(`${this.url}/${id}`, body);
   }
 
+  reassignCreator(id: string, createdById: string) {
+    return this.http.patch<Quotation>(`${this.url}/${id}/creator`, {
+      created_by_id: createdById,
+    });
+  }
+
   delete(id: string) {
     return this.http.delete(`${this.url}/${id}`);
   }

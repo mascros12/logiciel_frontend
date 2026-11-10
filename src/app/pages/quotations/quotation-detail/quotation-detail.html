@@ -44,6 +44,33 @@
           </span>
         }
       </div>
+      @if (isAdmin()) {
+        <div class="creator-reassign">
+          <label for="creator-select">Creador</label>
+          <p-select
+            inputId="creator-select"
+            [options]="creatorOptions()"
+            optionLabel="label"
+            optionValue="id"
+            [ngModel]="creatorChoice()"
+            (ngModelChange)="creatorChoice.set($event)"
+            [filter]="true"
+            filterBy="label"
+            appendTo="body"
+            placeholder="Creador"
+          />
+          <p-button
+            label="Reasignar"
+            icon="pi pi-user-edit"
+            [outlined]="true"
+            [loading]="reassigning()"
+            [disabled]="!canReassignCreator()"
+            (onClick)="reassignCreator()"
+          />
+        </div>
+      } @else if (q.created_by_name) {
+        <p class="meta-item">Creador: {{ q.created_by_name }}</p>
+      }
       @if (q.contact_source || q.contact_budget || q.contact_traveller_type || q.contact_ritm) {
         <ul class="contact-summary-list">
           @if (q.contact_source) {
@@ -1101,6 +1128,16 @@
                       [loading]="openingCarnet()"
                       (onClick)="openCarnet()"
                     />
+                    @if (existingCarnetId()) {
+                      <p-button
+                        label="Regenerar Carnet"
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        [outlined]="true"
+                        [loading]="regeneratingCarnet()"
+                        (onClick)="askRegenerateCarnet()"
+                      />
+                    }
                   }
                   @if (canDeleteFileAA()) {
                     <p-button

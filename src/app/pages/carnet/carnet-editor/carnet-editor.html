@@ -60,6 +60,15 @@
         (onClick)="questionnaire.set(!questionnaire())"
       />
       <p-button
+        label="Regenerar"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="regenerating()"
+        [disabled]="!document() || regenerating()"
+        (onClick)="askRegenerate()"
+      />
+      <p-button
         label="Publicar"
         icon="pi pi-send"
         [loading]="publishing()"

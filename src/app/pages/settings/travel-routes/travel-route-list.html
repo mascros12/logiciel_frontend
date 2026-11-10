@@ -61,44 +61,87 @@
     <label>Modalidad
       <p-select formControlName="mode" [options]="modes" optionLabel="label" optionValue="value" appendTo="body" />
     </label>
-    <label>
-      @if (form.value.mode === 'place_to_place') {
-        Distancia (km, opcional)
-      } @else {
-        Distancia (km)
-      }
-      <input pInputText type="number" min="0" step="0.1" formControlName="distance_km" />
-    </label>
-    @if (form.value.mode !== 'place_to_place') {
-      <label>Duración (minutos) · {{ previewDuration() }}
-        <input pInputText type="number" min="0" step="1" formControlName="duration_minutes" />
-      </label>
-    }
-    <label>Instrucciones de llegada
-      <textarea pInputTextarea rows="5" formControlName="instructions"></textarea>
-    </label>
 
-    @if (form.value.mode === 'place_to_place') {
+    @if (showPlaces()) {
       <label>Tipo de origen
         <p-select formControlName="origin_kind" [options]="kinds" optionLabel="label" optionValue="value" appendTo="body" />
       </label>
       <label>Origen
-        <p-select formControlName="origin_id" [options]="places(form.value.origin_kind)" optionLabel="name" optionValue="id" appendTo="body" (onChange)="onPlace('origin')" />
+        <p-select
+          formControlName="origin_id"
+          [options]="places(form.value.origin_kind)"
+          optionLabel="name"
+          optionValue="id"
+          [filter]="true"
+          filterBy="name"
+          filterPlaceholder="Buscar"
+          [resetFilterOnHide]="true"
+          appendTo="body"
+          (onChange)="onPlace('origin')"
+        />
       </label>
       <label>Tipo de destino
         <p-select formControlName="destination_kind" [options]="kinds" optionLabel="label" optionValue="value" appendTo="body" />
       </label>
       <label>Destino
-        <p-select formControlName="destination_id" [options]="places(form.value.destination_kind)" optionLabel="name" optionValue="id" appendTo="body" (onChange)="onPlace('destination')" />
+        <p-select
+          formControlName="destination_id"
+          [options]="places(form.value.destination_kind)"
+          optionLabel="name"
+          optionValue="id"
+          [filter]="true"
+          filterBy="name"
+          filterPlaceholder="Buscar"
+          [resetFilterOnHide]="true"
+          appendTo="body"
+          (onChange)="onPlace('destination')"
+        />
+      </label>
+      <label>Instrucciones de llegada
+        <textarea pInputTextarea rows="5" formControlName="instructions"></textarea>
       </label>
     }
 
-    <label>Zona de origen
-      <p-select formControlName="origin_zone_id" [options]="options()?.zones ?? []" optionLabel="name" optionValue="id" appendTo="body" [disabled]="form.value.mode === 'place_to_place'" />
-    </label>
-    <label>Zona de destino
-      <p-select formControlName="destination_zone_id" [options]="options()?.zones ?? []" optionLabel="name" optionValue="id" appendTo="body" [disabled]="form.value.mode === 'place_to_place'" />
-    </label>
+    @if (showDistance()) {
+      <label>Distancia (km)
+        <input pInputText type="number" min="0" step="0.1" formControlName="distance_km" />
+      </label>
+    }
+    @if (showDuration()) {
+      <label>Duración (minutos) · {{ previewDuration() }}
+        <input pInputText type="number" min="0" step="1" formControlName="duration_minutes" />
+      </label>
+    }
+
+    @if (!showPlaces()) {
+      <label>Zona de origen
+        <p-select
+          formControlName="origin_zone_id"
+          [options]="options()?.zones ?? []"
+          optionLabel="name"
+          optionValue="id"
+          [filter]="true"
+          filterBy="name"
+          filterPlaceholder="Buscar"
+          [resetFilterOnHide]="true"
+          appendTo="body"
+        />
+      </label>
+      <label>Zona de destino
+        <p-select
+          formControlName="destination_zone_id"
+          [options]="options()?.zones ?? []"
+          optionLabel="name"
+          optionValue="id"
+          [filter]="true"
+          filterBy="name"
+          filterPlaceholder="Buscar"
+          [resetFilterOnHide]="true"
+          appendTo="body"
+        />
+      </label>
+    }
+
     <label class="travel-routes__switch">
       <p-toggleswitch formControlName="active" />
       Activo

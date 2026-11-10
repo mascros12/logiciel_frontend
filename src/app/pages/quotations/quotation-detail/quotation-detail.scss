@@ -72,6 +72,22 @@
       i { font-size: 0.925rem; }
     }
 
+    .creator-reassign {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+
+      label {
+        font-size: 0.875rem;
+        color: var(--p-text-muted-color);
+      }
+
+      p-select {
+        width: 16rem;
+      }
+    }
+
     .contact-summary-list {
       display: flex;
       flex-wrap: wrap;

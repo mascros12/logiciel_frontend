@@ -14,18 +14,30 @@
       [options]="[{ label: 'Todas las zonas', value: '' }, ...zoneOptions()]"
       [(ngModel)]="zoneFilter"
       (ngModelChange)="load()"
+      [filter]="true"
+      filterBy="label"
+      filterPlaceholder="Buscar"
+      [resetFilterOnHide]="true"
       appendTo="body"
     />
     <p-select
       [options]="[{ label: 'Todas las categorías', value: '' }, ...categories]"
       [(ngModel)]="categoryFilter"
       (ngModelChange)="load()"
+      [filter]="true"
+      filterBy="label"
+      filterPlaceholder="Buscar"
+      [resetFilterOnHide]="true"
       appendTo="body"
     />
     <p-select
       [options]="[{ label: 'Todos', value: 'all' }, { label: 'Activas', value: 'yes' }, { label: 'Inactivas', value: 'no' }]"
       [(ngModel)]="activeFilter"
       (ngModelChange)="load()"
+      [filter]="true"
+      filterBy="label"
+      filterPlaceholder="Buscar"
+      [resetFilterOnHide]="true"
       appendTo="body"
     />
   </div>
@@ -68,16 +80,37 @@
 >
   <form [formGroup]="form" class="regional-recommendations__form" (ngSubmit)="save()">
     <label>Categoría
-      <p-select [options]="categories" formControlName="category" appendTo="body" />
+      <p-select
+        [options]="categories"
+        formControlName="category"
+        [filter]="true"
+        filterBy="label"
+        filterPlaceholder="Buscar"
+        [resetFilterOnHide]="true"
+        appendTo="body"
+      />
     </label>
     <label>Zona
-      <p-select [options]="zoneOptions()" formControlName="zone_id" appendTo="body" placeholder="Elegir zona" />
+      <p-select
+        [options]="zoneOptions()"
+        formControlName="zone_id"
+        [filter]="true"
+        filterBy="label"
+        filterPlaceholder="Buscar"
+        [resetFilterOnHide]="true"
+        appendTo="body"
+        placeholder="Elegir zona"
+      />
     </label>
     @if (form.value.category === 'activity') {
       <label>Actividad comercial, opcional
         <p-select
           [options]="activityOptions()"
           formControlName="activity_id"
+          [filter]="true"
+          filterBy="label"
+          filterPlaceholder="Buscar"
+          [resetFilterOnHide]="true"
           appendTo="body"
           placeholder="Sin vincular"
           [showClear]="true"

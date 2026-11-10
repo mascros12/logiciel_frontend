@@ -43,8 +43,8 @@ export class Sidebar {
   /** Ítems del menú Configuraciones — ampliar aquí al agregar más módulos. */
   settingsItems: SettingsNavItem[] = [
     { label: 'Generales', icon: 'pi pi-sliders-h', route: '/configuraciones/generales', roles: ['admin'] },
-    { label: 'Zonas', icon: 'pi pi-map', route: '/configuraciones/zonas', roles: ['admin'] },
-    { label: 'Proveedores', icon: 'pi pi-briefcase', route: '/configuraciones/proveedores', roles: ['admin'] },
+    { label: 'Zonas', icon: 'pi pi-map', route: '/configuraciones/zonas', roles: ['admin', 'operaciones'] },
+    { label: 'Proveedores', icon: 'pi pi-briefcase', route: '/configuraciones/proveedores', roles: ['admin', 'operaciones'] },
     {
       label: 'Trayectos',
       icon: 'pi pi-directions',

@@ -126,6 +126,7 @@ export class CarnetEditor implements OnInit {
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
   readonly saving = signal(false);
+  readonly regenerating = signal(false);
   readonly previewing = signal(false);
   readonly questionnaire = signal(false);
   readonly state = signal<EditorState | null>(null);
@@ -260,6 +261,39 @@ export class CarnetEditor implements OnInit {
       error: () => {
         this.loading.set(false);
         this.loadError.set('No se pudo cargar el Carnet.');
+      },
+    });
+  }
+
+  askRegenerate(): void {
+    const unsaved = this.dirty() ? ' Hay cambios sin guardar en este editor.' : '';
+    this.confirmation.confirm({
+      header: 'Regenerar Carnet',
+      message:
+        'Se vuelve a armar el borrador con la ficha actual. Las ediciones del borrador se pierden. La revisión publicada y el enlace no cambian.' +
+        unsaved,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Regenerar',
+      rejectLabel: 'Cancelar',
+      accept: () => this.regenerate(),
+    });
+  }
+
+  regenerate(): void {
+    if (this.regenerating() || !this.carnetId) return;
+    this.regenerating.set(true);
+    this.carnets.regenerate(this.carnetId).subscribe({
+      next: (view) => {
+        this.regenerating.set(false);
+        this.applyServer(view);
+        this.messages.add({ severity: 'success', summary: 'Carnet regenerado' });
+      },
+      error: () => {
+        this.regenerating.set(false);
+        this.messages.add({
+          severity: 'error',
+          summary: 'No se pudo regenerar el Carnet.',
+        });
       },
     });
   }
@@ -779,7 +813,12 @@ export class CarnetEditor implements OnInit {
   canSaveCatalogRoute(block: CarnetBlock): boolean {
     if (block.type !== 'itinerary_route' || this.savedCatalogRoutes().has(block.id)) return false;
     if (block.content['mode'] === 'place_to_place') {
-      return this.text(block, 'instructions').trim().length > 0;
+      const raw = this.text(block, 'distance_km').trim().replace(',', '.');
+      const distance = Number(raw);
+      return this.text(block, 'instructions').trim().length > 0
+        && raw.length > 0
+        && Number.isFinite(distance)
+        && distance >= 0;
     }
     const distance = Number(this.text(block, 'distance_km').replace(',', '.'));
     return Number.isFinite(distance) && distance >= 0 && this.number(block, 'duration_minutes') > 0

@@ -35,6 +35,10 @@ export class CarnetService {
     return this.http.get<CarnetView>(apiUrl(`/carnets/${carnetId}`));
   }
 
+  regenerate(carnetId: string) {
+    return this.http.post<CarnetView>(apiUrl(`/carnets/${carnetId}/regenerate`), {});
+  }
+
   save(carnetId: string, body: DraftWrite) {
     return this.http.put<CarnetView>(apiUrl(`/carnets/${carnetId}/draft`), body);
   }

@@ -121,7 +121,7 @@ export const routes: Routes = [
         path: 'configuraciones/zonas',
         title: 'Logiciel - Zonas',
         canActivate: [authGuard],
-        data: { roles: ['admin'] },
+        data: { roles: ['admin', 'operaciones'] },
         loadComponent: () =>
           import('./pages/settings/zones/zone-list/zone-list')
             .then(m => m.ZoneList)
@@ -157,7 +157,7 @@ export const routes: Routes = [
         path: 'configuraciones/proveedores',
         title: 'Logiciel - Proveedores',
         canActivate: [authGuard],
-        data: { roles: ['admin'] },
+        data: { roles: ['admin', 'operaciones'] },
         loadComponent: () =>
           import('./pages/settings/providers/provider-list/provider-list')
             .then(m => m.ProviderList)

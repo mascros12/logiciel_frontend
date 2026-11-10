@@ -36,6 +36,7 @@ import { VehicleService } from '../../../core/services/vehicle.service';
 import { ContactService } from '../../../core/services/contact.service';
 import { AppSettingsService } from '../../../core/services/app-settings.service';
 import { CarnetService } from '../../../core/services/carnet.service';
+import { UserService } from '../../../core/services/user.service';
 import { canEditCarnet } from '../../../core/utils/carnet-document';
 import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import {
@@ -457,23 +458,39 @@ export class QuotationDetail implements OnInit {
 
   private destroyRef = inject(DestroyRef);
   private carnetService = inject(CarnetService);
+  private userService = inject(UserService);
   readonly carnetActionLabel = signal('Generar Carnet de Route');
+  readonly existingCarnetId = signal<string | null>(null);
   readonly openingCarnet = signal(false);
+  readonly regeneratingCarnet = signal(false);
+  readonly creatorOptions = signal<{ id: string; label: string }[]>([]);
+  readonly creatorChoice = signal<string | null>(null);
+  readonly reassigning = signal(false);
+  readonly canReassignCreator = computed(() => {
+    const current = this.quotation();
+    const choice = this.creatorChoice();
+    return !!current && !!choice && choice !== current.created_by_id && !this.reassigning();
+  });
   private carnetLabelSeq = 0;
   private readonly watchCarnetLabel = effect(() => {
     const fileId = this.fichaFileAA()?.id ?? null;
     const allowed = this.canOpenCarnet();
     const seq = ++this.carnetLabelSeq;
     if (!fileId || !allowed) {
+      this.existingCarnetId.set(null);
       this.carnetActionLabel.set('Generar Carnet de Route');
       return;
     }
     this.carnetService.findByFile(fileId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        if (seq === this.carnetLabelSeq) this.carnetActionLabel.set('Editar Carnet de Route');
+      next: (carnet) => {
+        if (seq !== this.carnetLabelSeq) return;
+        this.existingCarnetId.set(carnet.id);
+        this.carnetActionLabel.set('Editar Carnet de Route');
       },
       error: () => {
-        if (seq === this.carnetLabelSeq) this.carnetActionLabel.set('Generar Carnet de Route');
+        if (seq !== this.carnetLabelSeq) return;
+        this.existingCarnetId.set(null);
+        this.carnetActionLabel.set('Generar Carnet de Route');
       },
     });
   });
@@ -667,6 +684,23 @@ export class QuotationDetail implements OnInit {
     this.loadFichaAaColWidths();
     this.load(id);
     this.loadProviders();
+    if (this.isAdmin()) this.loadCreators();
+  }
+
+  private loadCreators(): void {
+    this.userService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        const options = res.items
+          .filter((user) =>
+            user.is_active &&
+            (user.role === 'admin' || user.role === 'operaciones' || user.role === 'comercial'),
+          )
+          .map((user) => ({ id: user.id, label: `${user.full_name} · ${user.role}` }))
+          .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+        this.creatorOptions.set(options);
+      },
+      error: () => this.creatorOptions.set([]),
+    });
   }
 
   private restoreTabsFromRoute(): void {
@@ -859,6 +893,7 @@ export class QuotationDetail implements OnInit {
     this.quotationService.getById(id).subscribe({
       next: (q) => {
         this.quotation.set(q);
+        this.creatorChoice.set(q.created_by_id);
         this.initFichaFromQuotation(q);
         const currentId = q.current_version?.id ? String(q.current_version.id) : null;
         const v1Version =
@@ -7118,6 +7153,7 @@ export class QuotationDetail implements OnInit {
     this.carnetService.openFromFile(ficha.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (carnet) => {
         this.openingCarnet.set(false);
+        this.existingCarnetId.set(carnet.id);
         this.carnetActionLabel.set('Editar Carnet de Route');
         void this.router.navigate(['/cotizaciones', quotation.id, 'carnet', carnet.id]);
       },
@@ -7130,6 +7166,78 @@ export class QuotationDetail implements OnInit {
             ? 'La Ficha AA está archivada.'
             : 'No se pudo abrir el Carnet.';
         this.messageService.add({ severity: 'error', summary });
+      },
+    });
+  }
+
+  askRegenerateCarnet(): void {
+    if (!this.existingCarnetId() || this.regeneratingCarnet()) return;
+    this.confirmationService.confirm({
+      header: 'Regenerar Carnet',
+      message:
+        'Se vuelve a armar el borrador con la ficha actual. Las ediciones del borrador se pierden. La revisión publicada y el enlace no cambian.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Regenerar',
+      rejectLabel: 'Cancelar',
+      accept: () => this.regenerateCarnet(),
+    });
+  }
+
+  regenerateCarnet(): void {
+    const carnetId = this.existingCarnetId();
+    const quotation = this.quotation();
+    if (!carnetId || !quotation || this.regeneratingCarnet()) return;
+    this.regeneratingCarnet.set(true);
+    this.carnetService.regenerate(carnetId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (carnet) => {
+        this.regeneratingCarnet.set(false);
+        this.existingCarnetId.set(carnet.id);
+        this.messageService.add({ severity: 'success', summary: 'Carnet regenerado' });
+        void this.router.navigate(['/cotizaciones', quotation.id, 'carnet', carnet.id]);
+      },
+      error: (err: { error?: { detail?: { code?: string } } }) => {
+        this.regeneratingCarnet.set(false);
+        const code = err.error?.detail?.code;
+        const summary = code === 'file_aa_inactive'
+          ? 'La Ficha AA no está activa.'
+          : code === 'file_aa_archived'
+            ? 'La Ficha AA está archivada.'
+            : 'No se pudo regenerar el Carnet.';
+        this.messageService.add({ severity: 'error', summary });
+      },
+    });
+  }
+
+  reassignCreator(): void {
+    const quotation = this.quotation();
+    const choice = this.creatorChoice();
+    if (!quotation || !choice || !this.canReassignCreator()) return;
+    const label = this.creatorOptions().find((item) => item.id === choice)?.label ?? 'el usuario elegido';
+    this.confirmationService.confirm({
+      header: 'Reasignar creador',
+      message: `La cotización quedará a nombre de ${label}.`,
+      icon: 'pi pi-user-edit',
+      acceptLabel: 'Reasignar',
+      rejectLabel: 'Cancelar',
+      accept: () => this.applyCreator(quotation.id, choice),
+    });
+  }
+
+  private applyCreator(quotationId: string, createdById: string): void {
+    this.reassigning.set(true);
+    this.quotationService.reassignCreator(quotationId, createdById).subscribe({
+      next: () => {
+        this.reassigning.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Creador reasignado' });
+        this.load(quotationId);
+      },
+      error: (err: { error?: { detail?: string } }) => {
+        this.reassigning.set(false);
+        const detail = err.error?.detail;
+        this.messageService.add({
+          severity: 'error',
+          summary: typeof detail === 'string' ? detail : 'No se pudo reasignar el creador',
+        });
       },
     });
   }

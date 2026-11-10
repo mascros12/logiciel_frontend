@@ -1,5 +1,14 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -18,6 +27,11 @@ import {
 } from '../../../core/models/travel-route.model';
 import { TravelRouteService } from '../../../core/services/travel-route.service';
 import { formatDuration } from '../../../core/utils/carnet-document';
+
+function requiredText(control: AbstractControl): ValidationErrors | null {
+  const value = typeof control.value === 'string' ? control.value.trim() : '';
+  return value ? null : { required: true };
+}
 
 @Component({
   selector: 'app-travel-route-list',
@@ -68,20 +82,48 @@ export class TravelRouteListPage implements OnInit {
     this.form = this.fb.group({
       mode: ['zone_to_zone' as RouteMode, Validators.required],
       active: [true],
-      distance_km: [null as number | null, [Validators.required, Validators.min(0)]],
-      duration_minutes: [0, [Validators.required, Validators.min(0)]],
+      distance_km: [null as number | null],
+      duration_minutes: [null as number | null],
       instructions: [''],
-      origin_zone_id: [null as string | null, Validators.required],
-      destination_zone_id: [null as string | null, Validators.required],
+      origin_zone_id: [null as string | null],
+      destination_zone_id: [null as string | null],
       origin_kind: [null as PlaceKind | null],
       origin_id: [null as string | null],
       destination_kind: [null as PlaceKind | null],
       destination_id: [null as string | null],
     });
     this.form.controls['mode'].valueChanges.subscribe((mode: RouteMode) => {
-      this.applyMeasures(mode);
+      if (this.filling) return;
+      if (mode === 'zone_to_zone') {
+        this.form.patchValue({
+          origin_kind: null,
+          origin_id: null,
+          destination_kind: null,
+          destination_id: null,
+          instructions: '',
+        }, { emitEvent: false });
+      } else {
+        this.form.patchValue({
+          origin_zone_id: null,
+          destination_zone_id: null,
+        }, { emitEvent: false });
+      }
+      this.syncValidators();
     });
+    for (const side of ['origin', 'destination'] as const) {
+      this.form.controls[`${side}_kind`].valueChanges.subscribe(() => {
+        if (this.filling) return;
+        this.form.patchValue({
+          [`${side}_id`]: null,
+          [`${side}_zone_id`]: null,
+        }, { emitEvent: false });
+        this.syncValidators();
+      });
+    }
+    this.syncValidators();
   }
+
+  private filling = false;
 
   ngOnInit(): void {
     this.routesApi.options().subscribe({
@@ -108,11 +150,11 @@ export class TravelRouteListPage implements OnInit {
 
   openCreate(): void {
     this.editing.set(null);
-    this.form.reset({
+    this.fill({
       mode: 'zone_to_zone',
       active: true,
       distance_km: null,
-      duration_minutes: 0,
+      duration_minutes: null,
       instructions: '',
       origin_zone_id: null,
       destination_zone_id: null,
@@ -126,7 +168,7 @@ export class TravelRouteListPage implements OnInit {
 
   openEdit(row: TravelRoute): void {
     this.editing.set(row);
-    this.form.reset({
+    this.fill({
       mode: row.mode,
       active: row.active,
       distance_km:
@@ -164,46 +206,96 @@ export class TravelRouteListPage implements OnInit {
     return formatDuration(Number(this.form.value.duration_minutes ?? 0));
   }
 
-  private applyMeasures(mode: RouteMode): void {
-    const distance = this.form.controls['distance_km'];
-    const duration = this.form.controls['duration_minutes'];
-    if (mode === 'place_to_place') {
-      distance.setValidators([Validators.min(0)]);
-      duration.clearValidators();
-      duration.setValue(null, { emitEvent: false });
-    } else {
-      distance.setValidators([Validators.required, Validators.min(0)]);
-      duration.setValidators([Validators.required, Validators.min(0)]);
-      if (distance.value == null || distance.value === '') {
-        distance.setValue(0, { emitEvent: false });
-      }
-      if (duration.value == null) {
-        duration.setValue(0, { emitEvent: false });
-      }
+  showPlaces(): boolean {
+    return this.form.value.mode === 'place_to_place';
+  }
+
+  showDistance(): boolean {
+    return this.form.value.mode === 'zone_to_zone' || this.lodgingPair();
+  }
+
+  showDuration(): boolean {
+    return this.form.value.mode === 'zone_to_zone' || this.activityLeg();
+  }
+
+  private lodgingPair(): boolean {
+    return this.isLodging(this.form.value.origin_kind)
+      && this.isLodging(this.form.value.destination_kind);
+  }
+
+  private activityLeg(): boolean {
+    return this.form.value.origin_kind === 'activity'
+      || this.form.value.destination_kind === 'activity';
+  }
+
+  private isLodging(kind: PlaceKind | null): boolean {
+    return kind === 'hotel' || kind === 'provider_branch';
+  }
+
+  private fill(value: object): void {
+    this.filling = true;
+    this.form.reset(value);
+    this.syncValidators();
+    this.filling = false;
+  }
+
+  private syncValidators(): void {
+    const place = this.showPlaces();
+    const distance = this.showDistance();
+    const duration = this.showDuration();
+    this.setRules('distance_km', distance, [Validators.min(0)]);
+    this.setRules('duration_minutes', duration, [Validators.min(0)]);
+    this.setRules('instructions', false, place ? [requiredText] : []);
+    this.setRules('origin_zone_id', !place, []);
+    this.setRules('destination_zone_id', !place, []);
+    this.setRules('origin_kind', place, []);
+    this.setRules('origin_id', place, []);
+    this.setRules('destination_kind', place, []);
+    this.setRules('destination_id', place, []);
+    if (!distance) {
+      this.form.controls['distance_km'].setValue(null, { emitEvent: false });
     }
-    distance.updateValueAndValidity({ emitEvent: false });
-    duration.updateValueAndValidity({ emitEvent: false });
+    if (!duration) {
+      this.form.controls['duration_minutes'].setValue(null, { emitEvent: false });
+    }
+    if (!place) {
+      this.form.controls['instructions'].setValue('', { emitEvent: false });
+    }
+  }
+
+  private setRules(name: string, required: boolean, extra: ValidatorFn[]): void {
+    const control = this.form.controls[name];
+    control.setValidators(required ? [Validators.required, ...extra] : extra);
+    control.updateValueAndValidity({ emitEvent: false });
   }
 
   save(): void {
-    if (this.form.invalid || this.saving()) return;
-    const value = this.form.getRawValue();
-    if (value.mode === 'place_to_place' && (!value.origin_id || !value.destination_id)) {
-      this.messages.add({ severity: 'warn', summary: 'Elija el origen y el destino' });
+    if (this.form.invalid || this.saving()) {
+      this.form.markAllAsTouched();
+      if (this.form.invalid) {
+        this.messages.add({ severity: 'warn', summary: 'Complete los campos obligatorios' });
+      }
       return;
     }
+    const value = this.form.getRawValue();
     const place = value.mode === 'place_to_place';
+    if (place && (!value.origin_zone_id || !value.destination_zone_id)) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'El establecimiento elegido no tiene zona',
+      });
+      return;
+    }
     const rawDistance = value.distance_km;
-    const distance =
-      rawDistance === '' || rawDistance == null ? null : Number(rawDistance);
     const body = {
       ...value,
-      distance_km: place ? distance : Number(rawDistance),
-      duration_minutes: place ? null : Number(value.duration_minutes),
-      origin_kind: value.mode === 'zone_to_zone' ? null : value.origin_kind,
-      origin_id: value.mode === 'zone_to_zone' ? null : value.origin_id,
-      destination_kind: value.mode === 'zone_to_zone' ? null : value.destination_kind,
-      destination_id: value.mode === 'zone_to_zone' ? null : value.destination_id,
+      distance_km: this.showDistance() ? Number(rawDistance) : null,
+      duration_minutes: this.showDuration() ? Number(value.duration_minutes) : null,
+      instructions: place ? String(value.instructions ?? '').trim() : '',
+      origin_kind: place ? value.origin_kind : null,
+      origin_id: place ? value.origin_id : null,
+      destination_kind: place ? value.destination_kind : null,
+      destination_id: place ? value.destination_id : null,
     };
     this.saving.set(true);
     const current = this.editing();

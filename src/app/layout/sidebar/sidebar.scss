@@ -69,10 +69,12 @@
 
   .sidebar-nav {
     flex: 1;
+    min-height: 0;
     padding: 0.75rem 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
+    overflow-y: auto;
   }
 
   .nav-item {
@@ -120,6 +122,10 @@
   }
 
   .sidebar-footer {
+    flex-shrink: 0;
+    min-width: 0;
+    max-height: 70%;
+    overflow-y: auto;
     padding: 0.75rem 0;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
@@ -130,6 +136,7 @@
       display: flex;
       flex-direction: column;
       gap: 2px;
+      min-width: 0;
     }
 
     .settings-btn {
@@ -145,19 +152,34 @@
       display: flex;
       flex-direction: column;
       gap: 2px;
+      min-width: 0;
       padding: 0.15rem 0 0.35rem;
       animation: settings-open 0.18s ease;
     }
 
-    .settings-subitem {
-      margin-left: 1.15rem;
-      width: calc(100% - 1.65rem);
-      padding-top: 0.5rem;
-      padding-bottom: 0.5rem;
+    .nav-item.settings-subitem {
+      min-width: 0;
+      width: calc(100% - 1rem);
+      max-width: calc(100% - 1rem);
+      margin: 0 0.5rem;
+      padding: 0.45rem 0.65rem;
       font-size: 0.85rem;
+      white-space: normal;
+      overflow-wrap: break-word;
+      align-items: flex-start;
       color: rgba(255, 255, 255, 0.72);
 
+      span {
+        flex: 1;
+        min-width: 0;
+        line-height: 1.25;
+        white-space: normal;
+        overflow-wrap: break-word;
+      }
+
       i {
+        flex-shrink: 0;
+        margin-top: 0.12rem;
         font-size: 0.95rem;
         min-width: 0.95rem;
       }
