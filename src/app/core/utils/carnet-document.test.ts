@@ -494,6 +494,13 @@ describe('secciones editoriales', () => {
     assert.equal(preview.rest.at(-1)?.id, 'conditions');
     assert.equal(sectionPending(numbers), true);
     assert.equal(sectionPending(itinerary), false);
+    const pratiques = editorial('pratiques', 'practical', 'Informations pratiques', null);
+    const numbersChild = {
+      ...editorial('numbers-child', 'practical', 'NUMÉROS IMPORTANTS', 'Ambassade'),
+      parent_id: 'pratiques',
+    };
+    assert.equal(sectionPending(pratiques, [pratiques, numbersChild]), false);
+    assert.equal(sectionPending(numbersChild, [pratiques, numbersChild]), false);
     const organisation = {
       ...editorial('organisation', 'free_text', 'Organisation du voyage', null),
       section_kind: 'itinerary_summary' as const,

@@ -814,7 +814,7 @@ export class CarnetEditor implements OnInit {
   }
 
   pending(block: CarnetBlock): boolean {
-    return sectionPending(block) || routeNeedsData(block);
+    return sectionPending(block, this.document()?.blocks ?? []) || routeNeedsData(block);
   }
 
   hasIssue(block: CarnetBlock): boolean {

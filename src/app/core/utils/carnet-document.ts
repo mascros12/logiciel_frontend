@@ -271,7 +271,7 @@ export function routeNeedsData(block: CarnetBlock): boolean {
   return textOf(block.content, 'distance_km').trim().length === 0;
 }
 
-export function sectionPending(block: CarnetBlock): boolean {
+export function sectionPending(block: CarnetBlock, blocks: readonly CarnetBlock[] = []): boolean {
   if (block.type === 'full_page_image') {
     if (block.removed || !block.visible) return false;
     return !pageAssetId(block);
@@ -280,6 +280,9 @@ export function sectionPending(block: CarnetBlock): boolean {
   if (block.section_kind && STRUCTURAL_KINDS.has(block.section_kind)) return false;
   if (block.removed || !block.visible || !EDITORIAL_TYPES.has(block.type)) return false;
   if (textOf(block.content, 'body').trim()) return false;
+  if (blocks.some((child) => child.parent_id === block.id && child.visible && !child.removed)) {
+    return false;
+  }
   return textOf(block.content, 'heading').trim() !== ITINERARY_HEADING;
 }
 
