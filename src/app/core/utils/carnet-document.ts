@@ -1112,34 +1112,42 @@ export function toDraftWrite(document: CarnetDocument, lockVersion: number): Dra
   };
 }
 
-export function validateDocument(document: CarnetDocument): string[] {
+export function blockIssues(block: CarnetBlock): string[] {
+  if (block.removed) return [];
   const errors: string[] = [];
-  for (const block of document.blocks) {
-    if (block.removed) continue;
-    const label = blockTitle(block);
-    for (const field of ['link', 'url']) {
-      const link = textOf(block.content, field);
-      if (link && !isHttpUrl(link)) {
-        errors.push(`${label}: el enlace debe usar http o https.`);
-      }
-    }
-    if (block.type === 'regional_recommendation') {
-      const latitude = textOf(block.content, 'latitude');
-      const longitude = textOf(block.content, 'longitude');
-      const message = coordinateError(latitude, longitude);
-      if (message) errors.push(`${label}: ${message}`);
-      if (!latitude && !longitude && !textOf(block.content, 'url')) {
-        errors.push(`${label}: indique coordenadas o un enlace http o https.`);
-      }
-    }
-    for (const field of ['coordinates', 'origin_coordinates', 'destination_coordinates']) {
-      if (!(field in block.content)) continue;
-      const coords = coordsOf(block.content, field);
-      const message = coordinateError(coords.latitude, coords.longitude);
-      if (message) errors.push(`${label}: ${message}`);
+  const label = blockTitle(block);
+  for (const field of ['link', 'url']) {
+    const link = textOf(block.content, field);
+    if (link && !isHttpUrl(link)) {
+      errors.push(`${label}: el enlace debe usar http o https.`);
     }
   }
+  if (block.type === 'regional_recommendation') {
+    const latitude = textOf(block.content, 'latitude');
+    const longitude = textOf(block.content, 'longitude');
+    const message = coordinateError(latitude, longitude);
+    if (message) errors.push(`${label}: ${message}`);
+    if (!latitude && !longitude && !textOf(block.content, 'url')) {
+      errors.push(`${label}: indique coordenadas o un enlace http o https.`);
+    }
+  }
+  for (const field of ['coordinates', 'origin_coordinates', 'destination_coordinates']) {
+    if (!(field in block.content)) continue;
+    const coords = coordsOf(block.content, field);
+    const message = coordinateError(coords.latitude, coords.longitude);
+    if (message) errors.push(`${label}: ${message}`);
+  }
   return errors;
+}
+
+export function validateDocument(document: CarnetDocument): string[] {
+  return document.blocks.flatMap((block) => blockIssues(block));
+}
+
+export function blockIssueIds(document: CarnetDocument): Set<string> {
+  return new Set(
+    document.blocks.filter((block) => blockIssues(block).length > 0).map((block) => block.id),
+  );
 }
 
 export function isHttpUrl(value: string): boolean {

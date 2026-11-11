@@ -2,7 +2,7 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -35,6 +35,7 @@ import {
   addBlock,
   attachBlockToDay,
   blockById,
+  blockIssueIds,
   blockTitle,
   blockWasEdited,
   coordsOf,
@@ -113,6 +114,7 @@ import { CarnetStructurePanel } from '../carnet-structure/carnet-structure';
 })
 export class CarnetEditor implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly carnets = inject(CarnetService);
   private readonly travelRoutes = inject(TravelRouteService);
   private readonly recommendationsApi = inject(RegionalRecommendationService);
@@ -141,6 +143,11 @@ export class CarnetEditor implements OnInit {
   readonly routeOptions = signal<TravelRouteOptions | null>(null);
   readonly savedCatalogRoutes = signal<ReadonlySet<string>>(new Set());
   readonly addChoice = signal<BlockType | null>(null);
+  readonly structureQuery = signal('');
+  readonly onlyPending = signal(false);
+  readonly issueIds = computed(() =>
+    this.document() ? blockIssueIds(this.document()!) : new Set<string>(),
+  );
   readonly catalogRoutes = signal<TravelRoute[]>([]);
   readonly catalogRecommendations = signal<RegionalRecommendation[]>([]);
   readonly catalogOptions = computed(() =>
@@ -559,7 +566,7 @@ export class CarnetEditor implements OnInit {
 
   dropStructure(event: CdkDragDrop<CarnetBlock[]>, blocks: CarnetBlock[]): void {
     const current = this.document();
-    if (!current || event.previousIndex === event.currentIndex) return;
+    if (!current || this.structureFiltering() || event.previousIndex === event.currentIndex) return;
     this.edit(reorderListed(
       current,
       blocks.map((block) => block.id),
@@ -808,6 +815,89 @@ export class CarnetEditor implements OnInit {
 
   pending(block: CarnetBlock): boolean {
     return sectionPending(block) || routeNeedsData(block);
+  }
+
+  hasIssue(block: CarnetBlock): boolean {
+    return this.issueIds().has(block.id);
+  }
+
+  hasIssueId(blockId: string): boolean {
+    return this.issueIds().has(blockId);
+  }
+
+  markedPending(block: CarnetBlock): boolean {
+    return this.pending(block) || this.hasIssue(block);
+  }
+
+  structureFiltering(): boolean {
+    return this.structureQuery().trim().length > 0 || this.onlyPending();
+  }
+
+  shown(blocks: CarnetBlock[]): CarnetBlock[] {
+    return blocks.filter((block) => this.matchesStructure(block));
+  }
+
+  shownDays(): CarnetBlock[] {
+    return this.days().filter((day) =>
+      this.matchesStructure(day)
+      || this.entries(day).some((entry) => this.entryMatches(entry.block_id)),
+    );
+  }
+
+  shownDayEntries(day: CarnetBlock) {
+    const entries = this.entries(day);
+    if (this.matchesStructure(day) && !this.onlyPending()) return entries;
+    return entries.filter((entry) => this.entryMatches(entry.block_id));
+  }
+
+  private entryMatches(blockId: string): boolean {
+    const document = this.document();
+    const block = document ? blockById(document, blockId) : null;
+    return block ? this.matchesStructure(block) : false;
+  }
+
+  private matchesStructure(block: CarnetBlock): boolean {
+    if (this.onlyPending() && !this.markedPending(block)) return false;
+    const query = this.structureQuery().trim().toLowerCase();
+    if (!query) return true;
+    if ((query === 'pendiente' || query === 'pendientes') && this.markedPending(block)) {
+      return true;
+    }
+    const haystack = `${this.titleOf(block)} ${this.typeLabel(block)}`.toLowerCase();
+    return haystack.includes(query);
+  }
+
+  catalogRecommendationId(block: CarnetBlock): string | null {
+    const id = block.content['recommendation_id'];
+    return typeof id === 'string' && id.trim() ? id : null;
+  }
+
+  editGlobalRecommendation(block: CarnetBlock): void {
+    const id = this.catalogRecommendationId(block);
+    if (!id) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Esta recomendación no está vinculada al catálogo global.',
+      });
+      return;
+    }
+    void this.router.navigate(['/configuraciones/recomendaciones'], {
+      queryParams: { editar: id },
+      state: {
+        carnetFields: {
+          name: this.text(block, 'name'),
+          opening_hours: this.text(block, 'opening_hours'),
+          phone: this.text(block, 'phone'),
+          latitude: this.text(block, 'latitude'),
+          longitude: this.text(block, 'longitude'),
+          url: this.text(block, 'url'),
+          activity_type: this.text(block, 'activity_type'),
+          duration_text: this.text(block, 'duration_text'),
+          difficulty_text: this.text(block, 'difficulty_text'),
+          description: this.text(block, 'description'),
+        },
+      },
+    });
   }
 
   canSaveCatalogRoute(block: CarnetBlock): boolean {

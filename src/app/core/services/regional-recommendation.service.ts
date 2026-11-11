@@ -25,6 +25,10 @@ export class RegionalRecommendationService {
     );
   }
 
+  get(id: string) {
+    return this.http.get<RegionalRecommendation>(`${this.url}/${id}`);
+  }
+
   list(filters: {
     active?: boolean | null;
     category?: string | null;

@@ -1,4 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -57,6 +58,8 @@ export class RegionalRecommendationListPage implements OnInit {
     private fb: FormBuilder,
     private api: RegionalRecommendationService,
     private messages: MessageService,
+    private route: ActivatedRoute,
+    private router: Router,
   ) {
     this.form = this.fb.group({
       category: ['activity' as RecommendationCategory, Validators.required],
@@ -82,6 +85,33 @@ export class RegionalRecommendationListPage implements OnInit {
       error: () => this.messages.add({ severity: 'error', summary: 'No se pudieron cargar las zonas' }),
     });
     this.load();
+    const editId = this.route.snapshot.queryParamMap.get('editar');
+    if (editId) this.openLinked(editId);
+  }
+
+  openLinked(id: string): void {
+    this.api.get(id).subscribe({
+      next: (row) => {
+        this.openEdit(row);
+        const draft = history.state?.carnetFields as Record<string, string> | undefined;
+        if (draft) {
+          const filled = Object.fromEntries(
+            Object.entries(draft).filter(([, value]) => String(value ?? '').trim() !== ''),
+          );
+          this.form.patchValue(filled);
+        }
+        void this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { editar: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      },
+      error: () => this.messages.add({
+        severity: 'error',
+        summary: 'No se encontró la recomendación en el catálogo',
+      }),
+    });
   }
 
   load(): void {

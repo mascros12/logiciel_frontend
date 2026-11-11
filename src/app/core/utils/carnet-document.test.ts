@@ -38,6 +38,7 @@ import {
   shouldWarnOnLeave,
   sourceStatusLabel,
   toDraftWrite,
+  blockIssueIds,
   validateDocument,
   warningText,
   withDocument,
@@ -267,6 +268,7 @@ describe('carnet editor document', () => {
     assert.equal(coords.origin, 'edited');
     const broken = setCoords(sample(), 'hotel-1', 'coordinates', '95.12345', '-85.12345');
     assert.ok(validateDocument(broken).length > 0);
+    assert.equal(blockIssueIds(broken).has('hotel-1'), true);
     const partial = setCoords(sample(), 'hotel-1', 'coordinates', '10.12345', '');
     assert.match(validateDocument(partial).join(' '), /juntas/);
     const linked = setText(sample(), 'hotel-1', 'link', 'javascript:alert(1)');

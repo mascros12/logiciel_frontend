@@ -155,11 +155,63 @@
   opacity: 0.55;
 }
 
+.carnet-editor__row.is-issue,
+.carnet-editor__day.is-issue,
+.carnet-editor__entry.is-issue {
+  border-color: #c44747;
+  background: #fff6f6;
+}
+
+.carnet-editor__finder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+}
+
+.carnet-editor__finder input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.carnet-editor__pending-filter {
+  border: 1px solid #c44747;
+  background: #fff;
+  color: #8d1d1d;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.carnet-editor__pending-filter.is-on {
+  background: #8d1d1d;
+  color: #fff;
+}
+
+.carnet-editor__pending {
+  color: #8a5a00;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.carnet-editor__pending.is-issue {
+  color: #8d1d1d;
+}
+
 .carnet-editor__days {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   margin-top: 0.8rem;
+}
+
+.carnet-editor__day-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .carnet-editor__days-toggle {
