@@ -269,6 +269,10 @@ describe('carnet editor document', () => {
     const broken = setCoords(sample(), 'hotel-1', 'coordinates', '95.12345', '-85.12345');
     assert.ok(validateDocument(broken).length > 0);
     assert.equal(blockIssueIds(broken).has('hotel-1'), true);
+    const short = setCoords(sample(), 'hotel-1', 'coordinates', '9.928', '-83.67');
+    assert.equal(validateDocument(short).length, 0);
+    const precise = setCoords(sample(), 'hotel-1', 'coordinates', '9.928123456', '-83.6769312');
+    assert.equal(validateDocument(precise).length, 0);
     const partial = setCoords(sample(), 'hotel-1', 'coordinates', '10.12345', '');
     assert.match(validateDocument(partial).join(' '), /juntas/);
     const linked = setText(sample(), 'hotel-1', 'link', 'javascript:alert(1)');

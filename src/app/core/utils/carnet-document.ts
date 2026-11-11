@@ -58,7 +58,7 @@ export interface OrganisationRow {
   included: string[];
 }
 
-const COORDINATE = /^-?\d+\.\d{5,7}$/;
+const COORDINATE = /^-?\d+(\.\d+)?$/;
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   cover: 'Portada',
@@ -1167,11 +1167,16 @@ export function coordinateError(latitude: string | null, longitude: string | nul
   const lng = (longitude ?? '').trim();
   if (!lat && !lng) return null;
   if (!lat || !lng) return 'latitud y longitud van juntas.';
-  if (!COORDINATE.test(lat) || Number(lat) < -90 || Number(lat) > 90) {
-    return 'la latitud debe tener entre 5 y 7 decimales y estar entre -90 y 90.';
-  }
-  if (!COORDINATE.test(lng) || Number(lng) < -180 || Number(lng) > 180) {
-    return 'la longitud debe tener entre 5 y 7 decimales y estar entre -180 y 180.';
+  const latitudeError = axisError(lat, -90, 90, 'latitud');
+  if (latitudeError) return latitudeError;
+  return axisError(lng, -180, 180, 'longitud');
+}
+
+function axisError(value: string, minimum: number, maximum: number, name: string): string | null {
+  if (!COORDINATE.test(value)) return `la ${name} no es un número.`;
+  const number = Number(value);
+  if (number < minimum || number > maximum) {
+    return `la ${name} debe estar entre ${minimum} y ${maximum}.`;
   }
   return null;
 }
