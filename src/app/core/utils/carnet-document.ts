@@ -126,9 +126,9 @@ export function warningText(code: string, fallback: string): string {
 }
 
 export function sourceStatusLabel(status: string): string {
-  if (status === 'changed') return 'Cambios detectados';
-  if (status === 'unavailable') return 'Verificación no disponible';
-  return 'Sin cambios';
+  if (status === 'changed') return 'Ficha AA con cambios';
+  if (status === 'unavailable') return 'Ficha AA no verificada';
+  return 'Ficha AA sin cambios';
 }
 
 export function blockTitle(block: CarnetBlock): string {

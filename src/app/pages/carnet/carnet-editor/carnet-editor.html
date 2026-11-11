@@ -34,7 +34,7 @@
         label="Guardar"
         icon="pi pi-save"
         [loading]="saving()"
-        [disabled]="!dirty() || validation().length > 0"
+        [disabled]="!dirty()"
         (onClick)="save()"
       />
       <p-button

@@ -401,9 +401,9 @@ describe('carnet editor document', () => {
   });
 
   it('traduce el estado de la fuente y deja los warnings fuera de la vista previa', () => {
-    assert.equal(sourceStatusLabel('unchanged'), 'Sin cambios');
-    assert.equal(sourceStatusLabel('changed'), 'Cambios detectados');
-    assert.equal(sourceStatusLabel('unavailable'), 'Verificación no disponible');
+    assert.equal(sourceStatusLabel('unchanged'), 'Ficha AA sin cambios');
+    assert.equal(sourceStatusLabel('changed'), 'Ficha AA con cambios');
+    assert.equal(sourceStatusLabel('unavailable'), 'Ficha AA no verificada');
     assert.match(warningText('coordinates_missing', 'x'), /coordenadas/i);
     assert.equal(previewText(sample()).includes('content_fr_missing'), false);
     assert.equal(previewText(sample()).includes('interno'), false);

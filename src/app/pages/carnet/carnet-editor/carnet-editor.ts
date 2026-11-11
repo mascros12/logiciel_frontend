@@ -307,7 +307,7 @@ export class CarnetEditor implements OnInit {
 
   save(): void {
     const current = this.state();
-    if (!current || this.validation().length) return;
+    if (!current || !current.dirty) return;
     this.saving.set(true);
     this.carnets.save(this.carnetId, toDraftWrite(current.document, current.lockVersion)).subscribe({
       next: (view) => {
