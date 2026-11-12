@@ -62,12 +62,12 @@ export class RegionalRecommendationListPage implements OnInit {
     private router: Router,
   ) {
     this.form = this.fb.group({
-      category: ['activity' as RecommendationCategory, Validators.required],
-      zone_id: [null as string | null, Validators.required],
+      category: ['activity' as RecommendationCategory],
+      zone_id: [null as string | null],
       activity_id: [null as string | null],
       name: ['', Validators.required],
-      opening_hours: ['', Validators.required],
-      phone: ['', Validators.required],
+      opening_hours: [''],
+      phone: [''],
       latitude: [''],
       longitude: [''],
       url: [''],
@@ -75,7 +75,7 @@ export class RegionalRecommendationListPage implements OnInit {
       activity_type: [''],
       duration_text: [''],
       difficulty_text: [''],
-      description: [''],
+      description: ['', Validators.required],
     });
   }
 
@@ -205,14 +205,24 @@ export class RegionalRecommendationListPage implements OnInit {
     const restaurant = raw.category === 'restaurant';
     const latitude = String(raw.latitude ?? '').trim();
     const longitude = String(raw.longitude ?? '').trim();
+    const name = String(raw.name ?? '').trim();
+    const description = String(raw.description ?? '').trim();
+    if (!name || !description) {
+      this.form.markAllAsTouched();
+      this.messages.add({
+        severity: 'error',
+        summary: 'El nombre y la descripción son obligatorios',
+      });
+      return;
+    }
     const body = {
-      category: raw.category,
-      zone_id: raw.zone_id,
+      category: raw.category || 'activity',
+      zone_id: raw.zone_id || null,
       activity_id: restaurant ? null : raw.activity_id || null,
       clear_activity: restaurant || !raw.activity_id,
-      name: String(raw.name).trim(),
-      opening_hours: String(raw.opening_hours).trim(),
-      phone: String(raw.phone).trim(),
+      name,
+      opening_hours: String(raw.opening_hours ?? '').trim(),
+      phone: String(raw.phone ?? '').trim(),
       latitude: latitude || null,
       longitude: longitude || null,
       clear_coordinates: !latitude && !longitude,
@@ -221,7 +231,7 @@ export class RegionalRecommendationListPage implements OnInit {
       activity_type: restaurant ? null : String(raw.activity_type ?? '').trim() || null,
       duration_text: restaurant ? null : String(raw.duration_text ?? '').trim() || null,
       difficulty_text: restaurant ? null : String(raw.difficulty_text ?? '').trim() || null,
-      description: restaurant ? null : String(raw.description ?? '').trim() || null,
+      description,
     };
     this.saving.set(true);
     const current = this.editing();

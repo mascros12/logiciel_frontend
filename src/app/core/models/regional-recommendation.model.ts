@@ -3,7 +3,7 @@ export type RecommendationCategory = 'activity' | 'restaurant';
 export interface RegionalRecommendation {
   id: string;
   category: RecommendationCategory;
-  zone_id: string;
+  zone_id: string | null;
   zone_name: string;
   activity_id: string | null;
   activity_name: string | null;
@@ -49,7 +49,7 @@ export interface RegionalRecommendationOptions {
 
 export interface RegionalRecommendationWrite {
   category: RecommendationCategory;
-  zone_id: string;
+  zone_id: string | null;
   activity_id?: string | null;
   name: string;
   opening_hours: string;

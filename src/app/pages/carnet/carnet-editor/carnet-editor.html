@@ -516,6 +516,7 @@
                 </label>
                 <label>Zona <input pInputText [value]="text(block, 'zone_name')" (input)="onText(block.id, 'zone_name', inputValue($event))" /></label>
                 <label>Nombre <input pInputText [value]="text(block, 'name')" (input)="onText(block.id, 'name', inputValue($event))" /></label>
+                <label>Descripción <textarea pInputTextarea rows="4" [value]="text(block, 'description')" (input)="onText(block.id, 'description', inputValue($event))"></textarea></label>
                 @if (block.content['category'] === 'activity') {
                   <label>Tipo <input pInputText [value]="text(block, 'activity_type')" (input)="onText(block.id, 'activity_type', inputValue($event))" /></label>
                 }
@@ -527,7 +528,6 @@
                 @if (block.content['category'] === 'activity') {
                   <label>Duración <input pInputText [value]="text(block, 'duration_text')" (input)="onText(block.id, 'duration_text', inputValue($event))" /></label>
                   <label>Dificultad <input pInputText [value]="text(block, 'difficulty_text')" (input)="onText(block.id, 'difficulty_text', inputValue($event))" /></label>
-                  <label>Descripción <textarea pInputTextarea rows="4" [value]="text(block, 'description')" (input)="onText(block.id, 'description', inputValue($event))"></textarea></label>
                   @if (canUsePurple(block)) {
                     <p>
                       <button type="button" (click)="setRecommendationTone(block.id, 'purple')">Marcar elección manual</button>

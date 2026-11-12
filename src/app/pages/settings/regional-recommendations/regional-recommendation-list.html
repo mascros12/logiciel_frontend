@@ -120,16 +120,16 @@
       <label>Tipo <input pInputText formControlName="activity_type" /></label>
       <label>Duración <input pInputText formControlName="duration_text" /></label>
       <label>Dificultad <input pInputText formControlName="difficulty_text" /></label>
-      <label>Descripción <textarea pInputTextarea rows="4" formControlName="description"></textarea></label>
     }
     <label>Nombre <input pInputText formControlName="name" /></label>
+    <label>Descripción <textarea pInputTextarea rows="4" formControlName="description"></textarea></label>
     <label>Horario <input pInputText formControlName="opening_hours" /></label>
     <label>Teléfono <input pInputText formControlName="phone" /></label>
     <label>Latitud <input pInputText formControlName="latitude" /></label>
     <label>Longitud <input pInputText formControlName="longitude" /></label>
     <label>Enlace http o https <input pInputText formControlName="url" /></label>
     <label class="regional-recommendations__switch">Activa <p-toggleSwitch formControlName="active" /></label>
-    <p>Indique el par de coordenadas o un enlace. Un restaurante no lleva duración ni dificultad.</p>
+    <p>El nombre y la descripción son obligatorios. Las coordenadas, si se indican, van juntas. Un restaurante no lleva tipo, duración ni dificultad.</p>
     <p-button type="submit" label="Guardar" [loading]="saving()" />
   </form>
 </p-dialog>

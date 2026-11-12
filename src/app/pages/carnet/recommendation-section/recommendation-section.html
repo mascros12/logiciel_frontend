@@ -5,7 +5,11 @@
   }
   @for (group of groups(); track group.zone) {
     <details class="recommendation-section__zone">
-      <summary>{{ group.zone || 'Autres' }}</summary>
+      <summary>
+        <span class="recommendation-section__zone-name">{{ group.zone || 'Autres' }}</span>
+        <span class="recommendation-section__count">{{ group.rows.length }}</span>
+      </summary>
+      <div class="recommendation-section__panel">
       @for (row of group.rows; track row.name + row.zoneName) {
         <article [class]="'recommendation-section__item tone-' + row.tone">
           <h4>
@@ -33,6 +37,9 @@
           @if (row.url) {
             <p><a [href]="row.url" target="_blank" rel="noopener noreferrer">Lien</a></p>
           }
+          @if (row.description) {
+            <p>{{ row.description }}</p>
+          }
           @if (kind() === 'activities') {
             @if (row.durationText) {
               <p>Durée : {{ row.durationText }}</p>
@@ -40,12 +47,10 @@
             @if (row.difficultyText) {
               <p>Difficulté : {{ row.difficultyText }}</p>
             }
-            @if (row.description) {
-              <p>{{ row.description }}</p>
-            }
           }
         </article>
       }
+      </div>
     </details>
   }
 </section>
