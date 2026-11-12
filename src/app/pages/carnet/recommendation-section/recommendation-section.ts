@@ -2,11 +2,13 @@ import { Component, input } from '@angular/core';
 import { RecommendationLine } from '../../../core/utils/carnet-document';
 import { wazeUrl } from '../../../core/utils/carnet-navigation';
 import { RichText } from '../rich-text/rich-text';
+import { FullPageImage } from '../full-page-image/full-page-image';
+import { WazeQr } from './waze-qr';
 
 @Component({
   selector: 'app-recommendation-section',
   standalone: true,
-  imports: [RichText],
+  imports: [RichText, WazeQr, FullPageImage],
   templateUrl: './recommendation-section.html',
   styleUrl: './recommendation-section.scss',
 })
@@ -15,6 +17,8 @@ export class RecommendationSection {
   readonly body = input('');
   readonly rows = input<RecommendationLine[]>([]);
   readonly kind = input<'activities' | 'restaurants'>('activities');
+  readonly mediaPublicBase = input<string | null>(null);
+  readonly mediaPrivateBase = input<string | null>(null);
 
   groups(): { zone: string; rows: RecommendationLine[] }[] {
     const order: string[] = [];

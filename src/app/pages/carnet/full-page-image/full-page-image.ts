@@ -12,6 +12,7 @@ export class FullPageImage implements OnDestroy {
   readonly assetId = input<string | null>(null);
   readonly publicBase = input<string | null>(null);
   readonly privateBase = input<string | null>(null);
+  readonly framed = input(true);
 
   readonly src = signal<string | null>(null);
 

@@ -47,6 +47,20 @@ export class RegionalRecommendationService {
     return this.http.post<RegionalRecommendation>(`${this.url}/`, body);
   }
 
+  uploadImage(id: string, file: File) {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<RegionalRecommendation>(`${this.url}/${id}/image`, body);
+  }
+
+  clearImage(id: string) {
+    return this.http.delete<RegionalRecommendation>(`${this.url}/${id}/image`);
+  }
+
+  image(id: string) {
+    return this.http.get(`${this.url}/${id}/image`, { responseType: 'blob' });
+  }
+
   update(id: string, body: Partial<RegionalRecommendationWrite>) {
     return this.http.patch<RegionalRecommendation>(`${this.url}/${id}`, body);
   }

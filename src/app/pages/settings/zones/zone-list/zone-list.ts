@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -31,13 +31,16 @@ import { ZoneService } from '../../../../core/services/zone.service';
   templateUrl: './zone-list.html',
   styleUrl: './zone-list.scss',
 })
-export class ZoneList implements OnInit {
+export class ZoneList implements OnInit, OnDestroy {
   zones = signal<Zone[]>([]);
   loading = signal(false);
   saving = signal(false);
   showDialog = signal(false);
   editing = signal<Zone | null>(null);
   searchTerm = '';
+  readonly imagePreview = signal<string | null>(null);
+  private pendingImage: File | null = null;
+  private imageObjectUrl: string | null = null;
   readonly rowsPerPage = 25;
   readonly rowsPerPageOptions = [25, 50, 100];
 
@@ -83,19 +86,56 @@ export class ZoneList implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.releaseImage();
+  }
+
   openCreate(): void {
     this.editing.set(null);
+    this.pendingImage = null;
+    this.releaseImage();
     this.form.reset({ name: '', province: null });
     this.showDialog.set(true);
   }
 
   openEdit(zone: Zone): void {
     this.editing.set(zone);
+    this.pendingImage = null;
+    this.releaseImage();
     this.form.reset({
       name: zone.name,
       province: zone.province,
     });
     this.showDialog.set(true);
+    if (zone.image_id) this.loadImage(zone.id);
+  }
+
+  onImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+    this.pendingImage = file;
+    this.releaseImage();
+    if (!file) return;
+    this.imageObjectUrl = URL.createObjectURL(file);
+    this.imagePreview.set(this.imageObjectUrl);
+  }
+
+  clearImage(): void {
+    const current = this.editing();
+    this.pendingImage = null;
+    this.releaseImage();
+    if (!current?.image_id) return;
+    this.zoneService.clearImage(current.id).subscribe({
+      next: (zone) => {
+        this.editing.set(zone);
+        this.load();
+      },
+      error: () => this.messageService.add({
+        severity: 'error',
+        summary: 'No se pudo quitar la imagen',
+      }),
+    });
   }
 
   submit(): void {
@@ -109,14 +149,35 @@ export class ZoneList implements OnInit {
       : this.zoneService.create(values);
 
     req.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.showDialog.set(false);
-        this.messageService.add({
-          severity: 'success',
-          summary: current ? 'Zona actualizada' : 'Zona creada',
+      next: (saved) => {
+        const file = this.pendingImage;
+        const finish = () => {
+          this.saving.set(false);
+          this.pendingImage = null;
+          this.showDialog.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: current ? 'Zona actualizada' : 'Zona creada',
+          });
+          this.load();
+        };
+        if (!file) {
+          finish();
+          return;
+        }
+        this.zoneService.uploadImage(saved.id, file).subscribe({
+          next: () => finish(),
+          error: (err: { error?: { detail?: string } }) => {
+            this.saving.set(false);
+            this.messageService.add({
+              severity: 'error',
+              summary: typeof err.error?.detail === 'string'
+                ? err.error.detail
+                : 'La zona se guardó, pero la imagen no',
+            });
+            this.load();
+          },
         });
-        this.load();
       },
       error: (err: { error?: { detail?: string } }) => {
         this.saving.set(false);
@@ -165,6 +226,22 @@ export class ZoneList implements OnInit {
       const province = z.province.toLowerCase();
       return name.includes(term) || province.includes(term);
     });
+  }
+
+  private loadImage(id: string): void {
+    this.zoneService.image(id).subscribe({
+      next: (blob) => {
+        this.releaseImage();
+        this.imageObjectUrl = URL.createObjectURL(blob);
+        this.imagePreview.set(this.imageObjectUrl);
+      },
+    });
+  }
+
+  private releaseImage(): void {
+    if (this.imageObjectUrl) URL.revokeObjectURL(this.imageObjectUrl);
+    this.imageObjectUrl = null;
+    this.imagePreview.set(null);
   }
 
   provinceLabel(province: Province): string {

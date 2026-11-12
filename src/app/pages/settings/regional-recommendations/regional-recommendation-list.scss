@@ -30,3 +30,11 @@
   flex-direction: row;
   align-items: center;
 }
+
+.regional-recommendations__photo {
+  display: block;
+  width: 100%;
+  max-height: 12rem;
+  object-fit: cover;
+  border-radius: 8px;
+}

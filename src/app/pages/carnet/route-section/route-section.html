@@ -3,11 +3,11 @@
     <app-rich-text [value]="body()" />
   }
   @if (zoneRows().length) {
+    <h2 class="routes__title">Temps de parcours</h2>
     <table class="routes__table">
       <thead>
         <tr>
-          <th>Départ</th>
-          <th>Destination</th>
+          <th>Trajet</th>
           <th>Distance</th>
           <th>Durée</th>
         </tr>
@@ -15,8 +15,7 @@
       <tbody>
         @for (row of zoneRows(); track $index) {
           <tr>
-            <td data-label="Départ">{{ row.originZone }}</td>
-            <td data-label="Destination">{{ row.destinationZone }}</td>
+            <td data-label="Trajet">{{ pair(row) }}</td>
             <td data-label="Distance">{{ row.distanceLabel }}</td>
             <td data-label="Durée">{{ row.durationLabel }}</td>
           </tr>
@@ -27,7 +26,14 @@
   <h2 class="routes__title">{{ heading() }}</h2>
   @for (row of establishmentRows(); track $index) {
     <article class="routes__detail">
-      <h3 class="routes__zone">{{ establishmentTitle(row) }}</h3>
+      <h3 class="routes__zone">
+        @if (headingOf(row).leg) {
+          <span class="routes__leg">{{ headingOf(row).leg }}</span>
+        }
+        @if (headingOf(row).hotels) {
+          <span class="routes__hotels">{{ headingOf(row).hotels }}</span>
+        }
+      </h3>
       @if (row.instructions) {
         <p class="routes__instructions">{{ row.instructions }}</p>
       }

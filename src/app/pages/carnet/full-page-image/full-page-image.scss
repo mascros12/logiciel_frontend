@@ -5,6 +5,11 @@
   break-after: page;
 }
 
+:host:has(.is-card) {
+  break-before: auto;
+  break-after: auto;
+}
+
 .full-page {
   margin: 0;
   max-width: 100%;
@@ -19,6 +24,18 @@ img {
   width: 100%;
   max-width: 100%;
   height: auto;
+}
+
+.full-page.is-card {
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.full-page.is-card img {
+  max-height: 11rem;
+  object-fit: cover;
 }
 
 p {

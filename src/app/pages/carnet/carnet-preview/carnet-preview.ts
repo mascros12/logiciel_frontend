@@ -46,6 +46,8 @@ export class CarnetPreview {
   readonly mode = input<'draft' | 'published'>('draft');
   readonly questionnaireMode = input<'public' | 'staff' | null>(null);
   readonly questionnaireKey = input('');
+  readonly mediaPublicBase = input<string | null>(null);
+  readonly mediaPrivateBase = input<string | null>(null);
   readonly tab = signal<DigitalTab>('organisation');
   readonly recommendationTab = signal<'activities' | 'restaurants'>('activities');
   readonly scores = [1, 2, 3, 4, 5];

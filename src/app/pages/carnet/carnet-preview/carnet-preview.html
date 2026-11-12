@@ -145,6 +145,8 @@
             [body]="text(block, 'body')"
             [rows]="recommendationRows(block)"
             kind="activities"
+            [mediaPublicBase]="mediaPublicBase()"
+            [mediaPrivateBase]="mediaPrivateBase()"
           />
         } @else {
           <p class="carnet-preview__empty">Aucune activité recommandée.</p>
@@ -155,6 +157,8 @@
           [body]="text(block, 'body')"
           [rows]="recommendationRows(block)"
           kind="restaurants"
+          [mediaPublicBase]="mediaPublicBase()"
+          [mediaPrivateBase]="mediaPrivateBase()"
         />
       } @else {
         <p class="carnet-preview__empty">Aucun restaurant recommandé.</p>

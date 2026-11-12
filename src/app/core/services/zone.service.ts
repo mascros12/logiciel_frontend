@@ -27,4 +27,18 @@ export class ZoneService {
   delete(id: string) {
     return this.http.delete<void>(`${this.url}/${id}`);
   }
+
+  uploadImage(id: string, file: File) {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<Zone>(`${this.url}/${id}/image`, body);
+  }
+
+  clearImage(id: string) {
+    return this.http.delete<Zone>(`${this.url}/${id}/image`);
+  }
+
+  image(id: string) {
+    return this.http.get(`${this.url}/${id}/image`, { responseType: 'blob' });
+  }
 }

@@ -1,7 +1,9 @@
 import { Component, input } from '@angular/core';
 import {
-  establishmentRouteTitle,
   RouteLine,
+  TrajetHeading,
+  trajetHeading,
+  zonePair,
 } from '../../../core/utils/carnet-document';
 import { RichText } from '../rich-text/rich-text';
 
@@ -25,7 +27,11 @@ export class RouteSection {
     return this.rows().filter((row) => row.tone !== 'zone');
   }
 
-  establishmentTitle(row: RouteLine): string {
-    return establishmentRouteTitle(row);
+  pair(row: RouteLine): string {
+    return zonePair(row);
+  }
+
+  headingOf(row: RouteLine): TrajetHeading {
+    return trajetHeading(row);
   }
 }

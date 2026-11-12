@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
+import { apiUrl } from '../../../core/config/api.config';
 import { CarnetDocument } from '../../../core/models/carnet.model';
 import { CarnetPdfStyle, CarnetService } from '../../../core/services/carnet.service';
 import { documentFromPublic } from '../../../core/utils/carnet-document';
@@ -26,6 +27,10 @@ export class CarnetPublic implements OnInit, OnDestroy {
 
   token(): string {
     return this.route.snapshot.paramMap.get('token') ?? '';
+  }
+
+  mediaBase(): string {
+    return apiUrl(`public/carnets/${encodeURIComponent(this.token())}/media`);
   }
 
   ngOnInit(): void {

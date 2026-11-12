@@ -194,6 +194,7 @@
         [unsaved]="dirty()"
         questionnaireMode="staff"
         [questionnaireKey]="carnetId"
+        [mediaPrivateBase]="pageMediaBase()"
       />
     } @else {
       <div class="carnet-editor__layout">
@@ -461,6 +462,7 @@
                 <label>Salida <input pInputText [value]="text(block, 'departure_time')" (input)="onText(block.id, 'departure_time', inputValue($event))" /></label>
                 <label>Regreso <input pInputText [value]="text(block, 'return_time')" (input)="onText(block.id, 'return_time', inputValue($event))" /></label>
                 <label>Fechas <textarea pInputTextarea rows="3" [value]="dates(block)" (input)="onDates(block.id, inputValue($event))"></textarea></label>
+                <label>Reserva <input pInputText [value]="text(block, 'reservation_number')" (input)="onText(block.id, 'reservation_number', inputValue($event))" /></label>
                 <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
                 <label>Notas <textarea pInputTextarea rows="3" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
                 @if (showsRentalNotice(block)) {
@@ -469,6 +471,9 @@
                   </div>
                   <label>Aviso de alquiler <textarea #rentalField pInputTextarea rows="6" [value]="rentalNotice(block)" (input)="onRentalNotice(block.id, inputValue($event))"></textarea></label>
                   <p class="carnet-editor__hint">Se imprime subrayado debajo de la tabla. Lo que va entre ** queda en negrita. Si no lo modifica, el nombre sale del encabezado Voiture de Location de la ficha AA, junto con la reserva, el recibo, la devolución y el teléfono de la marca.</p>
+                  @if (pending(block)) {
+                    <p class="carnet-editor__hint">Pendiente: falta el número de reserva. Escríbalo en Reserva. Si no ha modificado el aviso, muestra [numéro de réservation]. No se puede publicar mientras falte.</p>
+                  }
                 }
               }
               @case ('route') {
@@ -514,6 +519,9 @@
                   <input type="checkbox" [checked]="block.content['included'] !== false" (change)="onIncluded(block.id, checkboxValue($event))" />
                   Incluir en el Carnet del viajero
                 </label>
+                @if (pending(block)) {
+                  <p class="carnet-editor__hint">Pendiente: falta la imagen. Cárguela en la recomendación o, si no tiene, en la zona. No se puede publicar mientras falte.</p>
+                }
                 <label>Zona <input pInputText [value]="text(block, 'zone_name')" (input)="onText(block.id, 'zone_name', inputValue($event))" /></label>
                 <label>Nombre <input pInputText [value]="text(block, 'name')" (input)="onText(block.id, 'name', inputValue($event))" /></label>
                 <label>Descripción <textarea pInputTextarea rows="4" [value]="text(block, 'description')" (input)="onText(block.id, 'description', inputValue($event))"></textarea></label>

@@ -1,7 +1,7 @@
-<figure class="full-page">
+<figure class="full-page" [class.is-card]="!framed()">
   @if (src(); as image) {
-    <img [src]="image" alt="" />
-  } @else {
+    <img [src]="image" [alt]="framed() ? '' : 'Recomendación'" />
+  } @else if (framed()) {
     <p>Página sin imagen</p>
   }
 </figure>

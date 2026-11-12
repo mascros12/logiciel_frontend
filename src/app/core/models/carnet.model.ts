@@ -170,6 +170,7 @@ export interface PublicRecommendation {
   duration_text: string | null;
   difficulty_text: string | null;
   description: string | null;
+  image_asset_id?: string | null;
   tone: 'black' | 'red' | 'purple';
 }
 

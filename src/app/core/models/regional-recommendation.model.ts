@@ -18,6 +18,7 @@ export interface RegionalRecommendation {
   duration_text: string | null;
   difficulty_text: string | null;
   description: string | null;
+  image_id: string | null;
 }
 
 export interface RegionalRecommendationList {

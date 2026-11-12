@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -36,8 +36,11 @@ import { RegionalRecommendationService } from '../../../core/services/regional-r
   templateUrl: './regional-recommendation-list.html',
   styleUrl: './regional-recommendation-list.scss',
 })
-export class RegionalRecommendationListPage implements OnInit {
+export class RegionalRecommendationListPage implements OnInit, OnDestroy {
   readonly rows = signal<RegionalRecommendation[]>([]);
+  readonly imagePreview = signal<string | null>(null);
+  private pendingImage: File | null = null;
+  private imageObjectUrl: string | null = null;
   readonly options = signal<RegionalRecommendationOptions | null>(null);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -133,8 +136,14 @@ export class RegionalRecommendationListPage implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.releaseImage();
+  }
+
   openCreate(): void {
     this.editing.set(null);
+    this.pendingImage = null;
+    this.releaseImage();
     this.form.reset({
       category: 'activity',
       zone_id: null,
@@ -156,6 +165,9 @@ export class RegionalRecommendationListPage implements OnInit {
 
   openEdit(row: RegionalRecommendation): void {
     this.editing.set(row);
+    this.pendingImage = null;
+    this.releaseImage();
+    if (row.image_id) this.loadImage(row.id);
     this.form.reset({
       category: row.category,
       zone_id: row.zone_id,
@@ -240,11 +252,32 @@ export class RegionalRecommendationListPage implements OnInit {
       ? this.api.update(current.id, body)
       : this.api.create(created);
     request.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.showDialog.set(false);
-        this.messages.add({ severity: 'success', summary: 'Recomendación guardada' });
-        this.load();
+      next: (saved) => {
+        const file = this.pendingImage;
+        const finish = () => {
+          this.saving.set(false);
+          this.pendingImage = null;
+          this.showDialog.set(false);
+          this.messages.add({ severity: 'success', summary: 'Recomendación guardada' });
+          this.load();
+        };
+        if (!file) {
+          finish();
+          return;
+        }
+        this.api.uploadImage(saved.id, file).subscribe({
+          next: () => finish(),
+          error: (error: { error?: { detail?: string } }) => {
+            this.saving.set(false);
+            const detail = error.error?.detail;
+            this.messages.add({
+              severity: 'error',
+              summary: 'La recomendación se guardó, pero la imagen no',
+              detail: typeof detail === 'string' ? detail : 'Revise el archivo.',
+            });
+            this.load();
+          },
+        });
       },
       error: (error: { error?: { detail?: string } }) => {
         this.saving.set(false);
@@ -277,5 +310,49 @@ export class RegionalRecommendationListPage implements OnInit {
       label: item.name,
       value: item.id,
     }));
+  }
+
+  onImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+    this.pendingImage = file;
+    this.releaseImage();
+    if (!file) return;
+    this.imageObjectUrl = URL.createObjectURL(file);
+    this.imagePreview.set(this.imageObjectUrl);
+  }
+
+  clearImage(): void {
+    const current = this.editing();
+    this.pendingImage = null;
+    this.releaseImage();
+    if (!current?.image_id) return;
+    this.api.clearImage(current.id).subscribe({
+      next: (row) => {
+        this.editing.set(row);
+        this.load();
+      },
+      error: () => this.messages.add({
+        severity: 'error',
+        summary: 'No se pudo quitar la imagen',
+      }),
+    });
+  }
+
+  private loadImage(id: string): void {
+    this.api.image(id).subscribe({
+      next: (blob) => {
+        this.releaseImage();
+        this.imageObjectUrl = URL.createObjectURL(blob);
+        this.imagePreview.set(this.imageObjectUrl);
+      },
+    });
+  }
+
+  private releaseImage(): void {
+    if (this.imageObjectUrl) URL.revokeObjectURL(this.imageObjectUrl);
+    this.imageObjectUrl = null;
+    this.imagePreview.set(null);
   }
 }

@@ -12,6 +12,14 @@
       <div class="recommendation-section__panel">
       @for (row of group.rows; track row.name + row.zoneName) {
         <article [class]="'recommendation-section__item tone-' + row.tone">
+          @if (row.imageAssetId) {
+            <app-full-page-image
+              [assetId]="row.imageAssetId"
+              [publicBase]="mediaPublicBase()"
+              [privateBase]="mediaPrivateBase()"
+              [framed]="false"
+            />
+          }
           <h4>
             {{ row.name }}
             @if (kind() === 'activities' && row.activityType) {
@@ -24,21 +32,27 @@
           @if (row.phone) {
             <p>Tél. : {{ row.phone }}</p>
           }
+          @if (row.description) {
+            <p class="recommendation-section__description">{{ row.description }}</p>
+          }
           @if (row.latitude && row.longitude) {
-            <p class="recommendation-section__nav">
+            <div class="recommendation-section__nav">
+              @if (waze(row); as href) {
+                <a class="recommendation-section__qr" [href]="href" target="_blank" rel="noopener noreferrer">
+                  <app-waze-qr [url]="href" />
+                  <span>Waze</span>
+                </a>
+              }
               <a class="recommendation-section__button" [href]="maps(row)" target="_blank" rel="noopener noreferrer">
                 Google Maps
               </a>
               <a class="recommendation-section__button" [href]="waze(row)" target="_blank" rel="noopener noreferrer">
                 Waze
               </a>
-            </p>
+            </div>
           }
           @if (row.url) {
             <p><a [href]="row.url" target="_blank" rel="noopener noreferrer">Lien</a></p>
-          }
-          @if (row.description) {
-            <p>{{ row.description }}</p>
           }
           @if (kind() === 'activities') {
             @if (row.durationText) {

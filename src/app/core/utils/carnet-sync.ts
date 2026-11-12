@@ -25,5 +25,6 @@ export function syncKindLabel(kind: string): string {
   if (kind === 'recommendation_add') return 'Recomendación de la zona';
   if (kind === 'recommendation_exclude') return 'Recomendación que ya no corresponde';
   if (kind === 'recommendation_recolor') return 'Color según la Ficha AA';
+  if (kind === 'recommendation_image') return 'Imagen de la recomendación o de la zona';
   return 'Servicio modificado';
 }

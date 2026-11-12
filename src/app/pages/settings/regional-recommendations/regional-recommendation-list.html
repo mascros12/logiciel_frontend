@@ -123,6 +123,16 @@
     }
     <label>Nombre <input pInputText formControlName="name" /></label>
     <label>Descripción <textarea pInputTextarea rows="4" formControlName="description"></textarea></label>
+    <label>Imagen
+      <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" (change)="onImage($event)" />
+    </label>
+    @if (imagePreview(); as src) {
+      <img class="regional-recommendations__photo" [src]="src" alt="Imagen de la recomendación" />
+    }
+    @if (imagePreview() || editing()?.image_id) {
+      <p-button type="button" label="Quitar imagen" [text]="true" severity="danger" (onClick)="clearImage()" />
+    }
+    <p>Si no carga una imagen, la ficha usa la de la zona. Si ninguna tiene, queda pendiente en el carnet.</p>
     <label>Horario <input pInputText formControlName="opening_hours" /></label>
     <label>Teléfono <input pInputText formControlName="phone" /></label>
     <label>Latitud <input pInputText formControlName="latitude" /></label>

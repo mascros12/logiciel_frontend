@@ -87,6 +87,18 @@
         styleClass="w-full"
       />
     </div>
+
+    <div class="field">
+      <label>Imagen</label>
+      <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" (change)="onImage($event)" />
+      @if (imagePreview(); as src) {
+        <img class="zone-form__photo" [src]="src" alt="Imagen de la zona" />
+      }
+      @if (imagePreview() || editing()?.image_id) {
+        <p-button type="button" label="Quitar imagen" [text]="true" severity="danger" (onClick)="clearImage()" />
+      }
+      <p>Se muestra en las recomendaciones de esta zona que no tengan imagen propia.</p>
+    </div>
   </form>
 
   <ng-template pTemplate="footer">

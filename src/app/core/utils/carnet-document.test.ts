@@ -1004,13 +1004,13 @@ describe('página de imagen', () => {
         destinationZone: 'Carara',
         originPlace: 'Finca la Amistad',
         destinationPlace: 'Selva Color',
-        originLodging: 'Finca la Amistad',
+        originLodging: 'Finca* la Amistad!',
         destinationLodging: 'Selva Color',
-        distanceLabel: '',
+        distanceLabel: '172 km',
         durationLabel: '',
         instructions: 'Prendre la route.',
       }),
-      'Finca la Amistad - Selva Color',
+      'Río Celeste - Carara  172 km Finca la Amistad - Selva Color',
     );
     assert.equal(
       excursionRouteTitle({
@@ -1254,6 +1254,17 @@ describe('aviso de alquiler', () => {
     };
     const notice = rentalNoticeText(block);
     assert.match(notice, /Hyundai Kona 2WD ou similaire \(1304120\)/);
+    const pending = {
+      ...block,
+      content: {
+        ...block.content,
+        reservation_number: text(null),
+      },
+    };
+    assert.match(
+      rentalNoticeText(pending),
+      /Hyundai Kona 2WD ou similaire \(\[numéro de réservation\]\)/,
+    );
     assert.equal(notice.includes('nombre de ficha AA'), false);
     assert.equal(notice.includes('4x4'), false);
     assert.match(notice, /Adobe rent a car \*\*2542-4848\*\*/);

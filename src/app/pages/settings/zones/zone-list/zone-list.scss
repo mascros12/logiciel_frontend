@@ -26,6 +26,15 @@
   }
 }
 
+.zone-form__photo {
+  display: block;
+  width: 100%;
+  max-height: 10rem;
+  object-fit: cover;
+  margin-top: 0.5rem;
+  border-radius: 8px;
+}
+
 .zone-form {
   display: flex;
   flex-direction: column;

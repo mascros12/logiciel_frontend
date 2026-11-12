@@ -2,6 +2,7 @@ import { Component, OnInit, inject, input, output, signal } from '@angular/core'
 import { HttpErrorResponse } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
+import { apiUrl } from '../../../core/config/api.config';
 import { CarnetService } from '../../../core/services/carnet.service';
 import {
   CarnetDocument,
@@ -75,6 +76,7 @@ export class CarnetSyncPanel implements OnInit {
       { title: 'Recomendaciones nuevas', kinds: ['recommendation_add'] },
       { title: 'Recomendaciones que ya no corresponden', kinds: ['recommendation_exclude'] },
       { title: 'Color de actividades', kinds: ['recommendation_recolor'] },
+      { title: 'Imagen de la recomendación', kinds: ['recommendation_image'] },
     ];
     return buckets
       .map((bucket) => ({
@@ -86,6 +88,10 @@ export class CarnetSyncPanel implements OnInit {
 
   conflicts(): SyncAction[] {
     return (this.proposal()?.actions ?? []).filter((action) => action.state === 'conflict');
+  }
+
+  mediaBase(): string {
+    return apiUrl(`carnets/${this.carnetId()}/media`);
   }
 
   label(action: SyncAction): string {

@@ -212,7 +212,7 @@ function composeRentalNotice(block: CarnetBlock): string {
   const provider = beforeSlash(brand);
   const phone = afterSlash(brand);
   const similar = name ? `${name} ou similaire` : 'ou similaire';
-  const booked = reservation ? `${similar} (${reservation})` : similar;
+  const booked = `${similar} (${reservation || PENDING_RESERVATION})`;
   const lines = [`La voiture de location **${booked}**`];
   const meeting: string[] = [];
   if (pickup) meeting.push(`Rendez vous le **${pickup}**`);
@@ -221,6 +221,21 @@ function composeRentalNotice(block: CarnetBlock): string {
   if (provider || phone) lines.push(phone ? `${provider} **${phone}**`.trim() : provider);
   lines.push(`**${RENTAL_INSURANCE}**`);
   return lines.join('\n');
+}
+
+const PENDING_RESERVATION = '[numéro de réservation]';
+
+export function recommendationNeedsImage(block: CarnetBlock): boolean {
+  if (block.removed || !block.visible || block.type !== 'regional_recommendation') return false;
+  if (block.content['included'] === false) return false;
+  const image = block.content['image_asset_id'];
+  return typeof image !== 'string' || image.length === 0;
+}
+
+export function rentalNeedsReservation(block: CarnetBlock): boolean {
+  if (block.removed || !block.visible || block.type !== 'transport') return false;
+  if (foldLabel(textOf(block.content, 'service_type')) !== RENTAL_KIND) return false;
+  return textOf(block.content, 'reservation_number').trim().length === 0;
 }
 
 function foldLabel(value: string): string {
@@ -1052,6 +1067,9 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       duration_text: writeText(content, 'duration_text'),
       difficulty_text: writeText(content, 'difficulty_text'),
       description: writeText(content, 'description'),
+      image_asset_id: typeof content['image_asset_id'] === 'string'
+        ? content['image_asset_id']
+        : null,
     };
   }
   if (block.type === 'itinerary_route') {
@@ -1124,6 +1142,12 @@ export function blockIssues(block: CarnetBlock): string[] {
     if (link && !isHttpUrl(link)) {
       errors.push(`${label}: el enlace debe usar http o https.`);
     }
+  }
+  if (rentalNeedsReservation(block)) {
+    errors.push(`${label}: falta el número de reserva del alquiler.`);
+  }
+  if (recommendationNeedsImage(block)) {
+    errors.push(`${label}: falta la imagen de la recomendación o de su zona.`);
   }
   if (block.type === 'regional_recommendation') {
     const latitude = textOf(block.content, 'latitude');
@@ -1273,10 +1297,37 @@ export function excursionRouteTitle(row: RouteLine): string {
   return row.durationLabel ? `${title} (${row.durationLabel})` : title;
 }
 
+export function routePlain(value: string): string {
+  return value.replace(/[*!]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function zonePair(row: RouteLine): string {
+  return [routePlain(row.originZone), routePlain(row.destinationZone)]
+    .filter((part) => part.length > 0)
+    .join(' - ');
+}
+
+export interface TrajetHeading {
+  leg: string;
+  hotels: string;
+}
+
+export function trajetHeading(row: RouteLine): TrajetHeading {
+  const distance = routePlain(row.distanceLabel);
+  const zones = zonePair(row);
+  const leg = distance ? `${zones}  ${distance}`.trim() : zones;
+  const hotels = [
+    routePlain(row.originLodging || row.originPlace),
+    routePlain(row.destinationLodging || row.destinationPlace),
+  ]
+    .filter((part) => part.length > 0)
+    .join(' - ');
+  return { leg, hotels };
+}
+
 export function establishmentRouteTitle(row: RouteLine): string {
-  const origin = row.originPlace || row.originLodging || row.originZone;
-  const destination = row.destinationPlace || row.destinationLodging || row.destinationZone;
-  return `${origin} - ${destination}`;
+  const heading = trajetHeading(row);
+  return [heading.leg, heading.hotels].filter((part) => part.length > 0).join(' ');
 }
 
 export interface RecommendationLine {
@@ -1292,6 +1343,7 @@ export interface RecommendationLine {
   durationText: string;
   difficultyText: string;
   description: string;
+  imageAssetId: string | null;
   tone: 'black' | 'red' | 'purple';
 }
 
@@ -1321,6 +1373,9 @@ export function recommendationLines(
       durationText: textOf(block.content, 'duration_text'),
       difficultyText: textOf(block.content, 'difficulty_text'),
       description: textOf(block.content, 'description'),
+      imageAssetId: typeof block.content['image_asset_id'] === 'string'
+        ? block.content['image_asset_id']
+        : null,
       tone: block.content['tone'] === 'red' || block.content['tone'] === 'purple'
         ? block.content['tone']
         : 'black',
@@ -1817,6 +1872,7 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
           duration_text: tracked(item.duration_text),
           difficulty_text: tracked(item.difficulty_text),
           description: tracked(item.description),
+          image_asset_id: item.image_asset_id ?? null,
         },
       });
     }

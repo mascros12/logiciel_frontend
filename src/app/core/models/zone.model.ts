@@ -11,6 +11,7 @@ export interface Zone {
   id: string;
   name: string;
   province: Province;
+  image_id: string | null;
   created_at: string;
   updated_at: string;
 }

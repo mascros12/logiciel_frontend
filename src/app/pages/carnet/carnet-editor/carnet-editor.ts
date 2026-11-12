@@ -66,6 +66,8 @@ import {
   setPoints,
   setRoomText,
   pageAssetId,
+  recommendationNeedsImage,
+  rentalNeedsReservation,
   routeNeedsData,
   sectionPending,
   setPageAsset,
@@ -814,7 +816,12 @@ export class CarnetEditor implements OnInit {
   }
 
   pending(block: CarnetBlock): boolean {
-    return sectionPending(block, this.document()?.blocks ?? []) || routeNeedsData(block);
+    return (
+      sectionPending(block, this.document()?.blocks ?? [])
+      || routeNeedsData(block)
+      || rentalNeedsReservation(block)
+      || recommendationNeedsImage(block)
+    );
   }
 
   hasIssue(block: CarnetBlock): boolean {
