@@ -39,7 +39,7 @@ export class RegionalRecommendationService {
     pageSize?: number;
   }) {
     const page = filters.page ?? 1;
-    const pageSize = filters.pageSize ?? 200;
+    const pageSize = filters.pageSize ?? 0;
     let params = new HttpParams().set('page', page).set('page_size', pageSize);
     if (filters.active != null) params = params.set('active', filters.active);
     if (filters.category) params = params.set('category', filters.category);
@@ -48,7 +48,10 @@ export class RegionalRecommendationService {
     return this.http.get<RegionalRecommendationList>(`${this.url}/`, { params });
   }
 
-  /** El API entrega como máximo 200 por página. Esta llamada recorre todas. */
+  /**
+   * Catálogo completo. Con el API nuevo basta una respuesta.
+   * Si el servidor todavía recorta a 200, se piden las páginas que falten.
+   */
   listAll(filters: {
     active?: boolean | null;
     category?: string | null;
@@ -56,19 +59,19 @@ export class RegionalRecommendationService {
     q?: string;
   }): Observable<RegionalRecommendationList> {
     const pageSize = 200;
-    return this.list({ ...filters, page: 1, pageSize }).pipe(
+    return this.list({ ...filters, page: 1, pageSize: 0 }).pipe(
       switchMap((first) => {
-        const pages = Math.ceil(first.total / pageSize);
-        if (pages <= 1) return of(first);
-        const rest = Array.from({ length: pages - 1 }, (_, index) =>
-          this.list({ ...filters, page: index + 2, pageSize }),
+        if (first.items.length >= first.total) return of(first);
+        const pages = Math.max(1, Math.ceil(first.total / pageSize));
+        const requests = Array.from({ length: pages }, (_, index) =>
+          this.list({ ...filters, page: index + 1, pageSize }),
         );
-        return forkJoin(rest).pipe(
+        return forkJoin(requests).pipe(
           map((lists) => ({
-            items: first.items.concat(...lists.map((page) => page.items)),
+            items: lists.flatMap((page) => page.items),
             total: first.total,
             page: 1,
-            page_size: pageSize,
+            page_size: first.total,
           })),
         );
       }),
