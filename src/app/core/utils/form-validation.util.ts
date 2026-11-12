@@ -22,6 +22,10 @@ export function controlErrorMessage(
   if (e['minlength']) {
     return `${label} debe tener al menos ${e['minlength'].requiredLength} caracteres.`;
   }
+  if (e['maxlength']) {
+    return `${label} debe tener como máximo ${e['maxlength'].requiredLength} caracteres.`;
+  }
+  if (typeof e['message'] === 'string' && e['message'].trim()) return e['message'];
   if (typeof e['dateRange'] === 'string') return e['dateRange'];
   if (e['dateRangeEnd']) {
     return 'La fecha fin debe ser mayor o igual a la fecha inicio.';

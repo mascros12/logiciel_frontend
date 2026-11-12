@@ -1,6 +1,14 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -12,10 +20,18 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import {
   RecommendationCategory,
+  RecommendationOptionActivity,
   RegionalRecommendation,
   RegionalRecommendationOptions,
 } from '../../../core/models/regional-recommendation.model';
 import { RegionalRecommendationService } from '../../../core/services/regional-recommendation.service';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { coordinatePairValidator } from '../../../core/utils/coordinate.util';
+import {
+  apiErrorSummary,
+  validateForm,
+  warnInvalidForm,
+} from '../../../core/utils/form-validation.util';
 
 @Component({
   selector: 'app-regional-recommendation-list',
@@ -31,6 +47,7 @@ import { RegionalRecommendationService } from '../../../core/services/regional-r
     SelectModule,
     ToggleSwitchModule,
     ToastModule,
+    FieldErrorComponent,
   ],
   providers: [MessageService],
   templateUrl: './regional-recommendation-list.html',
@@ -68,24 +85,27 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
       category: ['activity' as RecommendationCategory],
       zone_id: [null as string | null],
       activity_id: [null as string | null],
-      name: ['', Validators.required],
-      opening_hours: [''],
-      phone: [''],
-      latitude: [''],
-      longitude: [''],
-      url: [''],
+      name: ['', [requiredText, Validators.maxLength(200), plainText(200)]],
+      opening_hours: ['', plainText(8000)],
+      phone: ['', [Validators.maxLength(40), plainText(40)]],
+      latitude: ['', freeCoordinate(-90, 90, 'Latitud')],
+      longitude: ['', freeCoordinate(-180, 180, 'Longitud')],
+      url: ['', httpUrl],
       active: [true],
-      activity_type: [''],
-      duration_text: [''],
-      difficulty_text: [''],
-      description: ['', Validators.required],
-    });
+      activity_type: ['', [Validators.maxLength(120), plainText(120)]],
+      duration_text: ['', [Validators.maxLength(120), plainText(120)]],
+      difficulty_text: ['', [Validators.maxLength(120), plainText(120)]],
+      description: ['', [requiredText, plainText(8000)]],
+    }, { validators: coordinatePairValidator });
   }
 
   ngOnInit(): void {
     this.api.options().subscribe({
       next: (options) => this.options.set(options),
-      error: () => this.messages.add({ severity: 'error', summary: 'No se pudieron cargar las zonas' }),
+      error: () => this.messages.add({
+        severity: 'error',
+        summary: 'No se pudieron cargar las zonas ni las actividades',
+      }),
     });
     this.load();
     const editId = this.route.snapshot.queryParamMap.get('editar');
@@ -119,7 +139,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
 
   load(): void {
     this.loading.set(true);
-    this.api.list({
+    this.api.listAll({
       active: this.activeFilter === 'all' ? null : this.activeFilter === 'yes',
       category: this.categoryFilter || null,
       zoneId: this.zoneFilter || null,
@@ -209,24 +229,31 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
   }
 
   save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+    const messages = validateForm(this.form, {
+      name: 'Nombre',
+      description: 'Descripción',
+      opening_hours: 'Horario',
+      phone: 'Teléfono',
+      latitude: 'Latitud',
+      longitude: 'Longitud',
+      url: 'Enlace',
+      activity_type: 'Tipo',
+      duration_text: 'Duración',
+      difficulty_text: 'Dificultad',
+    });
+    if (this.form.hasError('coordinatePair')) {
+      messages.push('Indique latitud y longitud, o deje ambas vacías.');
+    }
+    if (messages.length) {
+      warnInvalidForm(this.messages, messages);
       return;
     }
     const raw = this.form.getRawValue();
     const restaurant = raw.category === 'restaurant';
-    const latitude = String(raw.latitude ?? '').trim();
-    const longitude = String(raw.longitude ?? '').trim();
+    const latitude = String(raw.latitude ?? '').trim().replace(',', '.');
+    const longitude = String(raw.longitude ?? '').trim().replace(',', '.');
     const name = String(raw.name ?? '').trim();
     const description = String(raw.description ?? '').trim();
-    if (!name || !description) {
-      this.form.markAllAsTouched();
-      this.messages.add({
-        severity: 'error',
-        summary: 'El nombre y la descripción son obligatorios',
-      });
-      return;
-    }
     const body = {
       category: raw.category || 'activity',
       zone_id: raw.zone_id || null,
@@ -267,25 +294,23 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
         }
         this.api.uploadImage(saved.id, file).subscribe({
           next: () => finish(),
-          error: (error: { error?: { detail?: string } }) => {
+          error: (error: { error?: { detail?: unknown } }) => {
             this.saving.set(false);
-            const detail = error.error?.detail;
             this.messages.add({
               severity: 'error',
               summary: 'La recomendación se guardó, pero la imagen no',
-              detail: typeof detail === 'string' ? detail : 'Revise el archivo.',
+              detail: apiErrorSummary(error, 'Revise el archivo.'),
             });
             this.load();
           },
         });
       },
-      error: (error: { error?: { detail?: string } }) => {
+      error: (error: { error?: { detail?: unknown } }) => {
         this.saving.set(false);
-        const detail = error.error?.detail;
         this.messages.add({
           severity: 'error',
           summary: 'No se pudo guardar',
-          detail: typeof detail === 'string' ? detail : 'Revise los datos.',
+          detail: apiErrorSummary(error, 'Revise los datos.'),
         });
       },
     });
@@ -305,12 +330,12 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     return (this.options()?.zones ?? []).map((zone) => ({ label: zone.name, value: zone.id }));
   }
 
-  activityOptions() {
-    return (this.options()?.activities ?? []).map((item) => ({
-      label: item.name,
-      value: item.id,
-    }));
-  }
+  readonly activityChoices = computed(() =>
+    (this.options()?.activities ?? []).map((item) => {
+      const label = activityChoiceLabel(item);
+      return { label, search: foldSearch(label), value: item.id };
+    }),
+  );
 
   onImage(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -355,4 +380,61 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     this.imageObjectUrl = null;
     this.imagePreview.set(null);
   }
+}
+
+function requiredText(control: AbstractControl): ValidationErrors | null {
+  return String(control.value ?? '').trim() ? null : { required: true };
+}
+
+function plainText(max: number) {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const text = String(control.value ?? '');
+    if (/<\s*\/?\s*[a-zA-Z][^>]*>/.test(text)) {
+      return { message: 'No se admite HTML.' };
+    }
+    if (text.length > max) {
+      return { maxlength: { requiredLength: max, actualLength: text.length } };
+    }
+    return null;
+  };
+}
+
+function freeCoordinate(min: number, max: number, label: string) {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const text = String(control.value ?? '').trim().replace(',', '.');
+    if (!text) return null;
+    if (!/^-?\d+(\.\d+)?$/.test(text)) return { message: `${label} no es un número.` };
+    const value = Number(text);
+    if (value < min) return { min: { min } };
+    if (value > max) return { max: { max } };
+    return null;
+  };
+}
+
+function httpUrl(control: AbstractControl): ValidationErrors | null {
+  const text = String(control.value ?? '').trim();
+  if (!text) return null;
+  if (text.length > 2000) {
+    return { maxlength: { requiredLength: 2000, actualLength: text.length } };
+  }
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    return { message: 'El enlace debe usar http o https.' };
+  }
+  const scheme = url.protocol === 'http:' || url.protocol === 'https:';
+  if (!scheme || !url.hostname) return { message: 'El enlace debe usar http o https.' };
+  return null;
+}
+
+function foldSearch(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase();
+}
+
+function activityChoiceLabel(item: RecommendationOptionActivity): string {
+  const parts = [item.catalog_name, item.name_es, item.file_aa_name, item.name]
+    .map((value) => (value ?? '').trim())
+    .filter((value, index, all) => value !== '' && all.indexOf(value) === index);
+  return parts.join(' · ');
 }

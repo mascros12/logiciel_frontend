@@ -219,7 +219,7 @@ export class CarnetEditor implements OnInit {
       next: (options) => this.routeOptions.set(options),
       error: () => this.routeOptions.set(null),
     });
-    this.recommendationsApi.list({ active: true }).subscribe({
+    this.recommendationsApi.listAll({ active: true }).subscribe({
       next: (res) => this.catalogRecommendations.set(res.items),
       error: () => this.catalogRecommendations.set([]),
     });
@@ -234,10 +234,14 @@ export class CarnetEditor implements OnInit {
     if (!category) return [];
     return this.catalogRecommendations()
       .filter((item) => item.category === category && item.active)
-      .map((item) => ({
-        label: `${item.zone_name} · ${item.name}`,
-        value: item.id,
-      }));
+      .map((item) => {
+        const label = `${item.zone_name} · ${item.name}`;
+        return {
+          label,
+          search: label.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase(),
+          value: item.id,
+        };
+      });
   }
 
   canUsePurple(block: CarnetBlock): boolean {

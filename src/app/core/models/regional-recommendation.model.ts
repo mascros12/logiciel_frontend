@@ -36,6 +36,9 @@ export interface RecommendationOptionZone {
 export interface RecommendationOptionActivity {
   id: string;
   name: string;
+  catalog_name?: string;
+  name_es?: string;
+  file_aa_name?: string;
   zone_id: string | null;
   phone: string | null;
   latitude: string | null;

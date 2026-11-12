@@ -600,6 +600,11 @@
                       optionLabel="label"
                       optionValue="value"
                       placeholder="Elegir recomendación activa"
+                      [filter]="true"
+                      filterBy="label,search"
+                      filterPlaceholder="Buscar"
+                      [resetFilterOnHide]="true"
+                      scrollHeight="16rem"
                       appendTo="body"
                       (onChange)="addCatalogRecommendation(block.id, $event.value)"
                     />

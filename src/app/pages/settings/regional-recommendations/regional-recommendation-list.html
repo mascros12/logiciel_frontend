@@ -105,24 +105,43 @@
     @if (form.value.category === 'activity') {
       <label>Actividad comercial, opcional
         <p-select
-          [options]="activityOptions()"
+          [options]="activityChoices()"
           formControlName="activity_id"
+          optionLabel="label"
+          optionValue="value"
           [filter]="true"
-          filterBy="label"
-          filterPlaceholder="Buscar"
+          filterBy="label,search"
+          filterPlaceholder="Buscar por nombre"
           [resetFilterOnHide]="true"
           appendTo="body"
+          scrollHeight="16rem"
           placeholder="Sin vincular"
           [showClear]="true"
         />
       </label>
+      <p>La búsqueda incluye el nombre del catálogo, el nombre en español y el de la ficha.</p>
       <p-button type="button" label="Copiar datos públicos" [outlined]="true" (onClick)="copyActivity()" />
-      <label>Tipo <input pInputText formControlName="activity_type" /></label>
-      <label>Duración <input pInputText formControlName="duration_text" /></label>
-      <label>Dificultad <input pInputText formControlName="difficulty_text" /></label>
+      <label>Tipo
+        <input pInputText formControlName="activity_type" />
+        <app-field-error [control]="form.get('activity_type')" label="Tipo" />
+      </label>
+      <label>Duración
+        <input pInputText formControlName="duration_text" />
+        <app-field-error [control]="form.get('duration_text')" label="Duración" />
+      </label>
+      <label>Dificultad
+        <input pInputText formControlName="difficulty_text" />
+        <app-field-error [control]="form.get('difficulty_text')" label="Dificultad" />
+      </label>
     }
-    <label>Nombre <input pInputText formControlName="name" /></label>
-    <label>Descripción <textarea pInputTextarea rows="4" formControlName="description"></textarea></label>
+    <label>Nombre
+      <input pInputText formControlName="name" />
+      <app-field-error [control]="form.get('name')" label="Nombre" />
+    </label>
+    <label>Descripción
+      <textarea pInputTextarea rows="4" formControlName="description"></textarea>
+      <app-field-error [control]="form.get('description')" label="Descripción" />
+    </label>
     <label>Imagen
       <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" (change)="onImage($event)" />
     </label>
@@ -133,11 +152,29 @@
       <p-button type="button" label="Quitar imagen" [text]="true" severity="danger" (onClick)="clearImage()" />
     }
     <p>Si no carga una imagen, la ficha usa la de la zona. Si ninguna tiene, queda pendiente en el carnet.</p>
-    <label>Horario <input pInputText formControlName="opening_hours" /></label>
-    <label>Teléfono <input pInputText formControlName="phone" /></label>
-    <label>Latitud <input pInputText formControlName="latitude" /></label>
-    <label>Longitud <input pInputText formControlName="longitude" /></label>
-    <label>Enlace http o https <input pInputText formControlName="url" /></label>
+    <label>Horario
+      <input pInputText formControlName="opening_hours" />
+      <app-field-error [control]="form.get('opening_hours')" label="Horario" />
+    </label>
+    <label>Teléfono
+      <input pInputText formControlName="phone" />
+      <app-field-error [control]="form.get('phone')" label="Teléfono" />
+    </label>
+    <label>Latitud
+      <input pInputText formControlName="latitude" inputmode="decimal" />
+      <app-field-error [control]="form.get('latitude')" label="Latitud" />
+    </label>
+    <label>Longitud
+      <input pInputText formControlName="longitude" inputmode="decimal" />
+      <app-field-error [control]="form.get('longitude')" label="Longitud" />
+    </label>
+    @if (form.hasError('coordinatePair') && (form.touched || form.dirty)) {
+      <small class="regional-recommendations__error">Indique latitud y longitud, o deje ambas vacías.</small>
+    }
+    <label>Enlace http o https
+      <input pInputText formControlName="url" />
+      <app-field-error [control]="form.get('url')" label="Enlace" />
+    </label>
     <label class="regional-recommendations__switch">Activa <p-toggleSwitch formControlName="active" /></label>
     <p>El nombre y la descripción son obligatorios. Las coordenadas, si se indican, van juntas. Un restaurante no lleva tipo, duración ni dificultad.</p>
     <p-button type="submit" label="Guardar" [loading]="saving()" />
