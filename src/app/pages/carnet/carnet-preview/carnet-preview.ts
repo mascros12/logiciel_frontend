@@ -11,7 +11,7 @@ import {
   pointsOf,
   itineraryRoutes,
   previewOf,
-  rentalNotices,
+  practicalSections,
   recommendationLines,
   RESTAURANTS_SECTION_ID,
   roomsOf,
@@ -20,7 +20,6 @@ import {
 } from '../../../core/utils/carnet-document';
 import { CarnetBlock, CarnetDocument } from '../../../core/models/carnet.model';
 import { NavigationView, navigationOf } from '../../../core/utils/carnet-navigation';
-import { OrganisationTable } from '../organisation-table/organisation-table';
 import { QuestionnaireForm } from '../questionnaire-form/questionnaire-form';
 import { RecommendationSection } from '../recommendation-section/recommendation-section';
 import { RichText } from '../rich-text/rich-text';
@@ -33,7 +32,6 @@ type DigitalTab = 'organisation' | 'practical' | 'routes' | 'recommendations' | 
   standalone: true,
   imports: [
     NgTemplateOutlet,
-    OrganisationTable,
     RouteSection,
     RecommendationSection,
     QuestionnaireForm,
@@ -44,7 +42,6 @@ type DigitalTab = 'organisation' | 'practical' | 'routes' | 'recommendations' | 
 })
 export class CarnetPreview {
   readonly document = input.required<CarnetDocument>();
-  readonly rentalNotices = rentalNotices;
   readonly unsaved = input(false);
   readonly mode = input<'draft' | 'published'>('draft');
   readonly questionnaireMode = input<'public' | 'staff' | null>(null);
@@ -64,24 +61,13 @@ export class CarnetPreview {
     return previewOf(this.document());
   }
 
-  organisationBlock(): CarnetBlock | null {
-    return [...this.preview().lead, ...this.preview().rest]
-      .find((block) => block.section_kind === 'itinerary_summary') ?? null;
-  }
-
   selectTab(tab: DigitalTab): void {
     this.tab.set(tab);
   }
 
   practicalView(): { body: string; sections: CarnetBlock[] } {
     const pool = [...this.preview().lead, ...this.preview().rest];
-    const parent = pool.find((block) =>
-      /informations pratiques/i.test(this.text(block, 'heading') || this.text(block, 'title')),
-    );
-    if (!parent) return { body: '', sections: [] };
-    const children = pool.filter((block) => block.parent_id === parent.id);
-    if (!children.length) return { body: '', sections: [parent] };
-    return { body: this.text(parent, 'body'), sections: children };
+    return practicalSections(pool);
   }
 
   routeBlock(): CarnetBlock | null {

@@ -54,11 +54,8 @@
   }
 
   .routes__table,
-  .routes__table tbody,
-  .routes__table tr,
-  .routes__table td {
+  .routes__table tbody {
     display: block;
-    width: auto;
   }
 
   .routes__table thead {
@@ -70,14 +67,25 @@
   }
 
   .routes__table tr {
-    padding: 0.35rem 0 0.7rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 0.75rem;
+    row-gap: 0.35rem;
+    padding: 0.75rem 0;
     border-bottom: 1px solid #e4e7ef;
   }
 
   .routes__table td {
+    display: block;
+    width: auto;
+    min-width: 0;
     border: 0;
-    padding: 0.2rem 0;
+    padding: 0;
     overflow-wrap: anywhere;
+  }
+
+  .routes__table td:nth-child(even) {
+    text-align: right;
   }
 
   .routes__table td::before {
@@ -88,6 +96,16 @@
     font-weight: 700;
     color: #5c647a;
   }
+}
+
+.routes__detail {
+  margin: 1.15rem 0;
+  padding: 0.95rem 1rem 1rem 1.05rem;
+  background: #fff;
+  border: 1px solid #e7eaf2;
+  border-left: 4px solid #030c3d;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(3, 12, 61, 0.08);
 }
 
 .routes__detail h3,

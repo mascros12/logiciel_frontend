@@ -1526,6 +1526,26 @@ export function previewOf(document: CarnetDocument): PreviewModel {
   };
 }
 
+export function practicalSections(
+  blocks: CarnetBlock[],
+): { body: string; sections: CarnetBlock[] } {
+  const parent = blocks.find((block) =>
+    /informations pratiques/i.test(textOf(block.content, 'heading') || textOf(block.content, 'title')),
+  ) ?? null;
+  const linked = parent
+    ? blocks.filter((block) => block.parent_id === parent.id)
+    : [];
+  const marked = blocks.filter((block) => {
+    const title = String(block.content['section_title'] ?? '');
+    return /informations pratiques/i.test(title) && block.id !== parent?.id;
+  });
+  const sections = linked.length ? linked : marked;
+  const body = parent ? textOf(parent.content, 'body') : '';
+  if (sections.length) return { body, sections };
+  if (parent && body) return { body: '', sections: [parent] };
+  return { body: '', sections: [] };
+}
+
 export function previewText(document: CarnetDocument): string {
   const preview = previewOf(document);
   const chunks: string[] = [];
@@ -1694,6 +1714,7 @@ function entryContent(entry: PublicEntry): Record<string, unknown> {
     link: displayText(entry.link),
     notes: displayText(entry.notes),
     visit_tips: displayText(entry.visit_tips),
+    ...(entry.section_title ? { section_title: entry.section_title } : {}),
     rooms: entry.rooms.map((room, index) => ({
       id: `public-room-${publicSeq}-${index}`,
       room_id: null,
@@ -1852,5 +1873,19 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
     }));
   }
   for (const entry of view.rest) pushEntry(entry);
+  linkPublicSections(blocks);
   return { locale: 'fr', schema_version: 1, blocks };
+}
+
+function linkPublicSections(blocks: CarnetBlock[]): void {
+  const parents = new Map<string, string>();
+  for (const block of blocks) {
+    const heading = textOf(block.content, 'heading').trim().toLowerCase();
+    if (heading && !parents.has(heading)) parents.set(heading, block.id);
+  }
+  for (const block of blocks) {
+    const title = String(block.content['section_title'] ?? '').trim().toLowerCase();
+    const parentId = parents.get(title);
+    if (parentId && parentId !== block.id) block.parent_id = parentId;
+  }
 }

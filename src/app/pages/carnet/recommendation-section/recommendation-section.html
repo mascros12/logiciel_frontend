@@ -4,10 +4,8 @@
     <app-rich-text [value]="body()" />
   }
   @for (group of groups(); track group.zone) {
-    <section>
-      @if (group.zone) {
-        <h3>{{ group.zone }}</h3>
-      }
+    <details class="recommendation-section__zone">
+      <summary>{{ group.zone || 'Autres' }}</summary>
       @for (row of group.rows; track row.name + row.zoneName) {
         <article [class]="'recommendation-section__item tone-' + row.tone">
           <h4>
@@ -48,6 +46,6 @@
           }
         </article>
       }
-    </section>
+    </details>
   }
 </section>

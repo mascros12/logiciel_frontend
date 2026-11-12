@@ -9,9 +9,15 @@
   color: #030c3d;
 }
 
-.recommendation-section h3 {
-  margin: 1.15rem 0 0.7rem;
+.recommendation-section__zone {
+  margin: 0.85rem 0 1.15rem;
+}
+
+.recommendation-section__zone summary {
+  cursor: pointer;
+  margin: 0.35rem 0 0.7rem;
   font-size: 0.95rem;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #030c3d;
@@ -25,7 +31,7 @@
 }
 
 .recommendation-section__item {
-  margin: 0.75rem 0;
+  margin: 1.15rem 0;
   padding: 0.95rem 1rem 1rem 1.05rem;
   background: #fff;
   border: 1px solid #e7eaf2;

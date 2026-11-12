@@ -209,6 +209,7 @@ export interface PublicEntry {
   visit_tips: string | null;
   rooms: PublicRoom[];
   section_kind?: string | null;
+  section_title?: string | null;
   organisation?: PublicOrganisationRow[] | null;
   routes?: PublicRoute[] | null;
   recommendations?: PublicRecommendation[] | null;

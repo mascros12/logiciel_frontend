@@ -57,13 +57,6 @@
 
   @switch (tab()) {
     @case ('organisation') {
-      @if (organisationBlock(); as block) {
-        <app-organisation-table
-          [heading]="text(block, 'heading') || 'Organisation du voyage'"
-          [rows]="preview().organisation ?? []"
-          [notices]="rentalNotices(document())"
-        />
-      }
       <div class="day-list">
         @for (day of preview().days; track day.block.id) {
           <details class="day" [open]="isToday(day.block)">

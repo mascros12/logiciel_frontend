@@ -22,6 +22,7 @@ import {
   organisationRows,
   pageAssetId,
   previewOf,
+  practicalSections,
   previewText,
   recommendationLines,
   sectionPending,
@@ -512,6 +513,33 @@ describe('secciones editoriales', () => {
     assert.equal(sectionPending(organisation), false);
     assert.match(previewText(document), /Numéros importants/);
     assert.equal(previewText(document).includes('9000'), false);
+  });
+
+  it('muestra las subsecciones de pratique aunque el padre no tenga texto', () => {
+    const parent = editorial('pratiques', 'practical', 'Informations pratiques', null);
+    const child = {
+      ...editorial('numeros', 'free_text', 'NUMÉROS IMPORTANTS', 'Le 911'),
+      parent_id: parent.id,
+    };
+    const draft = practicalSections([parent, child]);
+    assert.deepEqual(draft.sections.map((block) => block.id), ['numeros']);
+    assert.equal(draft.body, '');
+
+    const published = documentFromPublic({
+      locale: 'fr',
+      cover: null,
+      general: null,
+      days: [],
+      preamble: [
+        publicEntry(parent),
+        { ...publicEntry(child), section_title: 'Informations pratiques' },
+      ],
+      rest: [],
+    });
+    const view = practicalSections([...previewOf(published).lead, ...previewOf(published).rest]);
+    assert.equal(view.sections.length, 1);
+    assert.equal(textOf(view.sections[0], 'heading'), 'NUMÉROS IMPORTANTS');
+    assert.equal(textOf(view.sections[0], 'body'), 'Le 911');
   });
 });
 
