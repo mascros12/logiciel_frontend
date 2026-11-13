@@ -1052,6 +1052,9 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       category: block.content['category'],
       zone_id: block.content['zone_id'],
       activity_id: block.content['activity_id'] ?? null,
+      activity_ids: Array.isArray(block.content['activity_ids'])
+        ? block.content['activity_ids']
+        : [],
       identified: block.content['identified'] === true,
       included: block.content['included'] !== false,
       selection_origin: block.content['selection_origin'] ?? 'automatic',

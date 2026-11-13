@@ -15,6 +15,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -45,6 +46,7 @@ import {
     InputTextModule,
     TextareaModule,
     SelectModule,
+    MultiSelectModule,
     ToggleSwitchModule,
     ToastModule,
     FieldErrorComponent,
@@ -84,7 +86,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     this.form = this.fb.group({
       category: ['activity' as RecommendationCategory],
       zone_id: [null as string | null],
-      activity_id: [null as string | null],
+      activity_ids: [[] as string[]],
       name: ['', [requiredText, Validators.maxLength(200), plainText(200)]],
       opening_hours: ['', plainText(8000)],
       phone: ['', [Validators.maxLength(40), plainText(40)]],
@@ -95,7 +97,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
       activity_type: ['', [Validators.maxLength(120), plainText(120)]],
       duration_text: ['', [Validators.maxLength(120), plainText(120)]],
       difficulty_text: ['', [Validators.maxLength(120), plainText(120)]],
-      description: ['', [requiredText, plainText(8000)]],
+      description: ['', plainText(8000)],
     }, { validators: coordinatePairValidator });
   }
 
@@ -167,7 +169,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     this.form.reset({
       category: 'activity',
       zone_id: null,
-      activity_id: null,
+      activity_ids: [],
       name: '',
       opening_hours: '',
       phone: '',
@@ -191,7 +193,11 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     this.form.reset({
       category: row.category,
       zone_id: row.zone_id,
-      activity_id: row.activity_id,
+      activity_ids: row.activity_ids?.length
+        ? row.activity_ids
+        : row.activity_id
+          ? [row.activity_id]
+          : [],
       name: row.name,
       opening_hours: row.opening_hours,
       phone: row.phone,
@@ -208,7 +214,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
   }
 
   copyActivity(): void {
-    const activityId = this.form.value.activity_id as string | null;
+    const activityId = (this.form.value.activity_ids as string[] | null)?.[0] ?? null;
     if (!activityId) return;
     this.api.defaults(activityId).subscribe({
       next: (row) => {
@@ -250,15 +256,19 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     }
     const raw = this.form.getRawValue();
     const restaurant = raw.category === 'restaurant';
+    const activityIds = restaurant
+      ? []
+      : ((raw.activity_ids as string[] | null) ?? []).filter((id) => !!id);
     const latitude = String(raw.latitude ?? '').trim().replace(',', '.');
     const longitude = String(raw.longitude ?? '').trim().replace(',', '.');
     const name = String(raw.name ?? '').trim();
-    const description = String(raw.description ?? '').trim();
+    const description = String(raw.description ?? '').trim() || null;
     const body = {
       category: raw.category || 'activity',
       zone_id: raw.zone_id || null,
-      activity_id: restaurant ? null : raw.activity_id || null,
-      clear_activity: restaurant || !raw.activity_id,
+      activity_id: activityIds[0] ?? null,
+      activity_ids: activityIds,
+      clear_activity: restaurant || activityIds.length === 0,
       name,
       opening_hours: String(raw.opening_hours ?? '').trim(),
       phone: String(raw.phone ?? '').trim(),

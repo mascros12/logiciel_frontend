@@ -103,23 +103,24 @@
       />
     </label>
     @if (form.value.category === 'activity') {
-      <label>Actividad comercial, opcional
-        <p-select
+      <label>Actividades comerciales, opcional
+        <p-multiSelect
           [options]="activityChoices()"
-          formControlName="activity_id"
+          formControlName="activity_ids"
           optionLabel="label"
           optionValue="value"
           [filter]="true"
           filterBy="label,search"
           filterPlaceholder="Buscar por nombre"
           [resetFilterOnHide]="true"
+          display="chip"
           appendTo="body"
           scrollHeight="16rem"
           placeholder="Sin vincular"
           [showClear]="true"
         />
       </label>
-      <p>La búsqueda incluye el nombre del catálogo, el nombre en español y el de la ficha.</p>
+      <p>Puede elegir varias. La búsqueda incluye el nombre del catálogo, el nombre en español y el de la ficha.</p>
       <p-button type="button" label="Copiar datos públicos" [outlined]="true" (onClick)="copyActivity()" />
       <label>Tipo
         <input pInputText formControlName="activity_type" />
@@ -176,7 +177,7 @@
       <app-field-error [control]="form.get('url')" label="Enlace" />
     </label>
     <label class="regional-recommendations__switch">Activa <p-toggleSwitch formControlName="active" /></label>
-    <p>El nombre y la descripción son obligatorios. Las coordenadas, si se indican, van juntas. Un restaurante no lleva tipo, duración ni dificultad.</p>
+    <p>El nombre es obligatorio. La descripción puede quedar vacía. Las coordenadas, si se indican, van juntas. Un restaurante no lleva tipo, duración ni dificultad.</p>
     <p-button type="submit" label="Guardar" [loading]="saving()" />
   </form>
 </p-dialog>

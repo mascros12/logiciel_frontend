@@ -421,7 +421,9 @@ export class CarnetEditor implements OnInit {
         .map((block) => block.product_id)
         .filter((id): id is string => !!id),
     );
-    const identified = item.category === 'activity' && !!item.activity_id && fileIds.has(item.activity_id);
+    const linked = new Set(item.activity_ids ?? []);
+    if (item.activity_id) linked.add(item.activity_id);
+    const identified = item.category === 'activity' && [...linked].some((id) => fileIds.has(id));
     const tone = identified ? 'red' : 'black';
     const text = (value: string | null) => ({
       value,
@@ -446,6 +448,7 @@ export class CarnetEditor implements OnInit {
         zone_id: item.zone_id,
         zone_name: text(item.zone_name),
         activity_id: item.activity_id,
+        activity_ids: [...linked],
         identified,
         included: true,
         selection_origin: 'manual',

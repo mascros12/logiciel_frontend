@@ -6,6 +6,7 @@ export interface RegionalRecommendation {
   zone_id: string | null;
   zone_name: string;
   activity_id: string | null;
+  activity_ids?: string[];
   activity_name: string | null;
   name: string;
   opening_hours: string;
@@ -55,6 +56,7 @@ export interface RegionalRecommendationWrite {
   category: RecommendationCategory;
   zone_id: string | null;
   activity_id?: string | null;
+  activity_ids?: string[] | null;
   name: string;
   opening_hours: string;
   phone: string;
