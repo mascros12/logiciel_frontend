@@ -11,6 +11,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Province, Zone, ZoneListResponse } from '../../../../core/models/zone.model';
 import { ZoneService } from '../../../../core/services/zone.service';
+import { apiErrorSummary } from '../../../../core/utils/form-validation.util';
 
 @Component({
   selector: 'app-zone-list',
@@ -167,13 +168,16 @@ export class ZoneList implements OnInit, OnDestroy {
         }
         this.zoneService.uploadImage(saved.id, file).subscribe({
           next: () => finish(),
-          error: (err: { error?: { detail?: string } }) => {
+          error: (err: { status?: number; error?: { detail?: unknown } }) => {
             this.saving.set(false);
+            const detail = apiErrorSummary(
+              err,
+              err.status ? `Error ${err.status}` : 'No se pudo guardar la imagen.',
+            );
             this.messageService.add({
               severity: 'error',
-              summary: typeof err.error?.detail === 'string'
-                ? err.error.detail
-                : 'La zona se guardó, pero la imagen no',
+              summary: 'La zona se guardó, pero la imagen no',
+              detail,
             });
             this.load();
           },
