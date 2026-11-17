@@ -162,6 +162,22 @@ export class CarnetEditor implements OnInit {
       value: route.id,
     })),
   );
+  readonly activityRouteChoice = signal<string | null>(null);
+  readonly activityCatalogOptions = computed(() => {
+    const used = new Set(
+      (this.document()?.blocks ?? [])
+        .filter((block) => !block.removed && block.type === 'itinerary_route')
+        .map((block) => String(block.content['catalog_route_id'] ?? '')),
+    );
+    return this.catalogRoutes()
+      .filter((route) => this.hotelActivityCatalog(route) && !used.has(route.id))
+      .map((route) => ({
+        label: route.duration_label
+          ? `${route.origin_name} → ${route.destination_name} · ${route.duration_label}`
+          : `${route.origin_name} → ${route.destination_name}`,
+        value: route.id,
+      }));
+  });
   readonly updatedAt = signal('');
   readonly fileAaId = signal('');
   readonly status = signal('draft');
@@ -487,6 +503,29 @@ export class CarnetEditor implements OnInit {
       blocks: [...current.document.blocks, block],
     }));
     this.selectedId.set(id);
+  }
+
+  addActivityRoute(routeId: string | null): void {
+    if (!routeId) return;
+    const parent = this.document()?.blocks.find(
+      (block) => !block.removed && block.section_kind === 'route_collection',
+    );
+    if (!parent) {
+      this.messages.add({ severity: 'warn', summary: 'No está el apartado Les trajets.' });
+      this.activityRouteChoice.set(null);
+      return;
+    }
+    const open = new Set(this.openRouteGroups());
+    open.add('activities');
+    this.openRouteGroups.set(open);
+    this.addCatalogRoute(parent.id, routeId);
+    this.activityRouteChoice.set(null);
+  }
+
+  private hotelActivityCatalog(route: TravelRoute): boolean {
+    if (!route.active || route.mode !== 'place_to_place') return false;
+    const kinds = [route.origin_kind, route.destination_kind];
+    return kinds.includes('hotel') && kinds.includes('activity');
   }
 
   addCatalogRoute(parentId: string, routeId: string | null): void {

@@ -353,6 +353,15 @@
   font-size: 0.9rem;
 }
 
+.carnet-editor__route-add {
+  margin: 0.35rem 0 0.45rem;
+}
+
+.carnet-editor__route-add p-select {
+  display: block;
+  width: 100%;
+}
+
 .carnet-editor__form input,
 .carnet-editor__form textarea,
 .carnet-editor__form select {
