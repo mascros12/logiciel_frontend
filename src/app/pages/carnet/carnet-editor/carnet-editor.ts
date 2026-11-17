@@ -713,6 +713,10 @@ export class CarnetEditor implements OnInit {
     this.edit(setText(current, blockId, field, value));
   }
 
+  private boldMarks(value: string): string {
+    return value.replace(/<\/?b>/gi, '**');
+  }
+
   organisationRows(block: CarnetBlock): Array<{
     date_label: string;
     region: string;
@@ -727,7 +731,7 @@ export class CarnetEditor implements OnInit {
       region: String(row?.region ?? ''),
       lodging: String(row?.lodging ?? ''),
       stay: String(row?.stay ?? row?.lodging ?? ''),
-      included: String(row?.included ?? ''),
+      included: boldMarks(String(row?.included ?? '')),
     }));
   }
 
