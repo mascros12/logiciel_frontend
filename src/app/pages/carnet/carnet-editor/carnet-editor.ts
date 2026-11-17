@@ -731,7 +731,7 @@ export class CarnetEditor implements OnInit {
       region: String(row?.region ?? ''),
       lodging: String(row?.lodging ?? ''),
       stay: String(row?.stay ?? row?.lodging ?? ''),
-      included: boldMarks(String(row?.included ?? '')),
+      included: this.boldMarks(String(row?.included ?? '')),
     }));
   }
 
