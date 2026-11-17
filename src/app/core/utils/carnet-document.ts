@@ -421,6 +421,27 @@ export function setPageAsset(
   });
 }
 
+export interface OrganisationLine {
+  date_label: string;
+  region: string;
+  lodging: string;
+  stay: string;
+  included: string;
+}
+
+export function setOrganisation(
+  document: CarnetDocument,
+  blockId: string,
+  rows: OrganisationLine[],
+): CarnetDocument {
+  const block = document.blocks.find((item) => item.id === blockId);
+  if (!block) return document;
+  return replaceBlock(document, blockId, {
+    ...block,
+    content: { ...block.content, organisation: rows },
+  });
+}
+
 export function setText(
   document: CarnetDocument,
   blockId: string,
@@ -1113,10 +1134,14 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       link: writeText(content, 'link'),
     };
   }
-  return {
+  const editorial: Record<string, unknown> = {
     heading: writeText(content, 'heading'),
     body: writeText(content, 'body'),
   };
+  if (Array.isArray(content['organisation'])) {
+    editorial['organisation'] = content['organisation'];
+  }
+  return editorial;
 }
 
 export function toDraftWrite(document: CarnetDocument, lockVersion: number): DraftWrite {

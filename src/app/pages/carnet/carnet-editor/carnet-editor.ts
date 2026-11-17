@@ -70,6 +70,7 @@ import {
   rentalNeedsReservation,
   routeNeedsData,
   sectionPending,
+  setOrganisation,
   setPageAsset,
   setText,
   setVisible,
@@ -700,6 +701,63 @@ export class CarnetEditor implements OnInit {
     const current = this.document();
     if (!current) return;
     this.edit(setText(current, blockId, field, value));
+  }
+
+  organisationRows(block: CarnetBlock): Array<{
+    date_label: string;
+    region: string;
+    lodging: string;
+    stay: string;
+    included: string;
+  }> {
+    const rows = block.content['organisation'];
+    if (!Array.isArray(rows)) return [];
+    return rows.map((row) => ({
+      date_label: String(row?.date_label ?? ''),
+      region: String(row?.region ?? ''),
+      lodging: String(row?.lodging ?? ''),
+      stay: String(row?.stay ?? row?.lodging ?? ''),
+      included: String(row?.included ?? ''),
+    }));
+  }
+
+  onOrganisation(
+    blockId: string,
+    index: number,
+    field: 'date_label' | 'region' | 'stay' | 'included',
+    value: string,
+  ): void {
+    const current = this.document();
+    const block = current?.blocks.find((item) => item.id === blockId);
+    if (!current || !block) return;
+    const rows = this.organisationRows(block);
+    const row = rows[index];
+    if (!row) return;
+    const next = { ...row, [field]: value };
+    if (field === 'stay') next.lodging = value;
+    rows[index] = next;
+    this.edit(setOrganisation(current, blockId, rows));
+  }
+
+  addOrganisationRow(blockId: string): void {
+    const current = this.document();
+    const block = current?.blocks.find((item) => item.id === blockId);
+    if (!current || !block) return;
+    this.edit(setOrganisation(current, blockId, [
+      ...this.organisationRows(block),
+      { date_label: '', region: '', lodging: '', stay: '', included: '' },
+    ]));
+  }
+
+  removeOrganisationRow(blockId: string, index: number): void {
+    const current = this.document();
+    const block = current?.blocks.find((item) => item.id === blockId);
+    if (!current || !block) return;
+    this.edit(setOrganisation(
+      current,
+      blockId,
+      this.organisationRows(block).filter((_, rowIndex) => rowIndex !== index),
+    ));
   }
 
   formatBody(area: HTMLTextAreaElement, blockId: string, kind: 'bold' | 'bullet' | 'title'): void {

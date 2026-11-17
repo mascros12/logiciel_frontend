@@ -104,6 +104,36 @@
   color: #8d1d1d;
 }
 
+.carnet-editor__errors {
+  margin-top: 1rem;
+}
+
+.carnet-editor__errors summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.carnet-editor__table-wrap {
+  overflow-x: auto;
+}
+
+.carnet-editor__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.carnet-editor__table th,
+.carnet-editor__table td {
+  border: 1px solid #e4e7ef;
+  padding: 0.35rem;
+  vertical-align: top;
+}
+
+.carnet-editor__table input,
+.carnet-editor__table textarea {
+  width: 100%;
+}
+
 .carnet-editor__layout {
   display: grid;
   grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);

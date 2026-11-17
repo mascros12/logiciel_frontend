@@ -180,14 +180,6 @@
       }
     </section>
 
-    @if (validation().length) {
-      <ul class="carnet-editor__errors">
-        @for (error of validation(); track error) {
-          <li>{{ error }}</li>
-        }
-      </ul>
-    }
-
     @if (previewing()) {
       <app-carnet-preview
         [document]="doc"
@@ -329,56 +321,6 @@
           </section>
           }
 
-          @if (!structureFiltering() || shownDays().length) {
-          <section class="carnet-editor__days">
-            <button
-              type="button"
-              class="carnet-editor__days-toggle"
-              (click)="toggleDays()"
-              [attr.aria-expanded]="daysOpen() || structureFiltering()"
-            >
-              <span>{{ daysOpen() || structureFiltering() ? '▾' : '▸' }} Días</span>
-              <span class="carnet-editor__type">{{ shownDays().length }}</span>
-            </button>
-            @if (daysOpen() || structureFiltering()) {
-              @for (day of shownDays(); track day.id) {
-                <section class="carnet-editor__day" [class.is-issue]="hasIssue(day)">
-                  <button type="button" class="carnet-editor__day-toggle" (click)="toggleDay(day.id)">
-                    {{ isDayOpen(day.id) || structureFiltering() ? '▾' : '▸' }} {{ titleOf(day) }}
-                    @if (markedPending(day)) {
-                      <span class="carnet-editor__pending" [class.is-issue]="hasIssue(day)">Pendiente</span>
-                    }
-                  </button>
-                  @if (isDayOpen(day.id) || structureFiltering()) {
-                    <div
-                      class="carnet-editor__entries"
-                      cdkDropList
-                      [id]="'day-' + day.id"
-                      [cdkDropListData]="day.id"
-                      [cdkDropListConnectedTo]="dayDropIds()"
-                      (cdkDropListDropped)="dropEntry($event)"
-                    >
-                      @for (entry of shownDayEntries(day); track entry.block_id) {
-                        <div
-                          class="carnet-editor__entry"
-                          cdkDrag
-                          [cdkDragDisabled]="structureFiltering()"
-                          [class.is-issue]="hasIssueId(entry.block_id)"
-                        >
-                          <span cdkDragHandle>{{ entryTitle(entry.block_id) }}</span>
-                          <span class="carnet-editor__type">{{ entryRole(entry.role) }}</span>
-                          @if (hasIssueId(entry.block_id)) {
-                            <span class="carnet-editor__pending is-issue">Pendiente</span>
-                          }
-                        </div>
-                      }
-                    </div>
-                  }
-                </section>
-              }
-            }
-          </section>
-          }
         </aside>
 
         <div class="carnet-editor__form">
@@ -593,6 +535,37 @@
                 </div>
                 <label>Texto <textarea #bodyField pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
                 <p class="carnet-editor__hint">La negrita envuelve la selección con **. Una viñeta es una línea que empieza por «-». Un título es una línea que empieza por «#».</p>
+                @if (block.section_kind === 'itinerary_summary') {
+                  <h3>Organisation du voyage</h3>
+                  <p class="carnet-editor__hint">Esta tabla es la que sale en el PDF. Una línea por actividad. La negrita se escribe con &lt;b&gt; y &lt;/b&gt;.</p>
+                  <div class="carnet-editor__table-wrap">
+                    <table class="carnet-editor__table">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Región</th>
+                          <th>Alojamiento y comidas</th>
+                          <th>Actividades y transportes</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of organisationRows(block); track $index) {
+                          <tr>
+                            <td><input pInputText [value]="row.date_label" (input)="onOrganisation(block.id, $index, 'date_label', inputValue($event))" /></td>
+                            <td><input pInputText [value]="row.region" (input)="onOrganisation(block.id, $index, 'region', inputValue($event))" /></td>
+                            <td><textarea pInputTextarea rows="3" [value]="row.stay" (input)="onOrganisation(block.id, $index, 'stay', inputValue($event))"></textarea></td>
+                            <td><textarea pInputTextarea rows="3" [value]="row.included" (input)="onOrganisation(block.id, $index, 'included', inputValue($event))"></textarea></td>
+                            <td><button type="button" (click)="removeOrganisationRow(block.id, $index)">Quitar</button></td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                  <p>
+                    <button type="button" (click)="addOrganisationRow(block.id)">Añadir fila</button>
+                  </p>
+                }
                 @if (block.section_kind === 'regional_recommendations' || block.template_section_id === restaurantsSectionId) {
                   <label>Añadir desde el catálogo
                     <p-select
@@ -646,6 +619,17 @@
           }
         </div>
       </div>
+
+      @if (validation().length) {
+        <details class="carnet-editor__errors">
+          <summary>Pendientes para publicar ({{ validation().length }})</summary>
+          <ul>
+            @for (error of validation(); track error) {
+              <li>{{ error }}</li>
+            }
+          </ul>
+        </details>
+      }
 
       <!--section class="carnet-editor__warnings">
         <h2>Diagnóstico para Operaciones</h2>
