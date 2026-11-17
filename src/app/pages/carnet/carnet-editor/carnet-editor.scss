@@ -104,13 +104,30 @@
   color: #8d1d1d;
 }
 
-.carnet-editor__errors {
+.carnet-editor__errors,
+.carnet-editor__notices {
   margin-top: 1rem;
+  padding-left: 1.15rem;
 }
 
-.carnet-editor__errors summary {
+.carnet-editor__errors summary,
+.carnet-editor__notices summary {
   cursor: pointer;
   font-weight: 600;
+}
+
+.carnet-editor__errors ul,
+.carnet-editor__notices ul {
+  margin: 0.55rem 0 0;
+  padding-left: 1.35rem;
+}
+
+.carnet-editor__notices {
+  background: #fff8e8;
+  border: 1px solid #f0d48a;
+  border-radius: 10px;
+  padding: 0.8rem 1rem 0.8rem 1.15rem;
+  color: #6b4e00;
 }
 
 .carnet-editor__table-wrap {

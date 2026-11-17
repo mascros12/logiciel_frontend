@@ -477,7 +477,7 @@
                   Incluir en el Carnet del viajero
                 </label>
                 @if (pending(block)) {
-                  <p class="carnet-editor__hint">Pendiente: falta la imagen. Cárguela en la recomendación o, si no tiene, en la zona. No se puede publicar mientras falte.</p>
+                  <p class="carnet-editor__hint">Falta la imagen. Cárguela en la recomendación o, si no tiene, en la zona. Se puede publicar igual; la ficha saldrá sin foto.</p>
                 }
                 <label>Zona <input pInputText [value]="text(block, 'zone_name')" (input)="onText(block.id, 'zone_name', inputValue($event))" /></label>
                 <label>Nombre <input pInputText [value]="text(block, 'name')" (input)="onText(block.id, 'name', inputValue($event))" /></label>
@@ -643,6 +643,16 @@
           <ul>
             @for (error of validation(); track error) {
               <li>{{ error }}</li>
+            }
+          </ul>
+        </details>
+      }
+      @if (imageWarnings().length) {
+        <details class="carnet-editor__notices">
+          <summary>Avisos ({{ imageWarnings().length }})</summary>
+          <ul>
+            @for (warning of imageWarnings(); track warning) {
+              <li>{{ warning }}</li>
             }
           </ul>
         </details>

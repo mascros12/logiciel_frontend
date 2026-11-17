@@ -1174,9 +1174,6 @@ export function blockIssues(block: CarnetBlock): string[] {
   if (rentalNeedsReservation(block)) {
     errors.push(`${label}: falta el número de reserva del alquiler.`);
   }
-  if (recommendationNeedsImage(block)) {
-    errors.push(`${label}: falta la imagen de la recomendación o de su zona.`);
-  }
   if (block.type === 'regional_recommendation') {
     const latitude = textOf(block.content, 'latitude');
     const longitude = textOf(block.content, 'longitude');
@@ -1197,6 +1194,14 @@ export function blockIssues(block: CarnetBlock): string[] {
 
 export function validateDocument(document: CarnetDocument): string[] {
   return document.blocks.flatMap((block) => blockIssues(block));
+}
+
+export function documentWarnings(document: CarnetDocument): string[] {
+  return document.blocks.flatMap((block) => {
+    if (!recommendationNeedsImage(block)) return [];
+    const label = blockTitle(block);
+    return [`${label}: falta la imagen de la recomendación o de su zona.`];
+  });
 }
 
 export function blockIssueIds(document: CarnetDocument): Set<string> {

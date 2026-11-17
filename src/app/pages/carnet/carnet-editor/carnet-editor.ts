@@ -78,6 +78,7 @@ import {
   sourceStatusLabel,
   textOf,
   toDraftWrite,
+  documentWarnings,
   validateDocument,
   visibleBlocks,
   warningText,
@@ -211,6 +212,9 @@ export class CarnetEditor implements OnInit {
   );
   readonly validation = computed(() =>
     this.document() ? validateDocument(this.document()!) : [],
+  );
+  readonly imageWarnings = computed(() =>
+    this.document() ? documentWarnings(this.document()!) : [],
   );
   readonly phaseLabel = computed(() => publicationLabel(this.dirty(), this.publication()));
 
