@@ -682,12 +682,18 @@ export class QuotationDetail implements OnInit {
   }
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id')!;
-    this.restoreTabsFromRoute();
     this.loadFichaAaColWidths();
-    this.load(id);
     this.loadProviders();
     if (this.isAdmin()) this.loadCreators();
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const id = params.get('id');
+      if (!id) return;
+      this.restoreTabsFromRoute();
+      this.fichaFileAA.set(null);
+      this.existingCarnetId.set(null);
+      this.carnetActionLabel.set('Generar Carnet de Route');
+      this.load(id);
+    });
   }
 
   private loadCreators(): void {
