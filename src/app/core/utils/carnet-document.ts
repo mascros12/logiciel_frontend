@@ -1101,6 +1101,7 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       catalog_route_id: block.content['catalog_route_id'],
       mode: block.content['mode'],
       tone: block.content['tone'],
+      pair: block.content['pair'] === 'activity' ? 'activity' : 'lodging',
       included: block.content['included'] !== false,
       origin_zone: writeText(content, 'origin_zone'),
       destination_zone: writeText(content, 'destination_zone'),

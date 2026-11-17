@@ -348,25 +348,6 @@
               <span class="carnet-editor__type">{{ shown(activityRoutes()).length }}</span>
             </button>
             @if (routeGroupOpen('activities') || structureFiltering()) {
-              <div class="carnet-editor__route-add">
-                <p-select
-                  [options]="activityCatalogOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  [ngModel]="activityRouteChoice()"
-                  (ngModelChange)="addActivityRoute($event)"
-                  placeholder="Añadir"
-                  [filter]="true"
-                  filterBy="label"
-                  filterPlaceholder="Buscar hotel o actividad"
-                  [resetFilterOnHide]="true"
-                  scrollHeight="16rem"
-                  appendTo="body"
-                />
-              </div>
-              @if (catalogRoutes().length && !activityCatalogOptions().length) {
-                <p class="carnet-editor__hint">No quedan trayectos de hotel y actividad activos en el catálogo.</p>
-              }
               <div
                 cdkDropList
                 class="carnet-editor__list"
@@ -526,9 +507,6 @@
                 <label>Zona <input pInputText [value]="text(block, 'zone_name')" (input)="onText(block.id, 'zone_name', inputValue($event))" /></label>
                 <label>Nombre <input pInputText [value]="text(block, 'name')" (input)="onText(block.id, 'name', inputValue($event))" /></label>
                 <label>Descripción <textarea pInputTextarea rows="4" [value]="text(block, 'description')" (input)="onText(block.id, 'description', inputValue($event))"></textarea></label>
-                @if (block.content['category'] === 'activity') {
-                  <label>Tipo <input pInputText [value]="text(block, 'activity_type')" (input)="onText(block.id, 'activity_type', inputValue($event))" /></label>
-                }
                 <label>Horario <input pInputText [value]="text(block, 'opening_hours')" (input)="onText(block.id, 'opening_hours', inputValue($event))" /></label>
                 <label>Teléfono <input pInputText [value]="text(block, 'phone')" (input)="onText(block.id, 'phone', inputValue($event))" /></label>
                 <label>Latitud <input pInputText [value]="text(block, 'latitude')" (input)="onText(block.id, 'latitude', inputValue($event))" /></label>

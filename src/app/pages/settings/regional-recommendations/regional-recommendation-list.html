@@ -122,10 +122,6 @@
       </label>
       <p>Puede elegir varias. La búsqueda incluye el nombre del catálogo, el nombre en español y el de la ficha.</p>
       <p-button type="button" label="Copiar datos públicos" [outlined]="true" (onClick)="copyActivity()" />
-      <label>Tipo
-        <input pInputText formControlName="activity_type" />
-        <app-field-error [control]="form.get('activity_type')" label="Tipo" />
-      </label>
       <label>Duración
         <input pInputText formControlName="duration_text" />
         <app-field-error [control]="form.get('duration_text')" label="Duración" />

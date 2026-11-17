@@ -94,7 +94,6 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
       longitude: ['', freeCoordinate(-180, 180, 'Longitud')],
       url: ['', httpUrl],
       active: [true],
-      activity_type: ['', [Validators.maxLength(120), plainText(120)]],
       duration_text: ['', [Validators.maxLength(120), plainText(120)]],
       difficulty_text: ['', [Validators.maxLength(120), plainText(120)]],
       description: ['', plainText(8000)],
@@ -177,7 +176,6 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
       longitude: '',
       url: '',
       active: true,
-      activity_type: '',
       duration_text: '',
       difficulty_text: '',
       description: '',
@@ -205,7 +203,6 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
       longitude: row.longitude ?? '',
       url: row.url ?? '',
       active: row.active,
-      activity_type: row.activity_type ?? '',
       duration_text: row.duration_text ?? '',
       difficulty_text: row.difficulty_text ?? '',
       description: row.description ?? '',
@@ -224,7 +221,6 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
           phone: row.phone ?? this.form.value.phone,
           latitude: row.latitude ?? '',
           longitude: row.longitude ?? '',
-          activity_type: row.activity_type ?? '',
         });
       },
       error: () => this.messages.add({
@@ -243,7 +239,6 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
       latitude: 'Latitud',
       longitude: 'Longitud',
       url: 'Enlace',
-      activity_type: 'Tipo',
       duration_text: 'Duración',
       difficulty_text: 'Dificultad',
     });
@@ -277,7 +272,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
       clear_coordinates: !latitude && !longitude,
       url: String(raw.url ?? '').trim(),
       active: raw.active !== false,
-      activity_type: restaurant ? null : String(raw.activity_type ?? '').trim() || null,
+      activity_type: null,
       duration_text: restaurant ? null : String(raw.duration_text ?? '').trim() || null,
       difficulty_text: restaurant ? null : String(raw.difficulty_text ?? '').trim() || null,
       description,
