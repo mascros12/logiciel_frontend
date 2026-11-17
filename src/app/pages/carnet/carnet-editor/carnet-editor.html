@@ -382,23 +382,23 @@
               }
               @case ('general') {
                 <label>Título del viaje <input pInputText [value]="text(block, 'trip_title')" (input)="onText(block.id, 'trip_title', inputValue($event))" /></label>
-                <label>Inicio <input type="date" [value]="date(block, 'start_date')" (input)="onDate(block.id, 'start_date', inputValue($event))" /></label>
-                <label>Fin <input type="date" [value]="date(block, 'end_date')" (input)="onDate(block.id, 'end_date', inputValue($event))" /></label>
+                <label>Inicio <input pInputText type="date" [value]="date(block, 'start_date')" (input)="onDate(block.id, 'start_date', inputValue($event))" /></label>
+                <label>Fin <input pInputText type="date" [value]="date(block, 'end_date')" (input)="onDate(block.id, 'end_date', inputValue($event))" /></label>
                 <label>Titular <input pInputText [value]="text(block, 'holder_name')" (input)="onText(block.id, 'holder_name', inputValue($event))" /></label>
-                <label>Adultos <input type="number" min="0" [value]="number(block, 'adults')" (input)="onInt(block.id, 'adults', numberValue($event))" /></label>
-                <label>Niños <input type="number" min="0" [value]="number(block, 'children')" (input)="onInt(block.id, 'children', numberValue($event))" /></label>
+                <label>Adultos <input pInputText type="number" min="0" [value]="number(block, 'adults')" (input)="onInt(block.id, 'adults', numberValue($event))" /></label>
+                <label>Niños <input pInputText type="number" min="0" [value]="number(block, 'children')" (input)="onInt(block.id, 'children', numberValue($event))" /></label>
                 <label>Edades de los niños <input pInputText [value]="ages(block)" (input)="onAges(block.id, inputValue($event))" /></label>
                 @for (flight of flights(block); track flight.id) {
                   <fieldset>
                     <legend>{{ flight.movement === 'arrival' ? 'Llegada' : 'Salida' }}</legend>
                     <label>Vuelo <input pInputText [value]="flight.flight_number.value ?? ''" (input)="onFlight(block.id, flight.id, 'flight_number', inputValue($event))" /></label>
-                    <label>Fecha <input type="date" [value]="flight.on_date.value ?? ''" (input)="onFlightDate(block.id, flight.id, inputValue($event))" /></label>
+                    <label>Fecha <input pInputText type="date" [value]="flight.on_date.value ?? ''" (input)="onFlightDate(block.id, flight.id, inputValue($event))" /></label>
                     <label>Hora <input pInputText [value]="flight.at_time.value ?? ''" (input)="onFlight(block.id, flight.id, 'at_time', inputValue($event))" /></label>
                   </fieldset>
                 }
               }
               @case ('day') {
-                <label>Fecha <input type="date" [value]="date(block, 'on_date')" (input)="onDate(block.id, 'on_date', inputValue($event))" /></label>
+                <label>Fecha <input pInputText type="date" [value]="date(block, 'on_date')" (input)="onDate(block.id, 'on_date', inputValue($event))" /></label>
                 <label>Título <input pInputText [value]="text(block, 'title')" (input)="onText(block.id, 'title', inputValue($event))" /></label>
                 <label>Notas del día <textarea pInputTextarea rows="4" [value]="text(block, 'notes')" (input)="onText(block.id, 'notes', inputValue($event))"></textarea></label>
               }
@@ -408,8 +408,8 @@
                 <label>Dirección <input pInputText [value]="text(block, 'address')" (input)="onText(block.id, 'address', inputValue($event))" /></label>
                 <label>Contacto público <input pInputText [value]="text(block, 'phone')" (input)="onText(block.id, 'phone', inputValue($event))" /></label>
                 <label>Localidad <input pInputText [value]="text(block, 'locality')" (input)="onText(block.id, 'locality', inputValue($event))" /></label>
-                <label>Entrada <input type="date" [value]="date(block, 'check_in')" (input)="onDate(block.id, 'check_in', inputValue($event))" /></label>
-                <label>Salida <input type="date" [value]="date(block, 'check_out')" (input)="onDate(block.id, 'check_out', inputValue($event))" /></label>
+                <label>Entrada <input pInputText type="date" [value]="date(block, 'check_in')" (input)="onDate(block.id, 'check_in', inputValue($event))" /></label>
+                <label>Salida <input pInputText type="date" [value]="date(block, 'check_out')" (input)="onDate(block.id, 'check_out', inputValue($event))" /></label>
                 <ng-container [ngTemplateOutlet]="coordFields" [ngTemplateOutletContext]="{ block: block, field: 'coordinates', label: 'Coordenadas' }" />
                 <label>Reserva <input pInputText [value]="text(block, 'reservation_number')" (input)="onText(block.id, 'reservation_number', inputValue($event))" /></label>
                 <label>Enlace <input pInputText [value]="text(block, 'link')" (input)="onText(block.id, 'link', inputValue($event))" /></label>
@@ -552,7 +552,7 @@
                 }
                 <label>Distancia (km) <input pInputText [value]="text(block, 'distance_km')" (input)="onText(block.id, 'distance_km', inputValue($event))" /></label>
                 @if (block.content['mode'] !== 'place_to_place' || activityLeg(block)) {
-                  <label>Duración (minutos) <input type="number" min="0" [value]="number(block, 'duration_minutes')" (input)="onInt(block.id, 'duration_minutes', numberValue($event))" /></label>
+                  <label>Duración (minutos) <input pInputText type="number" min="0" [value]="number(block, 'duration_minutes')" (input)="onInt(block.id, 'duration_minutes', numberValue($event))" /></label>
                 }
                 @if (block.content['mode'] === 'place_to_place') {
                   <label>Instrucciones de llegada <textarea pInputTextarea rows="5" [value]="text(block, 'instructions')" (input)="onText(block.id, 'instructions', inputValue($event))"></textarea></label>
@@ -649,7 +649,7 @@
               }
             }
 
-            @if (block.type !== 'day' && block.type !== 'cover' && block.type !== 'general' && block.type !== 'full_page_image' && block.type !== 'regional_recommendation') {
+            @if (block.type !== 'day' && block.type !== 'cover' && block.type !== 'general' && block.type !== 'full_page_image' && block.type !== 'regional_recommendation' && block.type !== 'itinerary_route') {
               <label>
                 Colocar en el día
                 <select (change)="placeOnDay(inputValue($event))">

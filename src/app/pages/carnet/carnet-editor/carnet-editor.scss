@@ -359,6 +359,32 @@
   width: 100%;
 }
 
+.carnet-editor__form input[type='number'] {
+  appearance: textfield;
+}
+
+.carnet-editor__form input[type='number']::-webkit-outer-spin-button,
+.carnet-editor__form input[type='number']::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.carnet-editor__form select {
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--p-inputtext-color);
+  background: var(--p-inputtext-background);
+  padding: var(--p-inputtext-padding-y) var(--p-inputtext-padding-x);
+  border: 1px solid var(--p-inputtext-border-color);
+  border-radius: var(--p-inputtext-border-radius);
+  outline: none;
+}
+
+.carnet-editor__form select:focus {
+  border-color: var(--p-inputtext-focus-border-color);
+  box-shadow: var(--p-inputtext-focus-ring-shadow);
+}
+
 .format-bar {
   display: flex;
   gap: 0.4rem;
