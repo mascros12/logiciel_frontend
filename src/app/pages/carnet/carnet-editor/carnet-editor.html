@@ -336,6 +336,31 @@
           </section>
           }
 
+          @if (!structureFiltering() || shown(activityRoutes()).length) {
+          <section class="carnet-editor__days">
+            <button
+              type="button"
+              class="carnet-editor__days-toggle"
+              (click)="toggleRouteGroup('activities')"
+              [attr.aria-expanded]="routeGroupOpen('activities') || structureFiltering()"
+            >
+              <span>{{ routeGroupOpen('activities') || structureFiltering() ? '▾' : '▸' }} Entre hoteles y actividades</span>
+              <span class="carnet-editor__type">{{ shown(activityRoutes()).length }}</span>
+            </button>
+            @if (routeGroupOpen('activities') || structureFiltering()) {
+              <div
+                cdkDropList
+                class="carnet-editor__list"
+                (cdkDropListDropped)="dropStructure($event, shown(activityRoutes()))"
+              >
+                @for (block of shown(activityRoutes()); track block.id) {
+                  <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
+                }
+              </div>
+            }
+          </section>
+          }
+
         </aside>
 
         <div class="carnet-editor__form">
@@ -519,15 +544,19 @@
                 </label>
                 <label>Zona de origen <input pInputText [value]="text(block, 'origin_zone')" (input)="onText(block.id, 'origin_zone', inputValue($event))" /></label>
                 <label>Zona de destino <input pInputText [value]="text(block, 'destination_zone')" (input)="onText(block.id, 'destination_zone', inputValue($event))" /></label>
-                <label>Hotel de origen <input pInputText [value]="text(block, 'origin_lodging')" (input)="onText(block.id, 'origin_lodging', inputValue($event))" /></label>
-                <label>Hotel de destino <input pInputText [value]="text(block, 'destination_lodging')" (input)="onText(block.id, 'destination_lodging', inputValue($event))" /></label>
-                <label>Lugar de origen <input pInputText [value]="text(block, 'origin_place')" (input)="onText(block.id, 'origin_place', inputValue($event))" /></label>
-                <label>Lugar de destino <input pInputText [value]="text(block, 'destination_place')" (input)="onText(block.id, 'destination_place', inputValue($event))" /></label>
+                @if (block.content['mode'] === 'place_to_place') {
+                  <label>Hotel de origen <input pInputText [value]="text(block, 'origin_lodging')" (input)="onText(block.id, 'origin_lodging', inputValue($event))" /></label>
+                  <label>Hotel de destino <input pInputText [value]="text(block, 'destination_lodging')" (input)="onText(block.id, 'destination_lodging', inputValue($event))" /></label>
+                  <label>Lugar de origen <input pInputText [value]="text(block, 'origin_place')" (input)="onText(block.id, 'origin_place', inputValue($event))" /></label>
+                  <label>Lugar de destino <input pInputText [value]="text(block, 'destination_place')" (input)="onText(block.id, 'destination_place', inputValue($event))" /></label>
+                }
                 <label>Distancia (km) <input pInputText [value]="text(block, 'distance_km')" (input)="onText(block.id, 'distance_km', inputValue($event))" /></label>
-                @if (block.content['mode'] !== 'place_to_place') {
+                @if (block.content['mode'] !== 'place_to_place' || activityLeg(block)) {
                   <label>Duración (minutos) <input type="number" min="0" [value]="number(block, 'duration_minutes')" (input)="onInt(block.id, 'duration_minutes', numberValue($event))" /></label>
                 }
-                <label>Instrucciones de llegada <textarea pInputTextarea rows="5" [value]="text(block, 'instructions')" (input)="onText(block.id, 'instructions', inputValue($event))"></textarea></label>
+                @if (block.content['mode'] === 'place_to_place') {
+                  <label>Instrucciones de llegada <textarea pInputTextarea rows="5" [value]="text(block, 'instructions')" (input)="onText(block.id, 'instructions', inputValue($event))"></textarea></label>
+                }
                 @if (canSaveCatalogRoute(block)) {
                   <p>
                     <button type="button" (click)="saveCatalogRoute(block)">

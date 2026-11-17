@@ -200,8 +200,13 @@ export class CarnetEditor implements OnInit {
   );
   readonly placeRoutes = computed(() =>
     this.listed().filter(
-      (block) => block.type === 'itinerary_route' && block.content['mode'] === 'place_to_place',
+      (block) => block.type === 'itinerary_route'
+        && block.content['mode'] === 'place_to_place'
+        && !this.activityLeg(block),
     ),
+  );
+  readonly activityRoutes = computed(() =>
+    this.listed().filter((block) => this.activityLeg(block)),
   );
   readonly days = computed(() =>
     (this.document() ? visibleBlocks(this.document()!) : []).filter((block) => block.type === 'day'),
@@ -500,9 +505,12 @@ export class CarnetEditor implements OnInit {
       origin: 'edited' as const,
       generated_value: null,
     });
-    const excursion = route.mode === 'place_to_place'
-      && route.origin_kind === 'hotel'
-      && route.destination_kind === 'activity';
+    const place = route.mode === 'place_to_place';
+    const activity = place
+      && (route.origin_kind === 'activity' || route.destination_kind === 'activity');
+    const minutes = !place || activity ? (route.duration_minutes ?? 0) : 0;
+    const lodging = (kind: string | null, name: string | null) =>
+      kind === 'hotel' || kind === 'provider_branch' ? text(name) : text(null);
     const id = `new-${crypto.randomUUID()}`;
     const block: CarnetBlock = {
       id,
@@ -518,17 +526,19 @@ export class CarnetEditor implements OnInit {
       content: {
         catalog_route_id: route.id,
         mode: route.mode,
-        tone: excursion ? 'excursion' : 'zone',
+        tone: place ? 'excursion' : 'zone',
         included: true,
         origin_zone: text(route.origin_zone_name),
         destination_zone: text(route.destination_zone_name),
         origin_place: text(route.origin_name),
         destination_place: text(route.destination_name),
+        origin_lodging: lodging(route.origin_kind, route.origin_name),
+        destination_lodging: lodging(route.destination_kind, route.destination_name),
         distance_km: text(route.distance_km == null ? null : String(route.distance_km)),
         duration_minutes: {
-          value: route.mode === 'place_to_place' ? 0 : (route.duration_minutes ?? 0),
+          value: minutes,
           origin: 'edited',
-          generated_value: route.mode === 'place_to_place' ? 0 : (route.duration_minutes ?? 0),
+          generated_value: minutes,
         },
         instructions: text(route.instructions || null),
       },
@@ -559,7 +569,14 @@ export class CarnetEditor implements OnInit {
     this.openRouteGroups.set(next);
   }
 
+  activityLeg(block: CarnetBlock): boolean {
+    return block.type === 'itinerary_route'
+      && block.content['mode'] === 'place_to_place'
+      && this.number(block, 'duration_minutes') > 0;
+  }
+
   routeListLabel(block: CarnetBlock): string {
+    if (this.activityLeg(block)) return 'Entre hoteles y actividades';
     return block.content['mode'] === 'place_to_place' ? 'Entre hoteles' : 'Entre zonas';
   }
 
