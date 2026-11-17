@@ -221,6 +221,21 @@
               appendTo="body"
             />
           </div>
+          @if (organisationBlock(); as organisation) {
+            @if (!structureFiltering() || shown([organisation]).length) {
+              <button
+                type="button"
+                class="carnet-editor__organisation"
+                [class.is-selected]="selectedId() === organisation.id"
+                [class.is-issue]="hasIssue(organisation)"
+                (click)="select(organisation.id)"
+              >
+                <span>Organisation du voyage</span>
+                <span class="carnet-editor__type">Tabla del PDF</span>
+              </button>
+            }
+          }
+
           @if (!structureFiltering() || shown(sections()).length) {
           <section class="carnet-editor__days">
             <button
@@ -326,7 +341,7 @@
         <div class="carnet-editor__form">
           @if (selected(); as block) {
             <header class="carnet-editor__form-head">
-              <h2>{{ labels[block.type] }}</h2>
+              <h2>{{ block.section_kind === 'itinerary_summary' ? 'Organisation du voyage' : labels[block.type] }}</h2>
               @if (edited(block)) {
                 <p-tag value="Contenido editado" severity="warn" />
               }
@@ -527,6 +542,39 @@
                 }
               }
               @default {
+                @if (block.section_kind === 'itinerary_summary') {
+                  <section class="carnet-editor__organisation-panel">
+                    <h3>Tabla del PDF</h3>
+                    <p class="carnet-editor__hint">Esta tabla es la que sale en el PDF. Una línea por actividad. La negrita se escribe con &lt;b&gt; y &lt;/b&gt;.</p>
+                    <div class="carnet-editor__table-wrap">
+                      <table class="carnet-editor__table">
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Región</th>
+                            <th>Alojamiento y comidas</th>
+                            <th>Actividades y transportes</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of organisationRows(block); track $index) {
+                            <tr>
+                              <td><input pInputText [value]="row.date_label" (input)="onOrganisation(block.id, $index, 'date_label', inputValue($event))" /></td>
+                              <td><input pInputText [value]="row.region" (input)="onOrganisation(block.id, $index, 'region', inputValue($event))" /></td>
+                              <td><textarea pInputTextarea rows="3" [value]="row.stay" (input)="onOrganisation(block.id, $index, 'stay', inputValue($event))"></textarea></td>
+                              <td><textarea pInputTextarea rows="3" [value]="row.included" (input)="onOrganisation(block.id, $index, 'included', inputValue($event))"></textarea></td>
+                              <td><button type="button" (click)="removeOrganisationRow(block.id, $index)">Quitar</button></td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>
+                      <button type="button" (click)="addOrganisationRow(block.id)">Añadir fila</button>
+                    </p>
+                  </section>
+                }
                 <label>Título <input pInputText [value]="text(block, 'heading')" (input)="onText(block.id, 'heading', inputValue($event))" /></label>
                 <div class="format-bar">
                   <button type="button" (click)="formatBody(bodyField, block.id, 'bold')">Negrita</button>
@@ -535,37 +583,6 @@
                 </div>
                 <label>Texto <textarea #bodyField pInputTextarea rows="6" [value]="text(block, 'body')" (input)="onText(block.id, 'body', inputValue($event))"></textarea></label>
                 <p class="carnet-editor__hint">La negrita envuelve la selección con **. Una viñeta es una línea que empieza por «-». Un título es una línea que empieza por «#».</p>
-                @if (block.section_kind === 'itinerary_summary') {
-                  <h3>Organisation du voyage</h3>
-                  <p class="carnet-editor__hint">Esta tabla es la que sale en el PDF. Una línea por actividad. La negrita se escribe con &lt;b&gt; y &lt;/b&gt;.</p>
-                  <div class="carnet-editor__table-wrap">
-                    <table class="carnet-editor__table">
-                      <thead>
-                        <tr>
-                          <th>Fecha</th>
-                          <th>Región</th>
-                          <th>Alojamiento y comidas</th>
-                          <th>Actividades y transportes</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (row of organisationRows(block); track $index) {
-                          <tr>
-                            <td><input pInputText [value]="row.date_label" (input)="onOrganisation(block.id, $index, 'date_label', inputValue($event))" /></td>
-                            <td><input pInputText [value]="row.region" (input)="onOrganisation(block.id, $index, 'region', inputValue($event))" /></td>
-                            <td><textarea pInputTextarea rows="3" [value]="row.stay" (input)="onOrganisation(block.id, $index, 'stay', inputValue($event))"></textarea></td>
-                            <td><textarea pInputTextarea rows="3" [value]="row.included" (input)="onOrganisation(block.id, $index, 'included', inputValue($event))"></textarea></td>
-                            <td><button type="button" (click)="removeOrganisationRow(block.id, $index)">Quitar</button></td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                  <p>
-                    <button type="button" (click)="addOrganisationRow(block.id)">Añadir fila</button>
-                  </p>
-                }
                 @if (block.section_kind === 'regional_recommendations' || block.template_section_id === restaurantsSectionId) {
                   <label>Añadir desde el catálogo
                     <p-select

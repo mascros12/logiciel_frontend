@@ -230,6 +230,45 @@
   color: #8d1d1d;
 }
 
+.carnet-editor__organisation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.35rem;
+  border: 2px solid #b8860b;
+  border-radius: 12px;
+  background: #fff8e1;
+  padding: 0.8rem 0.85rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.carnet-editor__organisation.is-selected {
+  border-color: #8a6508;
+  box-shadow: inset 0 0 0 1px #8a6508;
+}
+
+.carnet-editor__organisation.is-issue {
+  border-color: #c44747;
+  background: #fff6f6;
+}
+
+.carnet-editor__organisation-panel {
+  margin-bottom: 1rem;
+  padding: 0.9rem;
+  border: 2px solid #b8860b;
+  border-radius: 12px;
+  background: #fff8e1;
+}
+
+.carnet-editor__organisation-panel h3 {
+  margin: 0 0 0.35rem;
+}
+
 .carnet-editor__days {
   display: flex;
   flex-direction: column;

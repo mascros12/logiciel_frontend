@@ -178,9 +178,15 @@ export class CarnetEditor implements OnInit {
   );
   readonly dirty = computed(() => this.state()?.dirty ?? false);
   readonly conflict = computed(() => this.state()?.conflict ?? false);
+  readonly organisationBlock = computed(() =>
+    this.listed().find((block) => block.section_kind === 'itinerary_summary') ?? null,
+  );
   readonly sections = computed(() =>
     this.listed().filter(
-      (block) => block.type !== 'itinerary_route' && block.type !== 'regional_recommendation',
+      (block) =>
+        block.type !== 'itinerary_route'
+        && block.type !== 'regional_recommendation'
+        && block.section_kind !== 'itinerary_summary',
     ),
   );
   readonly recommendations = computed(() =>
