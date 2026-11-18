@@ -129,6 +129,8 @@ export class CarnetEditor implements OnInit {
   readonly restaurantsSectionId = RESTAURANTS_SECTION_ID;
   readonly addable = [
     ...ADDABLE_TYPES.map((type) => ({ label: BLOCK_LABELS[type], value: type })),
+    { label: 'Trayecto entre zonas', value: 'zone_route' },
+    { label: 'Trayecto entre hoteles', value: 'hotel_route' },
     { label: 'Trayecto entre hotel y actividad', value: 'activity_route' },
   ];
 
@@ -157,16 +159,6 @@ export class CarnetEditor implements OnInit {
   );
   readonly catalogRoutes = signal<TravelRoute[]>([]);
   readonly catalogRecommendations = signal<RegionalRecommendation[]>([]);
-  readonly catalogOptions = computed(() =>
-    this.catalogRoutes()
-      .filter((route) => !this.hotelActivityCatalog(route))
-      .map((route) => ({
-        label: route.duration_label
-          ? `${route.origin_zone_name} → ${route.destination_zone_name} · ${route.duration_label}`
-          : `${route.origin_zone_name} → ${route.destination_zone_name}`,
-        value: route.id,
-      })),
-  );
   readonly updatedAt = signal('');
   readonly fileAaId = signal('');
   readonly status = signal('draft');
@@ -378,8 +370,8 @@ export class CarnetEditor implements OnInit {
   add(type: string | null): void {
     const current = this.document();
     if (!current || !type) return;
-    if (type === 'activity_route') {
-      this.addBlankActivityRoute();
+    if (type === 'zone_route' || type === 'hotel_route' || type === 'activity_route') {
+      this.addBlankRoute(type);
       this.addChoice.set(null);
       return;
     }
@@ -389,7 +381,7 @@ export class CarnetEditor implements OnInit {
     this.addChoice.set(null);
   }
 
-  private addBlankActivityRoute(): void {
+  private addBlankRoute(kind: 'zone_route' | 'hotel_route' | 'activity_route'): void {
     const current = this.state();
     if (!current) return;
     const parent = current.document.blocks.find(
@@ -400,6 +392,8 @@ export class CarnetEditor implements OnInit {
       origin: 'edited' as const,
       generated_value: null,
     });
+    const place = kind !== 'zone_route';
+    const group = kind === 'zone_route' ? 'zones' : kind === 'hotel_route' ? 'places' : 'activities';
     const id = `new-${crypto.randomUUID()}`;
     const block: CarnetBlock = {
       id,
@@ -414,9 +408,9 @@ export class CarnetEditor implements OnInit {
       parent_id: parent?.id ?? null,
       content: {
         catalog_route_id: crypto.randomUUID(),
-        mode: 'place_to_place',
-        tone: 'excursion',
-        pair: 'activity',
+        mode: place ? 'place_to_place' : 'zone_to_zone',
+        tone: place ? 'excursion' : 'zone',
+        pair: kind === 'activity_route' ? 'activity' : 'lodging',
         included: true,
         origin_zone: text(null),
         destination_zone: text(null),
@@ -430,7 +424,7 @@ export class CarnetEditor implements OnInit {
       },
     };
     const open = new Set(this.openRouteGroups());
-    open.add('activities');
+    open.add(group);
     this.openRouteGroups.set(open);
     this.state.set(withDocument(current, {
       ...current.document,
@@ -540,74 +534,6 @@ export class CarnetEditor implements OnInit {
         duration_text: text(item.duration_text),
         difficulty_text: text(item.difficulty_text),
         description: text(item.description),
-      },
-    };
-    this.state.set(withDocument(current, {
-      ...current.document,
-      blocks: [...current.document.blocks, block],
-    }));
-    this.selectedId.set(id);
-  }
-
-  private hotelActivityCatalog(route: TravelRoute): boolean {
-    if (!route.active || route.mode !== 'place_to_place') return false;
-    const kinds = [route.origin_kind, route.destination_kind];
-    return kinds.includes('hotel') && kinds.includes('activity');
-  }
-
-  addCatalogRoute(parentId: string, routeId: string | null): void {
-    const current = this.state();
-    const route = this.catalogRoutes().find((item) => item.id === routeId);
-    if (!current || !route) return;
-    const exists = current.document.blocks.some(
-      (block) => !block.removed && block.content['catalog_route_id'] === route.id,
-    );
-    if (exists) {
-      this.messages.add({ severity: 'info', summary: 'Ese trayecto ya está en el Carnet' });
-      return;
-    }
-    const text = (value: string | null) => ({
-      value,
-      origin: 'edited' as const,
-      generated_value: null,
-    });
-    const place = route.mode === 'place_to_place';
-    const activity = place
-      && (route.origin_kind === 'activity' || route.destination_kind === 'activity');
-    const minutes = !place || activity ? (route.duration_minutes ?? 0) : 0;
-    const lodging = (kind: string | null, name: string | null) =>
-      kind === 'hotel' || kind === 'provider_branch' ? text(name) : text(null);
-    const id = `new-${crypto.randomUUID()}`;
-    const block: CarnetBlock = {
-      id,
-      type: 'itinerary_route',
-      position: current.document.blocks.length,
-      visible: true,
-      removed: false,
-      manual: true,
-      source_detail_id: null,
-      product_kind: null,
-      product_id: null,
-      parent_id: parentId,
-      content: {
-        catalog_route_id: route.id,
-        mode: route.mode,
-        tone: place ? 'excursion' : 'zone',
-        pair: activity ? 'activity' : 'lodging',
-        included: true,
-        origin_zone: text(route.origin_zone_name),
-        destination_zone: text(route.destination_zone_name),
-        origin_place: text(route.origin_name),
-        destination_place: text(route.destination_name),
-        origin_lodging: lodging(route.origin_kind, route.origin_name),
-        destination_lodging: lodging(route.destination_kind, route.destination_name),
-        distance_km: text(route.distance_km == null ? null : String(route.distance_km)),
-        duration_minutes: {
-          value: minutes,
-          origin: 'edited',
-          generated_value: minutes,
-        },
-        instructions: text(route.instructions || null),
       },
     };
     this.state.set(withDocument(current, {

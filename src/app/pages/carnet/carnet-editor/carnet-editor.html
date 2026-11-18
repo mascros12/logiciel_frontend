@@ -627,19 +627,6 @@
                   </label>
                   <p class="carnet-editor__hint">Excluir una recomendación la oculta al viajero y no cambia el catálogo. El orden se cambia en la lista.</p>
                 }
-                @if (block.section_kind === 'route_collection') {
-                  <label>Añadir desde el catálogo
-                    <p-select
-                      [options]="catalogOptions()"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Elegir trayecto activo"
-                      appendTo="body"
-                      (onChange)="addCatalogRoute(block.id, $event.value)"
-                    />
-                  </label>
-                  <p class="carnet-editor__hint">Excluir un trayecto lo oculta al viajero y no cambia el catálogo. El orden se cambia en la lista.</p>
-                }
                 @if (pending(block)) {
                   <p class="carnet-editor__hint">Pendiente: este apartado no se publica hasta que Operaciones escriba el texto. No incluya teléfonos ni condiciones inventados.</p>
                 }

@@ -12,6 +12,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { Province, Zone, ZoneListResponse } from '../../../../core/models/zone.model';
 import { ZoneService } from '../../../../core/services/zone.service';
 import { apiErrorSummary } from '../../../../core/utils/form-validation.util';
+import { prepareZoneImage } from '../../../../core/utils/prepare-zone-image';
 
 @Component({
   selector: 'app-zone-list',
@@ -115,11 +116,7 @@ export class ZoneList implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     input.value = '';
-    this.pendingImage = file;
-    this.releaseImage();
-    if (!file) return;
-    this.imageObjectUrl = URL.createObjectURL(file);
-    this.imagePreview.set(this.imageObjectUrl);
+    void this.useImage(file);
   }
 
   clearImage(): void {
@@ -230,6 +227,16 @@ export class ZoneList implements OnInit, OnDestroy {
       const province = z.province.toLowerCase();
       return name.includes(term) || province.includes(term);
     });
+  }
+
+  private async useImage(file: File | null): Promise<void> {
+    this.pendingImage = null;
+    this.releaseImage();
+    if (!file) return;
+    const prepared = await prepareZoneImage(file);
+    this.pendingImage = prepared;
+    this.imageObjectUrl = URL.createObjectURL(prepared);
+    this.imagePreview.set(this.imageObjectUrl);
   }
 
   private loadImage(id: string): void {

@@ -97,7 +97,7 @@
       @if (imagePreview() || editing()?.image_id) {
         <p-button type="button" label="Quitar imagen" [text]="true" severity="danger" (onClick)="clearImage()" />
       }
-      <p>Se muestra en las recomendaciones de esta zona que no tengan imagen propia.</p>
+      <p>Se muestra en las recomendaciones de esta zona que no tengan imagen propia. Si la foto tiene mucha resolución, se reduce al cargarla.</p>
     </div>
   </form>
 
