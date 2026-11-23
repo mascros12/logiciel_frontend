@@ -22,7 +22,12 @@ import {
 import { apiUrl } from '../../../core/config/api.config';
 import { CarnetPdfStyle, CarnetService } from '../../../core/services/carnet.service';
 import { TravelRouteService } from '../../../core/services/travel-route.service';
-import { TravelRoute, TravelRouteOptions } from '../../../core/models/travel-route.model';
+import {
+  PlaceKind,
+  RouteOptionPlace,
+  TravelRoute,
+  TravelRouteOptions,
+} from '../../../core/models/travel-route.model';
 import { RegionalRecommendationService } from '../../../core/services/regional-recommendation.service';
 import { RegionalRecommendation } from '../../../core/models/regional-recommendation.model';
 import { applyRichMark } from '../../../core/utils/rich-text';
@@ -411,6 +416,10 @@ export class CarnetEditor implements OnInit {
         mode: place ? 'place_to_place' : 'zone_to_zone',
         tone: place ? 'excursion' : 'zone',
         pair: kind === 'activity_route' ? 'activity' : 'lodging',
+        origin_kind: null,
+        origin_id: null,
+        destination_kind: null,
+        destination_id: null,
         included: true,
         origin_zone: text(null),
         destination_zone: text(null),
@@ -1003,6 +1012,10 @@ export class CarnetEditor implements OnInit {
 
   canSaveCatalogRoute(block: CarnetBlock): boolean {
     if (block.type !== 'itinerary_route' || this.savedCatalogRoutes().has(block.id)) return false;
+    if (this.activityLeg(block)) {
+      return this.text(block, 'instructions').trim().length > 0
+        && this.number(block, 'duration_minutes') > 0;
+    }
     if (block.content['mode'] === 'place_to_place') {
       const raw = this.text(block, 'distance_km').trim().replace(',', '.');
       const distance = Number(raw);
@@ -1061,22 +1074,38 @@ export class CarnetEditor implements OnInit {
     });
   }
 
+  catalogRouteLabel(block: CarnetBlock): string {
+    if (this.activityLeg(block)) return 'trayectos entre hoteles y actividades';
+    return block.content['mode'] === 'place_to_place'
+      ? 'trayectos entre hoteles'
+      : 'trayectos entre zonas';
+  }
+
   private savePlaceRoute(block: CarnetBlock, options: TravelRouteOptions): void {
-    const origin = this.placeMatch(
-      options.hotels,
-      this.text(block, 'origin_lodging') || this.text(block, 'origin_place'),
-    );
-    const destination = this.placeMatch(
-      options.hotels,
-      this.text(block, 'destination_lodging') || this.text(block, 'destination_place'),
-    );
-    if (!origin || !destination || !origin.zone_id || !destination.zone_id) {
-      this.messages.add({ severity: 'warn', summary: 'No se encontró el hotel en el catálogo.' });
+    const activity = this.activityLeg(block);
+    const origin = this.routeEndpoint(block, 'origin', options, activity);
+    const destination = this.routeEndpoint(block, 'destination', options, activity);
+    if (!origin || !destination) {
+      this.messages.add({
+        severity: 'warn',
+        summary: activity
+          ? 'No se encontró el hotel o la actividad en el catálogo.'
+          : 'No se encontró el hotel en el catálogo.',
+      });
+      return;
+    }
+    if (!origin.zone_id || !destination.zone_id) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'El establecimiento elegido no tiene zona.',
+      });
       return;
     }
     if (this.catalogRoutes().some((route) =>
       route.mode === 'place_to_place'
+      && route.origin_kind === origin.kind
       && route.origin_id === origin.id
+      && route.destination_kind === destination.kind
       && route.destination_id === destination.id
     )) {
       this.markCatalogSaved(block.id);
@@ -1088,14 +1117,14 @@ export class CarnetEditor implements OnInit {
     this.storeCatalogRoute(block, {
       mode: 'place_to_place',
       active: true,
-      distance_km: rawDistance && Number.isFinite(distance) ? distance : null,
-      duration_minutes: null,
+      distance_km: activity || !Number.isFinite(distance) ? null : distance,
+      duration_minutes: activity ? this.number(block, 'duration_minutes') : null,
       instructions: this.text(block, 'instructions').trim(),
       origin_zone_id: origin.zone_id,
       destination_zone_id: destination.zone_id,
-      origin_kind: 'hotel',
+      origin_kind: origin.kind,
       origin_id: origin.id,
-      destination_kind: 'hotel',
+      destination_kind: destination.kind,
       destination_id: destination.id,
     });
   }
@@ -1107,7 +1136,13 @@ export class CarnetEditor implements OnInit {
         this.markCatalogSaved(block.id);
         this.messages.add({ severity: 'success', summary: 'Trayecto guardado en el catálogo.' });
       },
-      error: () => this.messages.add({ severity: 'error', summary: 'No se pudo guardar el trayecto.' }),
+      error: (err) => {
+        const detail = err?.error?.detail;
+        this.messages.add({
+          severity: 'error',
+          summary: typeof detail === 'string' ? detail : 'No se pudo guardar el trayecto.',
+        });
+      },
     });
   }
 
@@ -1123,13 +1158,80 @@ export class CarnetEditor implements OnInit {
     return found.length === 1 ? found[0] : null;
   }
 
-  private placeMatch(
-    places: { id: string; name: string; zone_id: string | null }[],
-    name: string,
-  ) {
+  private routeEndpoint(
+    block: CarnetBlock,
+    side: 'origin' | 'destination',
+    options: TravelRouteOptions,
+    activity: boolean,
+  ): { id: string; zone_id: string | null; kind: PlaceKind } | null {
+    const lodging = this.text(
+      block,
+      side === 'origin' ? 'origin_lodging' : 'destination_lodging',
+    );
+    const place = this.text(block, side === 'origin' ? 'origin_place' : 'destination_place');
+    const stored = this.storedEndpoint(block, side, options);
+    if (stored) return stored;
+    const label = (lodging || place).trim();
+    if (!label) return null;
+    const kind: PlaceKind = activity && !lodging.trim() ? 'activity' : 'hotel';
+    const catalog = kind === 'activity' ? options.activities : options.hotels;
+    return this.placeFromDocument(kind, label, catalog) ?? this.placeMatch(catalog, label, kind);
+  }
+
+  private storedEndpoint(
+    block: CarnetBlock,
+    side: 'origin' | 'destination',
+    options: TravelRouteOptions,
+  ): { id: string; zone_id: string | null; kind: PlaceKind } | null {
+    const kind = block.content[side === 'origin' ? 'origin_kind' : 'destination_kind'];
+    const id = block.content[side === 'origin' ? 'origin_id' : 'destination_id'];
+    if (kind !== 'hotel' && kind !== 'activity' && kind !== 'provider_branch') return null;
+    if (typeof id !== 'string' || !id) return null;
+    const catalog = kind === 'activity'
+      ? options.activities
+      : kind === 'provider_branch'
+        ? options.branches
+        : options.hotels;
+    const found = catalog.find((place) => place.id === id);
+    return found ? { id: found.id, zone_id: found.zone_id, kind } : null;
+  }
+
+  private placeFromDocument(
+    kind: 'hotel' | 'activity',
+    label: string,
+    catalog: RouteOptionPlace[],
+  ): { id: string; zone_id: string | null; kind: PlaceKind } | null {
+    const folded = this.foldName(label);
+    const ids = new Set(
+      (this.document()?.blocks ?? [])
+        .filter((item) => item.type === kind && !item.removed && item.product_id)
+        .filter((item) => this.foldName(this.text(item, 'public_name')) === folded)
+        .map((item) => item.product_id as string),
+    );
+    if (ids.size !== 1) return null;
+    const found = catalog.find((place) => place.id === [...ids][0]);
+    return found ? { id: found.id, zone_id: found.zone_id, kind } : null;
+  }
+
+  private placeMatch(places: RouteOptionPlace[], name: string, kind: PlaceKind) {
     const folded = this.foldName(name);
-    const found = places.filter((place) => this.foldName(place.name) === folded);
-    return found.length === 1 ? found[0] : null;
+    const found = places.filter((place) =>
+      this.placeNames(place, kind).some((candidate) => this.foldName(candidate) === folded),
+    );
+    if (found.length !== 1) return null;
+    const place = found[0];
+    return { id: place.id, zone_id: place.zone_id, kind };
+  }
+
+  private placeNames(place: RouteOptionPlace, kind: PlaceKind): string[] {
+    const names = [place.name, place.file_aa_name ?? ''];
+    if (kind === 'activity') names.push(this.activityDisplayName(place.name));
+    return names.filter((item) => item.trim().length > 0);
+  }
+
+  private activityDisplayName(name: string): string {
+    const parts = name.split(/\s*\/\s*/).map((part) => part.trim()).filter(Boolean);
+    return parts.length >= 2 ? parts[1] : parts[0] ?? '';
   }
 
   private foldName(value: string): string {

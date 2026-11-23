@@ -557,7 +557,7 @@
                 @if (canSaveCatalogRoute(block)) {
                   <p>
                     <button type="button" (click)="saveCatalogRoute(block)">
-                      Guardar en {{ block.content['mode'] === 'place_to_place' ? 'trayectos entre hoteles' : 'trayectos entre zonas' }}
+                      Guardar en {{ catalogRouteLabel(block) }}
                     </button>
                   </p>
                   <p class="carnet-editor__hint">El texto de este Carnet no cambia. El trayecto queda disponible para los viajes siguientes.</p>

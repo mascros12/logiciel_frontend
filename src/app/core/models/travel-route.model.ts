@@ -52,6 +52,7 @@ export interface RouteOptionPlace {
   id: string;
   name: string;
   zone_id: string | null;
+  file_aa_name?: string | null;
 }
 
 export interface TravelRouteOptions {

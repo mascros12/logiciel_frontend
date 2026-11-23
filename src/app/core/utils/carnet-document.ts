@@ -971,6 +971,16 @@ function clientId(id: string): string | undefined {
   return id.startsWith('new-') ? undefined : id;
 }
 
+function endpointKind(value: unknown): string | null {
+  return value === 'hotel' || value === 'activity' || value === 'provider_branch'
+    ? value
+    : null;
+}
+
+function endpointId(value: unknown): string | null {
+  return typeof value === 'string' && value ? value : null;
+}
+
 function writeContent(block: CarnetBlock): Record<string, unknown> {
   const content = block.content;
   if (block.type === 'full_page_image') {
@@ -1102,6 +1112,10 @@ function writeContent(block: CarnetBlock): Record<string, unknown> {
       mode: block.content['mode'],
       tone: block.content['tone'],
       pair: block.content['pair'] === 'activity' ? 'activity' : 'lodging',
+      origin_kind: endpointKind(content['origin_kind']),
+      origin_id: endpointId(content['origin_id']),
+      destination_kind: endpointKind(content['destination_kind']),
+      destination_id: endpointId(content['destination_id']),
       included: block.content['included'] !== false,
       origin_zone: writeText(content, 'origin_zone'),
       destination_zone: writeText(content, 'destination_zone'),
