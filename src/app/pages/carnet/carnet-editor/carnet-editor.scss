@@ -158,6 +158,20 @@
   align-items: start;
 }
 
+.carnet-editor__layout.is-structure-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.carnet-editor__structure-toggle {
+  border: 1px solid #d5d9e4;
+  background: #fff;
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  margin-bottom: 0.7rem;
+  cursor: pointer;
+}
+
 .carnet-editor__structure {
   position: sticky;
   top: 0.75rem;

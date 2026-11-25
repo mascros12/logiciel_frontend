@@ -158,6 +158,7 @@ export class CarnetEditor implements OnInit {
   readonly savedCatalogRoutes = signal<ReadonlySet<string>>(new Set());
   readonly addChoice = signal<string | null>(null);
   readonly structureQuery = signal('');
+  readonly structureOpen = signal(true);
   readonly onlyPending = signal(false);
   readonly issueIds = computed(() =>
     this.document() ? blockIssueIds(this.document()!) : new Set<string>(),

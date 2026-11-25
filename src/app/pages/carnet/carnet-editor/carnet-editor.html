@@ -189,8 +189,16 @@
         [mediaPrivateBase]="pageMediaBase()"
       />
     } @else {
-      <div class="carnet-editor__layout">
+      <div class="carnet-editor__layout" [class.is-structure-hidden]="!structureOpen()">
+        @if (structureOpen()) {
         <aside class="carnet-editor__structure">
+          <button
+            type="button"
+            class="carnet-editor__structure-toggle"
+            (click)="structureOpen.set(false)"
+          >
+            Ocultar estructura
+          </button>
           <div class="carnet-editor__finder">
             <input
               pInputText
@@ -362,8 +370,18 @@
           }
 
         </aside>
+        }
 
         <div class="carnet-editor__form">
+          @if (!structureOpen()) {
+            <button
+              type="button"
+              class="carnet-editor__structure-toggle"
+              (click)="structureOpen.set(true)"
+            >
+              Mostrar estructura
+            </button>
+          }
           @if (selected(); as block) {
             <header class="carnet-editor__form-head">
               <h2>{{ block.section_kind === 'itinerary_summary' ? 'Organisation du voyage' : labels[block.type] }}</h2>
