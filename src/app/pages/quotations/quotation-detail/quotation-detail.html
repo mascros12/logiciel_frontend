@@ -283,7 +283,7 @@
 
   <!-- Tabs -->
   <div class="detail-body">
-    <p-tabs [value]="activeTab()" (valueChange)="setActiveTab($event)">
+    <p-tabs #quotationTabs [value]="activeTab()" (valueChange)="setActiveTab($event)">
 
       <!-- Tab Agenda -->
       <p-tablist>
@@ -292,6 +292,9 @@
           <p-tab value="cotizacion">Cotización</p-tab>
         }
         <p-tab value="fileaa">Ficha AA</p-tab>
+        @if (canOpenCarnet() && existingCarnetId()) {
+          <p-tab value="carnet">Carnet</p-tab>
+        }
       </p-tablist>
 
       <p-tabpanels>
@@ -1161,24 +1164,24 @@
                     [loading]="downloadingFichaPdf()"
                     (onClick)="downloadFichaAAPdf()"
                   />
-                  @if (canOpenCarnet()) {
+                  @if (canOpenCarnet() && !existingCarnetId()) {
                     <p-button
-                      [label]="carnetActionLabel()"
+                      label="Generar Carnet de Route"
                       icon="pi pi-map"
                       [outlined]="true"
                       [loading]="openingCarnet()"
                       (onClick)="openCarnet()"
                     />
-                    @if (existingCarnetId()) {
-                      <p-button
-                        label="Regenerar Carnet"
-                        icon="pi pi-refresh"
-                        severity="secondary"
-                        [outlined]="true"
-                        [loading]="regeneratingCarnet()"
-                        (onClick)="askRegenerateCarnet()"
-                      />
-                    }
+                  }
+                  @if (canOpenCarnet() && existingCarnetId()) {
+                    <p-button
+                      label="Regenerar Carnet"
+                      icon="pi pi-refresh"
+                      severity="secondary"
+                      [outlined]="true"
+                      [loading]="regeneratingCarnet()"
+                      (onClick)="askRegenerateCarnet()"
+                    />
                   }
                   @if (canDeleteFileAA()) {
                     <p-button
@@ -2694,6 +2697,17 @@
             }
           </div>
         </p-tabpanel>
+        @if (canOpenCarnet() && existingCarnetId(); as carnetId) {
+          <p-tabpanel value="carnet">
+            @if (activeTab() === 'carnet' && quotation(); as q) {
+              <app-carnet-editor
+                [embeddedQuotationId]="q.id"
+                [embeddedCarnetId]="carnetId"
+                (leaveToFile)="setActiveTab('fileaa')"
+              />
+            }
+          </p-tabpanel>
+        }
 
       </p-tabpanels>
     </p-tabs>

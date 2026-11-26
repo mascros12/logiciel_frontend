@@ -232,6 +232,7 @@ export interface PublicRoute {
   distance_label: string;
   duration_label: string;
   instructions: string | null;
+  activity?: boolean;
 }
 
 export interface PublicOrganisationRow {

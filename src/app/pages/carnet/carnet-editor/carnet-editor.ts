@@ -1,6 +1,6 @@
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -73,6 +73,7 @@ import {
   pageAssetId,
   recommendationNeedsImage,
   rentalNeedsReservation,
+  routeIncludesActivity,
   routeNeedsData,
   sectionPending,
   setOrganisation,
@@ -137,6 +138,8 @@ export class CarnetEditor implements OnInit {
     { label: 'Trayecto entre zonas', value: 'zone_route' },
     { label: 'Trayecto entre hoteles', value: 'hotel_route' },
     { label: 'Trayecto entre hotel y actividad', value: 'activity_route' },
+    { label: 'Trayecto entre hotel y vehículo', value: 'hotel_vehicle_route' },
+    { label: 'Trayecto entre actividad y vehículo', value: 'activity_vehicle_route' },
   ];
 
   readonly loading = signal(true);
@@ -173,6 +176,11 @@ export class CarnetEditor implements OnInit {
   readonly publicPath = signal<string | null>(null);
   readonly publishing = signal(false);
   readonly downloading = signal(false);
+  /** Cuando la cotización muestra el carnet en una pestaña, no se leen los parámetros de la ruta. */
+  readonly embeddedQuotationId = input<string | null>(null);
+  readonly embeddedCarnetId = input<string | null>(null);
+  readonly leaveToFile = output<void>();
+
   quotationId = '';
   carnetId = '';
 
@@ -196,20 +204,8 @@ export class CarnetEditor implements OnInit {
   readonly recommendations = computed(() =>
     this.listed().filter((block) => block.type === 'regional_recommendation'),
   );
-  readonly zoneRoutes = computed(() =>
-    this.listed().filter(
-      (block) => block.type === 'itinerary_route' && block.content['mode'] !== 'place_to_place',
-    ),
-  );
-  readonly placeRoutes = computed(() =>
-    this.listed().filter(
-      (block) => block.type === 'itinerary_route'
-        && block.content['mode'] === 'place_to_place'
-        && !this.activityLeg(block),
-    ),
-  );
-  readonly activityRoutes = computed(() =>
-    this.listed().filter((block) => this.activityLeg(block)),
+  readonly tripRoutes = computed(() =>
+    this.listed().filter((block) => block.type === 'itinerary_route'),
   );
   readonly days = computed(() =>
     (this.document() ? visibleBlocks(this.document()!) : []).filter((block) => block.type === 'day'),
@@ -227,8 +223,12 @@ export class CarnetEditor implements OnInit {
   readonly phaseLabel = computed(() => publicationLabel(this.dirty(), this.publication()));
 
   ngOnInit(): void {
-    this.quotationId = this.route.snapshot.paramMap.get('quotationId') ?? '';
-    this.carnetId = this.route.snapshot.paramMap.get('carnetId') ?? '';
+    this.quotationId = this.embeddedQuotationId()
+      || this.route.snapshot.paramMap.get('quotationId')
+      || '';
+    this.carnetId = this.embeddedCarnetId()
+      || this.route.snapshot.paramMap.get('carnetId')
+      || '';
     this.reload();
     this.travelRoutes.list(true).subscribe({
       next: (res) => this.catalogRoutes.set(res.items),
@@ -273,6 +273,10 @@ export class CarnetEditor implements OnInit {
     if (current && shouldWarnOnLeave(current)) {
       event.preventDefault();
     }
+  }
+
+  requestLeave(): void {
+    this.leaveToFile.emit();
   }
 
   canDeactivate(): boolean {
@@ -376,7 +380,13 @@ export class CarnetEditor implements OnInit {
   add(type: string | null): void {
     const current = this.document();
     if (!current || !type) return;
-    if (type === 'zone_route' || type === 'hotel_route' || type === 'activity_route') {
+    if (
+      type === 'zone_route'
+      || type === 'hotel_route'
+      || type === 'activity_route'
+      || type === 'hotel_vehicle_route'
+      || type === 'activity_vehicle_route'
+    ) {
       this.addBlankRoute(type);
       this.addChoice.set(null);
       return;
@@ -387,7 +397,9 @@ export class CarnetEditor implements OnInit {
     this.addChoice.set(null);
   }
 
-  private addBlankRoute(kind: 'zone_route' | 'hotel_route' | 'activity_route'): void {
+  private addBlankRoute(
+    kind: 'zone_route' | 'hotel_route' | 'activity_route' | 'hotel_vehicle_route' | 'activity_vehicle_route',
+  ): void {
     const current = this.state();
     if (!current) return;
     const parent = current.document.blocks.find(
@@ -399,7 +411,6 @@ export class CarnetEditor implements OnInit {
       generated_value: null,
     });
     const place = kind !== 'zone_route';
-    const group = kind === 'zone_route' ? 'zones' : kind === 'hotel_route' ? 'places' : 'activities';
     const id = `new-${crypto.randomUUID()}`;
     const block: CarnetBlock = {
       id,
@@ -416,10 +427,20 @@ export class CarnetEditor implements OnInit {
         catalog_route_id: crypto.randomUUID(),
         mode: place ? 'place_to_place' : 'zone_to_zone',
         tone: place ? 'excursion' : 'zone',
-        pair: kind === 'activity_route' ? 'activity' : 'lodging',
-        origin_kind: null,
+        pair: kind === 'activity_route' || kind === 'activity_vehicle_route' ? 'activity' : 'lodging',
+        origin_kind: kind === 'activity_vehicle_route'
+          ? 'activity'
+          : kind === 'zone_route'
+            ? null
+            : 'hotel',
         origin_id: null,
-        destination_kind: null,
+        destination_kind: kind === 'hotel_vehicle_route' || kind === 'activity_vehicle_route'
+          ? 'vehicle'
+          : kind === 'activity_route'
+            ? 'activity'
+            : kind === 'hotel_route'
+              ? 'hotel'
+              : null,
         destination_id: null,
         included: true,
         origin_zone: text(null),
@@ -434,7 +455,7 @@ export class CarnetEditor implements OnInit {
       },
     };
     const open = new Set(this.openRouteGroups());
-    open.add(group);
+    open.add('routes');
     this.openRouteGroups.set(open);
     this.state.set(withDocument(current, {
       ...current.document,
@@ -573,18 +594,19 @@ export class CarnetEditor implements OnInit {
   }
 
   activityLeg(block: CarnetBlock): boolean {
-    if (block.type !== 'itinerary_route' || block.content['mode'] !== 'place_to_place') return false;
-    if (block.content['pair'] === 'activity') return true;
-    const originLodging = this.text(block, 'origin_lodging');
-    const destinationLodging = this.text(block, 'destination_lodging');
-    if (originLodging && destinationLodging) return false;
-    return Boolean(
-      (this.text(block, 'origin_place') && !originLodging)
-      || (this.text(block, 'destination_place') && !destinationLodging),
+    return block.type === 'itinerary_route' && routeIncludesActivity(block.content);
+  }
+
+  vehicleLeg(block: CarnetBlock): boolean {
+    return block.type === 'itinerary_route' && (
+      block.content['origin_kind'] === 'vehicle'
+      || block.content['destination_kind'] === 'vehicle'
     );
   }
 
   routeListLabel(block: CarnetBlock): string {
+    if (this.activityLeg(block) && this.vehicleLeg(block)) return 'Entre actividad y vehículo';
+    if (this.vehicleLeg(block)) return 'Entre hotel y vehículo';
     if (this.activityLeg(block)) return 'Entre hoteles y actividades';
     return block.content['mode'] === 'place_to_place' ? 'Entre hoteles' : 'Entre zonas';
   }
@@ -1076,6 +1098,10 @@ export class CarnetEditor implements OnInit {
   }
 
   catalogRouteLabel(block: CarnetBlock): string {
+    if (this.activityLeg(block) && this.vehicleLeg(block)) {
+      return 'trayectos entre actividades y vehículos';
+    }
+    if (this.vehicleLeg(block)) return 'trayectos entre hoteles y vehículos';
     if (this.activityLeg(block)) return 'trayectos entre hoteles y actividades';
     return block.content['mode'] === 'place_to_place'
       ? 'trayectos entre hoteles'
@@ -1084,17 +1110,19 @@ export class CarnetEditor implements OnInit {
 
   private savePlaceRoute(block: CarnetBlock, options: TravelRouteOptions): void {
     const activity = this.activityLeg(block);
-    const origin = this.routeEndpoint(block, 'origin', options, activity);
-    const destination = this.routeEndpoint(block, 'destination', options, activity);
+    let origin = this.routeEndpoint(block, 'origin', options, activity);
+    let destination = this.routeEndpoint(block, 'destination', options, activity);
     if (!origin || !destination) {
       this.messages.add({
         severity: 'warn',
         summary: activity
-          ? 'No se encontró el hotel o la actividad en el catálogo.'
-          : 'No se encontró el hotel en el catálogo.',
+          ? 'No se encontró el hotel, la actividad o el vehículo en el catálogo.'
+          : 'No se encontró el hotel o el vehículo en el catálogo.',
       });
       return;
     }
+    if (origin.kind === 'vehicle') origin = { ...origin, zone_id: destination.zone_id };
+    if (destination.kind === 'vehicle') destination = { ...destination, zone_id: origin.zone_id };
     if (!origin.zone_id || !destination.zone_id) {
       this.messages.add({
         severity: 'warn',
@@ -1115,11 +1143,12 @@ export class CarnetEditor implements OnInit {
     }
     const rawDistance = this.text(block, 'distance_km').trim();
     const distance = Number(rawDistance.replace(',', '.'));
+    const timed = activity || origin.kind === 'vehicle' || destination.kind === 'vehicle';
     this.storeCatalogRoute(block, {
       mode: 'place_to_place',
       active: true,
-      distance_km: activity || !Number.isFinite(distance) ? null : distance,
-      duration_minutes: activity ? this.number(block, 'duration_minutes') : null,
+      distance_km: timed || !Number.isFinite(distance) ? null : distance,
+      duration_minutes: timed ? this.number(block, 'duration_minutes') : null,
       instructions: this.text(block, 'instructions').trim(),
       origin_zone_id: origin.zone_id,
       destination_zone_id: destination.zone_id,
@@ -1186,13 +1215,17 @@ export class CarnetEditor implements OnInit {
   ): { id: string; zone_id: string | null; kind: PlaceKind } | null {
     const kind = block.content[side === 'origin' ? 'origin_kind' : 'destination_kind'];
     const id = block.content[side === 'origin' ? 'origin_id' : 'destination_id'];
-    if (kind !== 'hotel' && kind !== 'activity' && kind !== 'provider_branch') return null;
+    if (kind !== 'hotel' && kind !== 'activity' && kind !== 'provider_branch' && kind !== 'vehicle') {
+      return null;
+    }
     if (typeof id !== 'string' || !id) return null;
     const catalog = kind === 'activity'
       ? options.activities
       : kind === 'provider_branch'
         ? options.branches
-        : options.hotels;
+        : kind === 'vehicle'
+          ? options.vehicles ?? []
+          : options.hotels;
     const found = catalog.find((place) => place.id === id);
     return found ? { id: found.id, zone_id: found.zone_id, kind } : null;
   }

@@ -1,5 +1,5 @@
 export type RouteMode = 'zone_to_zone' | 'place_to_place';
-export type PlaceKind = 'hotel' | 'activity' | 'provider_branch';
+export type PlaceKind = 'hotel' | 'activity' | 'provider_branch' | 'vehicle';
 
 export interface TravelRoute {
   id: string;
@@ -60,4 +60,5 @@ export interface TravelRouteOptions {
   hotels: RouteOptionPlace[];
   activities: RouteOptionPlace[];
   branches: RouteOptionPlace[];
+  vehicles: RouteOptionPlace[];
 }

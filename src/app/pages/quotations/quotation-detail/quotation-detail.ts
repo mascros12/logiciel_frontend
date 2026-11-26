@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject, DestroyRef, effect } from '@angular/core';
+import { Component, OnInit, ViewChild, signal, computed, inject, DestroyRef, effect } from '@angular/core';
 import { HttpResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, forkJoin } from 'rxjs';
@@ -6,7 +6,7 @@ import { catchError, concatMap, map } from 'rxjs/operators';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, CurrencyPipe, NgClass } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
-import { TabsModule } from 'primeng/tabs';
+import { Tabs, TabsModule } from 'primeng/tabs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -38,6 +38,7 @@ import { AppSettingsService } from '../../../core/services/app-settings.service'
 import { CarnetService } from '../../../core/services/carnet.service';
 import { UserService } from '../../../core/services/user.service';
 import { canEditCarnet } from '../../../core/utils/carnet-document';
+import { CarnetEditor } from '../../carnet/carnet-editor/carnet-editor';
 import { ContactSource, ContactBudget, TravellerType, Ritm } from '../../../core/models/contact.model';
 import {
   QuotationFull, QuotationVersion, QuotationLine,
@@ -233,6 +234,7 @@ function computeFichaAaTableMinWidthPx(
     FormsModule, DatePickerModule, RichTextPipe, DragDropModule, MenuModule,
     StickyHorizontalScrollDirective,
     FieldErrorComponent,
+    CarnetEditor,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './quotation-detail.html',
@@ -275,7 +277,9 @@ export class QuotationDetail implements OnInit {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'operaciones' || role === 'comercial';
   });
-  activeTab = signal<'agenda' | 'cotizacion' | 'fileaa'>('agenda');
+  activeTab = signal<'agenda' | 'cotizacion' | 'fileaa' | 'carnet'>('agenda');
+  @ViewChild(CarnetEditor) private carnetEditor?: CarnetEditor;
+  @ViewChild('quotationTabs') private quotationTabs?: Tabs;
   /** Tab principal restaurado desde `?tab=` (no aplicar atajos automáticos de rol). */
   private tabRestoredFromUrl = false;
   /** Sub-tab Ficha AA restaurado desde `?fichaTab=`. */
@@ -479,7 +483,13 @@ export class QuotationDetail implements OnInit {
     const fileId = this.fichaFileAA()?.id ?? null;
     const allowed = this.canOpenCarnet();
     const seq = ++this.carnetLabelSeq;
-    if (!fileId || !allowed) {
+    if (!allowed) {
+      this.existingCarnetId.set(null);
+      this.carnetActionLabel.set('Generar Carnet de Route');
+      if (this.activeTab() === 'carnet') this.applyActiveTab('fileaa');
+      return;
+    }
+    if (!fileId) {
       this.existingCarnetId.set(null);
       this.carnetActionLabel.set('Generar Carnet de Route');
       return;
@@ -494,6 +504,7 @@ export class QuotationDetail implements OnInit {
         if (seq !== this.carnetLabelSeq) return;
         this.existingCarnetId.set(null);
         this.carnetActionLabel.set('Generar Carnet de Route');
+        if (this.activeTab() === 'carnet') this.applyActiveTab('fileaa');
       },
     });
   });
@@ -714,7 +725,7 @@ export class QuotationDetail implements OnInit {
 
   private restoreTabsFromRoute(): void {
     const tab = this.route.snapshot.queryParamMap.get('tab');
-    if (tab === 'agenda' || tab === 'fileaa') {
+    if (tab === 'agenda' || tab === 'fileaa' || (tab === 'carnet' && this.canOpenCarnet())) {
       this.tabRestoredFromUrl = true;
       this.activeTab.set(tab);
     } else if (tab === 'cotizacion' && this.canViewQuotationBreakdown()) {
@@ -732,7 +743,7 @@ export class QuotationDetail implements OnInit {
     this.versionRestoredFromUrl = version || null;
   }
 
-  private syncTabToRoute(tab: 'agenda' | 'cotizacion' | 'fileaa'): void {
+  private syncTabToRoute(tab: 'agenda' | 'cotizacion' | 'fileaa' | 'carnet'): void {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab },
@@ -795,9 +806,19 @@ export class QuotationDetail implements OnInit {
     this.insertAfterByLineId.update((rec) => ({ ...rec, [lineId]: v }));
   }
 
+  canDeactivate(): boolean {
+    return this.carnetEditor?.canDeactivate() ?? true;
+  }
+
   setActiveTab(value: string | number | undefined): void {
-    if (value === 'agenda' || value === 'cotizacion' || value === 'fileaa') {
+    if (value === 'agenda' || value === 'cotizacion' || value === 'fileaa' || value === 'carnet') {
       if (value === 'cotizacion' && !this.canViewQuotationBreakdown()) return;
+      if (value === 'carnet' && (!this.canOpenCarnet() || !this.existingCarnetId())) return;
+      if (value === this.activeTab()) return;
+      if (this.activeTab() === 'carnet' && this.carnetEditor && !this.carnetEditor.canDeactivate()) {
+        this.quotationTabs?.updateValue(this.activeTab());
+        return;
+      }
       if (
         (value === 'agenda' || value === 'cotizacion') &&
         this.shouldPromptVersionWhenLeavingFicha(value)
@@ -824,7 +845,7 @@ export class QuotationDetail implements OnInit {
     return q.versions.some((v) => String(v.id) === String(ficha.version_id));
   }
 
-  private applyActiveTab(value: 'agenda' | 'cotizacion' | 'fileaa'): void {
+  private applyActiveTab(value: 'agenda' | 'cotizacion' | 'fileaa' | 'carnet'): void {
     this.activeTab.set(value);
     this.syncTabToRoute(value);
     if (value === 'fileaa') {
@@ -7243,7 +7264,7 @@ export class QuotationDetail implements OnInit {
         this.openingCarnet.set(false);
         this.existingCarnetId.set(carnet.id);
         this.carnetActionLabel.set('Editar Carnet de Route');
-        void this.router.navigate(['/cotizaciones', quotation.id, 'carnet', carnet.id]);
+        this.applyActiveTab('carnet');
       },
       error: (err: { error?: { detail?: { code?: string } } }) => {
         this.openingCarnet.set(false);
@@ -7281,7 +7302,7 @@ export class QuotationDetail implements OnInit {
         this.regeneratingCarnet.set(false);
         this.existingCarnetId.set(carnet.id);
         this.messageService.add({ severity: 'success', summary: 'Carnet regenerado' });
-        void this.router.navigate(['/cotizaciones', quotation.id, 'carnet', carnet.id]);
+        this.applyActiveTab('carnet');
       },
       error: (err: { error?: { detail?: { code?: string } } }) => {
         this.regeneratingCarnet.set(false);

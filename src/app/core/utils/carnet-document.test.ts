@@ -1009,6 +1009,7 @@ describe('página de imagen', () => {
         distanceLabel: '172 km',
         durationLabel: '',
         instructions: 'Prendre la route.',
+        activity: false,
       }),
       'Río Celeste - Carara  172 km Finca la Amistad - Selva Color',
     );

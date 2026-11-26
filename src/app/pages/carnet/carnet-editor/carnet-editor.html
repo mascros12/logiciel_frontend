@@ -19,11 +19,17 @@
         {{ dirty() ? 'Cambios sin guardar' : 'Guardado' }}
       </span>
       <span class="carnet-editor__source">{{ statusLabel() }}</span>
-      <a
-        class="carnet-editor__back"
-        [routerLink]="['/cotizaciones', quotationId]"
-        [queryParams]="{ tab: 'fileaa' }"
-      >Volver a la Ficha AA</a>
+      @if (embeddedCarnetId()) {
+        <button type="button" class="carnet-editor__back" (click)="requestLeave()">
+          Volver a la Ficha AA
+        </button>
+      } @else {
+        <a
+          class="carnet-editor__back"
+          [routerLink]="['/cotizaciones', quotationId]"
+          [queryParams]="{ tab: 'fileaa' }"
+        >Volver a la Ficha AA</a>
+      }
       <p-button
         [label]="previewing() ? 'Editor' : 'Vista previa'"
         icon="pi pi-eye"
@@ -294,74 +300,24 @@
           </section>
           }
 
-          @if (!structureFiltering() || shown(zoneRoutes()).length) {
+          @if (!structureFiltering() || shown(tripRoutes()).length) {
           <section class="carnet-editor__days">
             <button
               type="button"
               class="carnet-editor__days-toggle"
-              (click)="toggleRouteGroup('zones')"
-              [attr.aria-expanded]="routeGroupOpen('zones') || structureFiltering()"
+              (click)="toggleRouteGroup('routes')"
+              [attr.aria-expanded]="routeGroupOpen('routes') || structureFiltering()"
             >
-              <span>{{ routeGroupOpen('zones') || structureFiltering() ? '▾' : '▸' }} Entre zonas</span>
-              <span class="carnet-editor__type">{{ shown(zoneRoutes()).length }}</span>
+              <span>{{ routeGroupOpen('routes') || structureFiltering() ? '▾' : '▸' }} Trajets</span>
+              <span class="carnet-editor__type">{{ shown(tripRoutes()).length }}</span>
             </button>
-            @if (routeGroupOpen('zones') || structureFiltering()) {
+            @if (routeGroupOpen('routes') || structureFiltering()) {
               <div
                 cdkDropList
                 class="carnet-editor__list"
-                (cdkDropListDropped)="dropStructure($event, shown(zoneRoutes()))"
+                (cdkDropListDropped)="dropStructure($event, shown(tripRoutes()))"
               >
-                @for (block of shown(zoneRoutes()); track block.id) {
-                  <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
-                }
-              </div>
-            }
-          </section>
-          }
-
-          @if (!structureFiltering() || shown(placeRoutes()).length) {
-          <section class="carnet-editor__days">
-            <button
-              type="button"
-              class="carnet-editor__days-toggle"
-              (click)="toggleRouteGroup('places')"
-              [attr.aria-expanded]="routeGroupOpen('places') || structureFiltering()"
-            >
-              <span>{{ routeGroupOpen('places') || structureFiltering() ? '▾' : '▸' }} Entre hoteles</span>
-              <span class="carnet-editor__type">{{ shown(placeRoutes()).length }}</span>
-            </button>
-            @if (routeGroupOpen('places') || structureFiltering()) {
-              <div
-                cdkDropList
-                class="carnet-editor__list"
-                (cdkDropListDropped)="dropStructure($event, shown(placeRoutes()))"
-              >
-                @for (block of shown(placeRoutes()); track block.id) {
-                  <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
-                }
-              </div>
-            }
-          </section>
-          }
-
-          @if (!structureFiltering() || shown(activityRoutes()).length) {
-          <section class="carnet-editor__days">
-            <button
-              type="button"
-              class="carnet-editor__days-toggle"
-              (click)="toggleRouteGroup('activities')"
-              [attr.aria-expanded]="routeGroupOpen('activities') || structureFiltering()"
-            >
-              <span>{{ routeGroupOpen('activities') || structureFiltering() ? '▾' : '▸' }} Entre hoteles y actividades</span>
-              <span class="carnet-editor__type">{{ shown(activityRoutes()).length }}</span>
-            </button>
-            @if (routeGroupOpen('activities') || structureFiltering()) {
-              <div
-                cdkDropList
-                class="carnet-editor__list"
-                (cdkDropListDropped)="dropStructure($event, shown(activityRoutes()))"
-              >
-                @for (block of shown(activityRoutes()); track block.id) {
+                @for (block of shown(tripRoutes()); track block.id) {
                   <ng-container [ngTemplateOutlet]="structureRow" [ngTemplateOutletContext]="{ $implicit: block }" />
                 }
               </div>
@@ -714,6 +670,7 @@
     [class.is-selected]="selectedId() === block.id"
     [class.is-hidden]="!block.visible"
     [class.is-issue]="hasIssue(block)"
+    [class.is-activity]="block.type === 'itinerary_route' && activityLeg(block)"
   >
     <button type="button" class="carnet-editor__row-main" (click)="select(block.id)">
       <span class="carnet-editor__type">{{ typeLabel(block) }}</span>

@@ -12,6 +12,7 @@ export interface Zone {
   name: string;
   province: Province;
   image_id: string | null;
+  nearby_zone_ids: string[];
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +20,7 @@ export interface Zone {
 export interface ZoneCreate {
   name: string;
   province: Province;
+  nearby_zone_ids: string[];
 }
 
 export type ZoneUpdate = Partial<ZoneCreate>;

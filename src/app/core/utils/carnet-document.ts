@@ -972,7 +972,7 @@ function clientId(id: string): string | undefined {
 }
 
 function endpointKind(value: unknown): string | null {
-  return value === 'hotel' || value === 'activity' || value === 'provider_branch'
+  return value === 'hotel' || value === 'activity' || value === 'provider_branch' || value === 'vehicle'
     ? value
     : null;
 }
@@ -1290,6 +1290,7 @@ export interface RouteLine {
   distanceLabel: string;
   durationLabel: string;
   instructions: string;
+  activity: boolean;
 }
 
 export function itineraryRoutes(document: CarnetDocument, parentId?: string): RouteLine[] {
@@ -1311,7 +1312,21 @@ export function itineraryRoutes(document: CarnetDocument, parentId?: string): Ro
       distanceLabel: formatDistance(textOf(block.content, 'distance_km')),
       durationLabel: routeDuration(intOf(block.content, 'duration_minutes')),
       instructions: textOf(block.content, 'instructions'),
+      activity: routeIncludesActivity(block.content),
     }));
+}
+
+export function routeIncludesActivity(content: CarnetBlock['content']): boolean {
+  if (content['pair'] === 'activity') return true;
+  if (content['mode'] !== 'place_to_place') return false;
+  const originKind = content['origin_kind'];
+  const destinationKind = content['destination_kind'];
+  if (originKind === 'vehicle' || destinationKind === 'vehicle') {
+    return originKind === 'activity' || destinationKind === 'activity';
+  }
+  const origin = textOf(content, 'origin_lodging').trim();
+  const destination = textOf(content, 'destination_lodging').trim();
+  return Boolean(origin) !== Boolean(destination);
 }
 
 function routeDuration(minutes: number): string {
@@ -1955,6 +1970,7 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
             generated_value: route.duration_minutes,
           },
           instructions: displayText(route.instructions),
+          pair: route.activity ? 'activity' : 'lodging',
         },
       });
     }

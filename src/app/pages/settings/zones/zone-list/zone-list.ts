@@ -6,10 +6,11 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { Province, Zone, ZoneListResponse } from '../../../../core/models/zone.model';
+import { Province, Zone, ZoneListResponse, zoneOptionLabel } from '../../../../core/models/zone.model';
 import { ZoneService } from '../../../../core/services/zone.service';
 import { apiErrorSummary } from '../../../../core/utils/form-validation.util';
 import { prepareZoneImage } from '../../../../core/utils/prepare-zone-image';
@@ -26,6 +27,7 @@ import { prepareZoneImage } from '../../../../core/utils/prepare-zone-image';
     DialogModule,
     InputTextModule,
     SelectModule,
+    MultiSelectModule,
     ToastModule,
     ConfirmDialogModule,
   ],
@@ -67,6 +69,7 @@ export class ZoneList implements OnInit, OnDestroy {
     this.form = this.fb.group({
       name: ['', Validators.required],
       province: [null as Province | null, Validators.required],
+      nearby_zone_ids: [[] as string[]],
     });
   }
 
@@ -96,7 +99,7 @@ export class ZoneList implements OnInit, OnDestroy {
     this.editing.set(null);
     this.pendingImage = null;
     this.releaseImage();
-    this.form.reset({ name: '', province: null });
+    this.form.reset({ name: '', province: null, nearby_zone_ids: [] });
     this.showDialog.set(true);
   }
 
@@ -107,6 +110,7 @@ export class ZoneList implements OnInit, OnDestroy {
     this.form.reset({
       name: zone.name,
       province: zone.province,
+      nearby_zone_ids: zone.nearby_zone_ids ?? [],
     });
     this.showDialog.set(true);
     if (zone.image_id) this.loadImage(zone.id);
@@ -139,7 +143,11 @@ export class ZoneList implements OnInit, OnDestroy {
   submit(): void {
     if (this.form.invalid) return;
     const current = this.editing();
-    const values = this.form.getRawValue() as { name: string; province: Province };
+    const values = this.form.getRawValue() as {
+      name: string;
+      province: Province;
+      nearby_zone_ids: string[];
+    };
     this.saving.set(true);
 
     const req = current
@@ -219,13 +227,30 @@ export class ZoneList implements OnInit, OnDestroy {
     });
   }
 
+  nearbyOptions(): { label: string; value: string }[] {
+    const current = this.editing()?.id;
+    return this.zones()
+      .filter((zone) => zone.id !== current)
+      .map((zone) => ({ label: zoneOptionLabel(zone), value: zone.id }))
+      .sort((left, right) => left.label.localeCompare(right.label, 'es'));
+  }
+
+  nearbyNames(zone: Zone): string {
+    const names = new Map(this.zones().map((item) => [item.id, item.name]));
+    return (zone.nearby_zone_ids ?? [])
+      .map((id) => names.get(id))
+      .filter((name): name is string => !!name)
+      .join(' · ');
+  }
+
   filteredZones(): Zone[] {
     const term = this.searchTerm.trim().toLowerCase();
     if (!term) return this.zones();
     return this.zones().filter((z) => {
       const name = z.name.toLowerCase();
       const province = z.province.toLowerCase();
-      return name.includes(term) || province.includes(term);
+      const nearby = this.nearbyNames(z).toLowerCase();
+      return name.includes(term) || province.includes(term) || nearby.includes(term);
     });
   }
 

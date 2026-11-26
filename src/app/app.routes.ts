@@ -51,6 +51,7 @@ export const routes: Routes = [
       {
         path: 'cotizaciones/:id',
         title: 'Logiciel - Cotización',
+        canDeactivate: [carnetUnsavedGuard],
         loadComponent: () =>
           import('./pages/quotations/quotation-detail/quotation-detail')
             .then(m => m.QuotationDetail)

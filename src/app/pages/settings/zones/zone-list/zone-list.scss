@@ -46,4 +46,10 @@
     flex-direction: column;
     gap: 0.4rem;
   }
+
+  p {
+    margin: 0;
+    color: var(--p-text-muted-color);
+    font-size: 0.85rem;
+  }
 }

@@ -72,6 +72,7 @@ export class TravelRouteListPage implements OnInit {
     { label: 'Hotel', value: 'hotel' },
     { label: 'Actividad', value: 'activity' },
     { label: 'Sucursal', value: 'provider_branch' },
+    { label: 'Vehículo', value: 'vehicle' },
   ];
 
   constructor(
@@ -192,14 +193,27 @@ export class TravelRouteListPage implements OnInit {
     if (!options || !kind) return [];
     if (kind === 'hotel') return options.hotels;
     if (kind === 'activity') return options.activities;
+    if (kind === 'vehicle') return options.vehicles ?? [];
     return options.branches;
   }
 
   onPlace(side: 'origin' | 'destination'): void {
+    const other = side === 'origin' ? 'destination' : 'origin';
     const kind = this.form.value[`${side}_kind`] as PlaceKind | null;
     const id = this.form.value[`${side}_id`] as string | null;
+    if (kind === 'vehicle') {
+      this.form.patchValue({
+        [`${side}_zone_id`]: this.form.value[`${other}_zone_id`] ?? null,
+      });
+      return;
+    }
     const place = this.places(kind).find((item) => item.id === id);
-    this.form.patchValue({ [`${side}_zone_id`]: place?.zone_id ?? null });
+    const zoneId = place?.zone_id ?? null;
+    const patch: Record<string, string | null> = { [`${side}_zone_id`]: zoneId };
+    if (this.form.value[`${other}_kind`] === 'vehicle') {
+      patch[`${other}_zone_id`] = zoneId;
+    }
+    this.form.patchValue(patch);
   }
 
   previewDuration(): string {
@@ -215,7 +229,7 @@ export class TravelRouteListPage implements OnInit {
   }
 
   showDuration(): boolean {
-    return this.form.value.mode === 'zone_to_zone' || this.activityLeg();
+    return this.form.value.mode === 'zone_to_zone' || this.timedLeg();
   }
 
   private lodgingPair(): boolean {
@@ -226,6 +240,11 @@ export class TravelRouteListPage implements OnInit {
   private activityLeg(): boolean {
     return this.form.value.origin_kind === 'activity'
       || this.form.value.destination_kind === 'activity';
+  }
+
+  private timedLeg(): boolean {
+    return this.activityLeg() || this.form.value.origin_kind === 'vehicle'
+      || this.form.value.destination_kind === 'vehicle';
   }
 
   private isLodging(kind: PlaceKind | null): boolean {

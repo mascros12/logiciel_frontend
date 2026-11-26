@@ -22,7 +22,10 @@
   padding: 0.45rem 0.8rem;
   border: 1px solid #d5d9e4;
   border-radius: 8px;
+  background: transparent;
   color: inherit;
+  font: inherit;
+  cursor: pointer;
   text-decoration: none;
 }
 
@@ -210,6 +213,10 @@
 
 .carnet-editor__row.is-selected {
   border-color: var(--app-accent, #fcca09);
+}
+
+.carnet-editor__row.is-activity .carnet-editor__row-main {
+  color: #9b1b1b;
 }
 
 .carnet-editor__row.is-hidden {
