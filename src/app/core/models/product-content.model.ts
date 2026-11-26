@@ -117,6 +117,8 @@ export interface HotelContentDetail {
   active_run: EnrichmentRunSummary | null;
   catalog_complete: boolean;
   missing_fields: string[];
+  carnet_notes: string | null;
+  carnet_notes_suggestion: string | null;
   rooms: RoomContentSummary[];
 }
 
@@ -165,6 +167,8 @@ export interface ActivityContentDetail {
   active_run: EnrichmentRunSummary | null;
   catalog_complete: boolean;
   missing_fields: string[];
+  carnet_notes: string | null;
+  carnet_notes_suggestion: string | null;
 }
 
 export interface VehicleContentDetail {

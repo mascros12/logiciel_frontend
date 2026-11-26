@@ -55,6 +55,13 @@
       [longitude]="item.longitude"
       (saved)="onContactSaved($event)"
     />
+    <app-carnet-notes-form
+      entityType="activities"
+      [entityId]="item.id"
+      [notes]="item.carnet_notes"
+      [suggestion]="item.carnet_notes_suggestion"
+      (saved)="onNotesSaved($event)"
+    />
     <app-content-editor
       entityType="activities"
       [entityId]="item.id"

@@ -38,7 +38,7 @@
             @if (row.included.length) {
               <ul class="organisation__lines">
                 @for (line of row.included; track $index) {
-                  <li>{{ line }}</li>
+                  <li [innerHTML]="marked(line)"></li>
                 }
               </ul>
             }

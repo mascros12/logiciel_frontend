@@ -1,0 +1,50 @@
+<p-toast />
+
+<section class="section-card">
+  <h3 class="section-title">Notas del carnet</h3>
+  @if (entityType() === 'hotels') {
+    <p class="field-hint">
+      Sale en la columna Activités et transports inclus, en los días de este hotel.
+      Sirve para las actividades que el hotel incluye.
+      Negrita, subrayado, rojo y morado se pueden combinar.
+    </p>
+  } @else {
+    <p class="field-hint">
+      Es la línea de la actividad en Activités et transports inclus.
+      [hora] se sustituye por el horario de la ficha. Si todavía no hay horario, el carnet deja [hora].
+      Negrita, subrayado, rojo y morado se pueden combinar.
+    </p>
+  }
+  <div class="format-bar">
+    <button type="button" (click)="format(notesField, 'bold')">Negrita</button>
+    <button type="button" (click)="format(notesField, 'underline')">Subrayar</button>
+    <button type="button" class="mark-red" (click)="format(notesField, 'red')">Rojo</button>
+    <button type="button" class="mark-purple" (click)="format(notesField, 'purple')">Morado</button>
+    @if (entityType() === 'activities') {
+      <button type="button" (click)="recalculate()">Recalcular</button>
+    }
+  </div>
+  <textarea
+    #notesField
+    pInputTextarea
+    rows="4"
+    class="w-full"
+    [ngModel]="draft()"
+    (ngModelChange)="draft.set($event)"
+  ></textarea>
+  @if (draft().trim()) {
+    <div class="notes-preview">
+      <app-rich-text [value]="draft()" />
+    </div>
+  }
+  <div class="actions">
+    <p-button
+      type="button"
+      label="Guardar notas"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="saving() || !changed()"
+      (onClick)="save()"
+    />
+  </div>
+</section>

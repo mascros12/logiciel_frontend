@@ -1,17 +1,24 @@
+<ng-template #marked let-spans="spans">
+  @for (span of spans; track $index) {
+    <span
+      [class.is-bold]="span.bold"
+      [class.is-underline]="span.underline"
+      [class.is-red]="span.color === 'red'"
+      [class.is-purple]="span.color === 'purple'"
+    >{{ span.text }}</span>
+  }
+</ng-template>
+
 @for (block of blocks(); track $index) {
   @if (block.kind === 'title') {
     <h4 class="rich-text__title">
-      @for (span of block.spans; track $index) {
-        @if (span.bold) { <strong>{{ span.text }}</strong> } @else { {{ span.text }} }
-      }
+      <ng-container [ngTemplateOutlet]="marked" [ngTemplateOutletContext]="{ spans: block.spans }" />
     </h4>
   } @else if (block.kind === 'list') {
     <ul>
       @for (item of block.items; track $index) {
         <li>
-          @for (span of item; track $index) {
-            @if (span.bold) { <strong>{{ span.text }}</strong> } @else { {{ span.text }} }
-          }
+          <ng-container [ngTemplateOutlet]="marked" [ngTemplateOutletContext]="{ spans: item }" />
         </li>
       }
     </ul>
@@ -21,9 +28,7 @@
     <p>
       @for (line of block.lines; track $index) {
         @if ($index > 0) { <br /> }
-        @for (span of line; track $index) {
-          @if (span.bold) { <strong>{{ span.text }}</strong> } @else { {{ span.text }} }
-        }
+        <ng-container [ngTemplateOutlet]="marked" [ngTemplateOutletContext]="{ spans: line }" />
       }
     </p>
   }

@@ -1,6 +1,8 @@
 export interface RichSpan {
   text: string;
   bold: boolean;
+  underline: boolean;
+  color: 'red' | 'purple' | null;
 }
 
 export interface RichParagraph {
@@ -82,30 +84,64 @@ export function parseRichText(value: string): RichBlock[] {
 
 function spansOf(value: string): RichSpan[] {
   const spans: RichSpan[] = [];
-  const pattern = /\*\*(.+?)\*\*/g;
+  const marks = /\*\*|\[\/?(?:u|rojo|morado)\]/gi;
+  let bold = false;
+  let underline = 0;
+  const colors: Array<'red' | 'purple'> = [];
   let cursor = 0;
-  for (const match of value.matchAll(pattern)) {
+
+  const push = (text: string) => {
+    if (!text) return;
+    spans.push({
+      text,
+      bold,
+      underline: underline > 0,
+      color: colors.length ? colors[colors.length - 1] : null,
+    });
+  };
+  const closeColor = (name: 'red' | 'purple') => {
+    for (let index = colors.length - 1; index >= 0; index -= 1) {
+      if (colors[index] === name) {
+        colors.splice(index, 1);
+        return;
+      }
+    }
+  };
+
+  for (const match of value.matchAll(marks)) {
     const start = match.index ?? 0;
-    if (start > cursor) spans.push({ text: value.slice(cursor, start), bold: false });
-    if (match[1]) spans.push({ text: match[1], bold: true });
+    push(value.slice(cursor, start));
+    const token = match[0].toLowerCase();
+    if (token === '**') bold = !bold;
+    else if (token === '[u]') underline += 1;
+    else if (token === '[/u]') underline = Math.max(0, underline - 1);
+    else if (token === '[rojo]') colors.push('red');
+    else if (token === '[morado]') colors.push('purple');
+    else if (token === '[/rojo]') closeColor('red');
+    else if (token === '[/morado]') closeColor('purple');
     cursor = start + match[0].length;
   }
-  if (cursor < value.length) spans.push({ text: value.slice(cursor), bold: false });
-  return spans.length ? spans : [{ text: value, bold: false }];
+  push(value.slice(cursor));
+  return spans.length ? spans : [{ text: value, bold: false, underline: false, color: null }];
 }
+
+const WRAP: Record<'bold' | 'underline' | 'red' | 'purple', [string, string]> = {
+  bold: ['**', '**'],
+  underline: ['[u]', '[/u]'],
+  red: ['[rojo]', '[/rojo]'],
+  purple: ['[morado]', '[/morado]'],
+};
 
 export function applyRichMark(
   value: string,
   start: number,
   end: number,
-  kind: 'bold' | 'bullet' | 'title',
+  kind: 'bold' | 'underline' | 'red' | 'purple' | 'bullet' | 'title',
 ): { value: string; caret: number } {
   const from = Math.min(start, end);
   const to = Math.max(start, end);
-  if (kind === 'bold') {
-    const selected = value.slice(from, to) || 'texto';
-    const insert = `**${selected}**`;
-    return { value: value.slice(0, from) + insert + value.slice(to), caret: from + insert.length };
+  if (kind !== 'bullet' && kind !== 'title') {
+    return toggleWrap(value, from, to, WRAP[kind][0], WRAP[kind][1]);
   }
   const lineStart = value.lastIndexOf('\n', Math.max(0, from - 1)) + 1;
   const lineEndIndex = value.indexOf('\n', to);
@@ -117,6 +153,36 @@ export function applyRichMark(
     value: value.slice(0, lineStart) + insert + value.slice(lineEnd),
     caret: lineStart + insert.length,
   };
+}
+
+function toggleWrap(
+  value: string,
+  from: number,
+  to: number,
+  open: string,
+  close: string,
+): { value: string; caret: number } {
+  if (from === to) {
+    const insert = `${open}texto${close}`;
+    return { value: value.slice(0, from) + insert + value.slice(to), caret: from + insert.length };
+  }
+  const selected = value.slice(from, to);
+  const wrapsSelection = selected.startsWith(open)
+    && selected.endsWith(close)
+    && selected.length > open.length + close.length;
+  if (wrapsSelection) {
+    const inner = selected.slice(open.length, selected.length - close.length);
+    return { value: value.slice(0, from) + inner + value.slice(to), caret: from + inner.length };
+  }
+  const around = from >= open.length
+    && value.slice(from - open.length, from) === open
+    && value.slice(to, to + close.length) === close;
+  if (around) {
+    const next = value.slice(0, from - open.length) + selected + value.slice(to + close.length);
+    return { value: next, caret: from - open.length + selected.length };
+  }
+  const insert = open + selected + close;
+  return { value: value.slice(0, from) + insert + value.slice(to), caret: from + insert.length };
 }
 
 function markLine(line: string, kind: 'bullet' | 'title'): string {

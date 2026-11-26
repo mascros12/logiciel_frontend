@@ -85,7 +85,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
   ) {
     this.form = this.fb.group({
       category: ['activity' as RecommendationCategory],
-      zone_id: [null as string | null],
+      zone_ids: [[] as string[]],
       activity_ids: [[] as string[]],
       name: ['', [requiredText, Validators.maxLength(200), plainText(200)]],
       opening_hours: ['', plainText(8000)],
@@ -167,7 +167,7 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     this.releaseImage();
     this.form.reset({
       category: 'activity',
-      zone_id: null,
+      zone_ids: [],
       activity_ids: [],
       name: '',
       opening_hours: '',
@@ -190,7 +190,11 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     if (row.image_id) this.loadImage(row.id);
     this.form.reset({
       category: row.category,
-      zone_id: row.zone_id,
+      zone_ids: row.zone_ids?.length
+        ? row.zone_ids
+        : row.zone_id
+          ? [row.zone_id]
+          : [],
       activity_ids: row.activity_ids?.length
         ? row.activity_ids
         : row.activity_id
@@ -215,9 +219,11 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     if (!activityId) return;
     this.api.defaults(activityId).subscribe({
       next: (row) => {
+        const current = (this.form.value.zone_ids as string[] | null) ?? [];
+        const zone = row.zone_id;
         this.form.patchValue({
           name: row.name,
-          zone_id: row.zone_id ?? this.form.value.zone_id,
+          zone_ids: zone && !current.includes(zone) ? [...current, zone] : current,
           phone: row.phone ?? this.form.value.phone,
           latitude: row.latitude ?? '',
           longitude: row.longitude ?? '',
@@ -254,13 +260,15 @@ export class RegionalRecommendationListPage implements OnInit, OnDestroy {
     const activityIds = restaurant
       ? []
       : ((raw.activity_ids as string[] | null) ?? []).filter((id) => !!id);
+    const zoneIds = ((raw.zone_ids as string[] | null) ?? []).filter((id) => !!id);
     const latitude = String(raw.latitude ?? '').trim().replace(',', '.');
     const longitude = String(raw.longitude ?? '').trim().replace(',', '.');
     const name = String(raw.name ?? '').trim();
     const description = String(raw.description ?? '').trim() || null;
     const body = {
       category: raw.category || 'activity',
-      zone_id: raw.zone_id || null,
+      zone_id: zoneIds[0] ?? null,
+      zone_ids: zoneIds,
       activity_id: activityIds[0] ?? null,
       activity_ids: activityIds,
       clear_activity: restaurant || activityIds.length === 0,

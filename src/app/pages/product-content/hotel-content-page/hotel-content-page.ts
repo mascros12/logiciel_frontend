@@ -24,6 +24,7 @@ import {
 import { ContentEditor } from '../content-editor/content-editor';
 import { ContentEnrichAction } from '../content-enrich-action/content-enrich-action';
 import { CatalogContactForm, CatalogContactSaved } from '../catalog-contact-form/catalog-contact-form';
+import { CarnetNotesForm } from '../carnet-notes-form/carnet-notes-form';
 import { RoomContentSummary } from '../../../core/models/product-content.model';
 
 @Component({
@@ -40,6 +41,7 @@ import { RoomContentSummary } from '../../../core/models/product-content.model';
     ContentEditor,
     ContentEnrichAction,
     CatalogContactForm,
+    CarnetNotesForm,
   ],
   templateUrl: './hotel-content-page.html',
   styleUrls: ['../content-shared.scss'],
@@ -119,6 +121,10 @@ export class HotelContentPage implements OnInit {
 
   onContactSaved(detail: CatalogContactSaved): void {
     this.hotel.update((current) => current ? { ...current, ...detail } : current);
+  }
+
+  onNotesSaved(notes: string | null): void {
+    this.hotel.update((current) => current ? { ...current, carnet_notes: notes } : current);
   }
 
   visibleRooms(rooms: RoomContentSummary[]): RoomContentSummary[] {

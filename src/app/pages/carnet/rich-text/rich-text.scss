@@ -21,6 +21,11 @@ p {
   display: block;
 }
 
+.is-bold { font-weight: 700; }
+.is-underline { text-decoration: underline; }
+.is-red { color: #9b1b1b; }
+.is-purple { color: #5c2d91; }
+
 ul {
   margin: 0.35rem 0 0.5rem;
   padding-left: 1.2rem;

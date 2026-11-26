@@ -84,6 +84,17 @@ export class ProductContentService {
     );
   }
 
+  saveCarnetNotes(
+    entity: 'hotels' | 'activities',
+    id: string,
+    carnetNotes: string | null,
+  ) {
+    return this.http.put<HotelContentDetail | ActivityContentDetail>(
+      `${this.url}/${entity}/${id}/carnet-notes`,
+      { carnet_notes: carnetNotes },
+    );
+  }
+
   saveCatalogContact(
     entity: 'hotels' | 'activities',
     id: string,

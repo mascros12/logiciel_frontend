@@ -90,18 +90,23 @@
         appendTo="body"
       />
     </label>
-    <label>Zona
-      <p-select
+    <label>Zonas
+      <p-multiSelect
         [options]="zoneOptions()"
-        formControlName="zone_id"
+        formControlName="zone_ids"
+        optionLabel="label"
+        optionValue="value"
         [filter]="true"
         filterBy="label"
         filterPlaceholder="Buscar"
         [resetFilterOnHide]="true"
+        display="chip"
         appendTo="body"
-        placeholder="Elegir zona"
+        placeholder="Elegir zonas"
+        [showClear]="true"
       />
     </label>
+    <p>Puede elegir varias zonas cercanas, por ejemplo Arenal y La Fortuna. En el carnet, el título de la subdivisión es solo la zona del hotel o de la actividad de ese viaje.</p>
     @if (form.value.category === 'activity') {
       <label>Actividades comerciales, opcional
         <p-multiSelect
