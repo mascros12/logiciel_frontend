@@ -28,14 +28,17 @@
     <article class="routes__detail" [class.routes__detail--excursion]="row.activity">
       <h3 [class.routes__zone]="!row.activity" [class.routes__excursion]="row.activity">
         @if (headingOf(row).leg) {
-          <span class="routes__leg">{{ headingOf(row).leg }}</span>
+          <span class="routes__leg" [class.routes__leg--transfer]="headingOf(row).transfer">{{ headingOf(row).leg }}</span>
         }
         @if (headingOf(row).hotels) {
           <span class="routes__hotels">{{ headingOf(row).hotels }}</span>
         }
       </h3>
       @if (row.instructions) {
-        <p class="routes__instructions">{{ row.instructions }}</p>
+        <p
+          class="routes__instructions"
+          [class.routes__instructions--transfer]="headingOf(row).transfer"
+        >{{ row.instructions }}</p>
       }
     </article>
   }

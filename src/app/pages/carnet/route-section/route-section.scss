@@ -118,6 +118,10 @@
   text-underline-offset: 0.12em;
 }
 
+.routes__leg--transfer {
+  text-decoration: none;
+}
+
 .routes__hotels {
   font-weight: 400;
 }
@@ -131,6 +135,10 @@
 .routes__instructions {
   margin: 0.15rem 0;
   white-space: pre-wrap;
+}
+
+.routes__instructions--transfer {
+  font-weight: 700;
 }
 
 .routes__detail--excursion,

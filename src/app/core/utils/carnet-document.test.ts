@@ -1014,6 +1014,42 @@ describe('página de imagen', () => {
       'Río Celeste - Carara  172 km Finca la Amistad - Selva Color',
     );
     assert.equal(
+      establishmentRouteTitle({
+        tone: 'excursion',
+        originZone: 'Arenal',
+        destinationZone: 'Arenal',
+        originPlace: 'Hotel Arco',
+        destinationPlace: 'Interbus',
+        originLodging: 'Hotel Arco',
+        destinationLodging: '',
+        distanceLabel: '12 km',
+        durationLabel: '',
+        instructions: 'Prendre la sortie.',
+        activity: false,
+        originKind: 'hotel',
+        destinationKind: 'vehicle',
+      }),
+      'Arenal 12 km. Hotel Arco - Interbus',
+    );
+    assert.equal(
+      establishmentRouteTitle({
+        tone: 'excursion',
+        originZone: 'Arenal',
+        destinationZone: 'La Fortuna',
+        originPlace: 'Hotel Arco',
+        destinationPlace: 'Sucursal San José',
+        originLodging: '',
+        destinationLodging: '',
+        distanceLabel: '8 km',
+        durationLabel: '',
+        instructions: '',
+        activity: false,
+        originKind: 'hotel',
+        destinationKind: 'provider_branch',
+      }),
+      'Arenal - La Fortuna 8 km. Hotel Arco - Sucursal San José',
+    );
+    assert.equal(
       excursionRouteTitle({
         ...lines[0],
         tone: 'excursion',

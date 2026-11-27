@@ -233,6 +233,8 @@ export interface PublicRoute {
   duration_label: string;
   instructions: string | null;
   activity?: boolean;
+  origin_kind?: string | null;
+  destination_kind?: string | null;
 }
 
 export interface PublicOrganisationRow {

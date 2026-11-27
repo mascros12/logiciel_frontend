@@ -1291,6 +1291,8 @@ export interface RouteLine {
   durationLabel: string;
   instructions: string;
   activity: boolean;
+  originKind?: string;
+  destinationKind?: string;
 }
 
 export function itineraryRoutes(document: CarnetDocument, parentId?: string): RouteLine[] {
@@ -1313,6 +1315,8 @@ export function itineraryRoutes(document: CarnetDocument, parentId?: string): Ro
       durationLabel: routeDuration(intOf(block.content, 'duration_minutes')),
       instructions: textOf(block.content, 'instructions'),
       activity: routeIncludesActivity(block.content),
+      originKind: kindOf(block.content, 'origin_kind'),
+      destinationKind: kindOf(block.content, 'destination_kind'),
     }));
 }
 
@@ -1373,9 +1377,13 @@ export function zonePair(row: RouteLine): string {
 export interface TrajetHeading {
   leg: string;
   hotels: string;
+  transfer: boolean;
 }
 
 export function trajetHeading(row: RouteLine): TrajetHeading {
+  if (isTransferLeg(row)) {
+    return { leg: transferTitle(row), hotels: '', transfer: true };
+  }
   const distance = routePlain(row.distanceLabel);
   const zones = zonePair(row);
   const leg = distance ? `${zones}  ${distance}`.trim() : zones;
@@ -1385,7 +1393,41 @@ export function trajetHeading(row: RouteLine): TrajetHeading {
   ]
     .filter((part) => part.length > 0)
     .join(' - ');
-  return { leg, hotels };
+  return { leg, hotels, transfer: false };
+}
+
+function isTransferLeg(row: RouteLine): boolean {
+  const ends = new Set([row.originKind ?? '', row.destinationKind ?? '']);
+  const place = ends.has('hotel') || ends.has('activity');
+  const other = ends.has('vehicle') || ends.has('provider_branch');
+  return place && other;
+}
+
+function transferTitle(row: RouteLine): string {
+  const origin = routePlain(row.originZone);
+  const destination = routePlain(row.destinationZone);
+  const same = origin.length > 0
+    && destination.length > 0
+    && foldZone(origin) === foldZone(destination);
+  const zones = same
+    ? origin
+    : [origin, destination].filter((part) => part.length > 0).join(' - ');
+  const distance = routePlain(row.distanceLabel);
+  const places = [routePlain(row.originPlace), routePlain(row.destinationPlace)]
+    .filter((part) => part.length > 0)
+    .join(' - ');
+  const measure = distance ? `${distance}.` : '';
+  const head = [zones, measure].filter((part) => part.length > 0).join(' ');
+  return [head, places].filter((part) => part.length > 0).join(' ');
+}
+
+function foldZone(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('es').replace(/\s+/g, ' ').trim();
+}
+
+function kindOf(content: CarnetBlock['content'], name: string): string {
+  const value = content[name];
+  return typeof value === 'string' ? value : '';
 }
 
 export function establishmentRouteTitle(row: RouteLine): string {
@@ -1971,6 +2013,8 @@ export function documentFromPublic(view: PublicCarnet): CarnetDocument {
           },
           instructions: displayText(route.instructions),
           pair: route.activity ? 'activity' : 'lodging',
+          origin_kind: route.origin_kind ?? null,
+          destination_kind: route.destination_kind ?? null,
         },
       });
     }
