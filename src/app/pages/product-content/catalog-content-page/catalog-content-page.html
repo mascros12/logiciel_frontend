@@ -99,6 +99,12 @@
     />
   </header>
   <div class="detail-body">
+    <app-trajet-name-form
+      [entityId]="item.id"
+      [name]="item.trajet_name"
+      [suggestion]="item.trajet_name_suggestion"
+      (saved)="onTrajetSaved($event)"
+    />
     <app-content-editor
       entityType="vehicles"
       [entityId]="item.id"

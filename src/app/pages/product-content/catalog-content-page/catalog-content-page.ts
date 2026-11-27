@@ -22,6 +22,7 @@ import { ContentEditor } from '../content-editor/content-editor';
 import { ContentEnrichAction } from '../content-enrich-action/content-enrich-action';
 import { CatalogContactForm, CatalogContactSaved } from '../catalog-contact-form/catalog-contact-form';
 import { CarnetNotesForm } from '../carnet-notes-form/carnet-notes-form';
+import { TrajetNameForm } from '../trajet-name-form/trajet-name-form';
 
 type CatalogKind = 'activities' | 'vehicles';
 
@@ -37,6 +38,7 @@ type CatalogKind = 'activities' | 'vehicles';
     ContentEnrichAction,
     CatalogContactForm,
     CarnetNotesForm,
+    TrajetNameForm,
   ],
   templateUrl: './catalog-content-page.html',
   styleUrls: ['../content-shared.scss'],
@@ -133,6 +135,10 @@ export class CatalogContentPage implements OnInit {
 
   onNotesSaved(notes: string | null): void {
     this.activity.update((current) => current ? { ...current, carnet_notes: notes } : current);
+  }
+
+  onTrajetSaved(name: string | null): void {
+    this.vehicle.update((current) => current ? { ...current, trajet_name: name } : current);
   }
 
   refresh(): void {

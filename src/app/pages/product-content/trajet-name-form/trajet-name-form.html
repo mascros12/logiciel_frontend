@@ -1,0 +1,36 @@
+<p-toast />
+
+<section class="section-card">
+  <h3 class="section-title">Nombre en los trayectos</h3>
+  <p class="field-hint">
+    Si lo dejas vacío, cada trayecto sigue usando el nombre que ya calcula la ficha.
+  </p>
+  @if (suggestion()) {
+    <p class="field-hint">Cálculo del catálogo: {{ suggestion() }}</p>
+  }
+  <input
+    pInputText
+    class="w-full"
+    maxlength="255"
+    [placeholder]="suggestion() || 'Nombre en el trayecto'"
+    [ngModel]="draft()"
+    (ngModelChange)="draft.set($event)"
+  />
+  <div class="actions">
+    <p-button
+      type="button"
+      label="Usar el cálculo"
+      [text]="true"
+      [disabled]="!draft().trim()"
+      (onClick)="useCalculation()"
+    />
+    <p-button
+      type="button"
+      label="Guardar nombre"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="saving() || !changed()"
+      (onClick)="save()"
+    />
+  </div>
+</section>

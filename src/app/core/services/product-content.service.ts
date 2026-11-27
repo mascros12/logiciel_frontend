@@ -84,6 +84,13 @@ export class ProductContentService {
     );
   }
 
+  saveVehicleTrajetName(id: string, trajetName: string | null) {
+    return this.http.put<VehicleContentDetail>(
+      `${this.url}/vehicles/${id}/trajet-name`,
+      { trajet_name: trajetName },
+    );
+  }
+
   saveCarnetNotes(
     entity: 'hotels' | 'activities',
     id: string,

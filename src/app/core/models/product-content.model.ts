@@ -185,6 +185,8 @@ export interface VehicleContentDetail {
   active_run: EnrichmentRunSummary | null;
   catalog_complete: boolean;
   missing_fields: string[];
+  trajet_name: string | null;
+  trajet_name_suggestion: string | null;
 }
 
 export interface BulkTypeCounts {
